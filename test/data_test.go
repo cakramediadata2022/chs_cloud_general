@@ -1,8 +1,8 @@
 package test
 
 import (
-	General "chs/internal/general"
-	GlobalVar "chs/internal/global_var"
+	General "chs_cloud_general/internal/general"
+	GlobalVar "chs_cloud_general/internal/global_var"
 	"strconv"
 
 	"errors"

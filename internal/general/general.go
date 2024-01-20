@@ -2,7 +2,7 @@ package general
 
 import (
 	"bytes"
-	"chs/internal/global_var"
+	"chs_cloud_general/internal/global_var"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/md5"

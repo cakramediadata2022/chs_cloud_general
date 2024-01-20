@@ -1,13 +1,13 @@
 package auth
 
 import (
-	"chs/internal/config"
-	"chs/internal/db_var"
-	"chs/internal/general"
-	"chs/internal/global_query"
-	"chs/internal/global_var"
-	"chs/internal/master_data"
-	"chs/internal/utils/cache"
+	"chs_cloud_general/internal/config"
+	"chs_cloud_general/internal/db_var"
+	"chs_cloud_general/internal/general"
+	"chs_cloud_general/internal/global_query"
+	"chs_cloud_general/internal/global_var"
+	"chs_cloud_general/internal/master_data"
+	"chs_cloud_general/internal/utils/cache"
 	"context"
 	"encoding/json"
 	"errors"

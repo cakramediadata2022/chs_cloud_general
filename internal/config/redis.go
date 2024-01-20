@@ -1,7 +1,7 @@
 package config
 
 import (
-	"chs/config"
+	"chs_cloud_general/config"
 	"context"
 	"log"
 	"time"

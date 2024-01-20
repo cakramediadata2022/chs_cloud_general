@@ -1,14 +1,14 @@
 package global_query
 
 import (
-	"chs/internal/config"
-	"chs/internal/db_var"
-	"chs/internal/general"
-	General "chs/internal/general"
-	"chs/internal/global_var"
-	"chs/internal/master_data"
-	"chs/internal/utils/cache"
-	"chs/pkg/utils"
+	"chs_cloud_general/internal/config"
+	"chs_cloud_general/internal/db_var"
+	"chs_cloud_general/internal/general"
+	General "chs_cloud_general/internal/general"
+	"chs_cloud_general/internal/global_var"
+	"chs_cloud_general/internal/master_data"
+	"chs_cloud_general/internal/utils/cache"
+	"chs_cloud_general/pkg/utils"
 	"encoding/json"
 	"fmt"
 	"strings"

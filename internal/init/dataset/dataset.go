@@ -1,9 +1,9 @@
 package dataset
 
 import (
-	"chs/internal/db_var"
-	"chs/internal/general"
-	"chs/internal/global_var"
+	"chs_cloud_general/internal/db_var"
+	"chs_cloud_general/internal/general"
+	"chs_cloud_general/internal/global_var"
 	"fmt"
 
 	"gorm.io/gorm"

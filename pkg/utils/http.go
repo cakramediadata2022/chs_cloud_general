@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"chs/internal/global_var"
-	"chs/pkg/httpErrors"
+	"chs_cloud_general/internal/global_var"
+	"chs_cloud_general/pkg/httpErrors"
 	"context"
 	"fmt"
 	"net/http"

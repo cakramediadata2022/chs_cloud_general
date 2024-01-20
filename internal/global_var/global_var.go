@@ -1,7 +1,7 @@
 package global_var
 
 import (
-	"chs/config"
+	"chs_cloud_general/config"
 	"sync"
 	"time"
 

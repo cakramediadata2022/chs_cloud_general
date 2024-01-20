@@ -1,13 +1,13 @@
 package master_data
 
 import (
-	"chs/internal/config"
-	"chs/internal/db_var"
-	DBVar "chs/internal/db_var"
-	General "chs/internal/general"
-	"chs/internal/global_var"
-	GlobalVar "chs/internal/global_var"
-	"chs/pkg/utils"
+	"chs_cloud_general/internal/config"
+	"chs_cloud_general/internal/db_var"
+	DBVar "chs_cloud_general/internal/db_var"
+	General "chs_cloud_general/internal/general"
+	"chs_cloud_general/internal/global_var"
+	GlobalVar "chs_cloud_general/internal/global_var"
+	"chs_cloud_general/pkg/utils"
 	"encoding/json"
 	"errors"
 	"fmt"

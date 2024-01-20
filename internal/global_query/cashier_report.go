@@ -1,12 +1,12 @@
 package global_query
 
 import (
-	"chs/internal/config"
-	DBVar "chs/internal/db_var"
-	"chs/internal/global_var"
-	GlobalVar "chs/internal/global_var"
-	MasterData "chs/internal/master_data"
-	"chs/internal/utils/cache"
+	"chs_cloud_general/internal/config"
+	DBVar "chs_cloud_general/internal/db_var"
+	"chs_cloud_general/internal/global_var"
+	GlobalVar "chs_cloud_general/internal/global_var"
+	MasterData "chs_cloud_general/internal/master_data"
+	"chs_cloud_general/internal/utils/cache"
 	"fmt"
 	"time"
 

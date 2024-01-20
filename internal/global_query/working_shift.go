@@ -1,14 +1,14 @@
 package global_query
 
 import (
-	"chs/internal/config"
-	"chs/internal/db_var"
-	General "chs/internal/general"
-	"chs/internal/global_var"
-	GlobalVar "chs/internal/global_var"
-	"chs/internal/master_data"
-	MasterData "chs/internal/master_data"
-	"chs/pkg/utils"
+	"chs_cloud_general/internal/config"
+	"chs_cloud_general/internal/db_var"
+	General "chs_cloud_general/internal/general"
+	"chs_cloud_general/internal/global_var"
+	GlobalVar "chs_cloud_general/internal/global_var"
+	"chs_cloud_general/internal/master_data"
+	MasterData "chs_cloud_general/internal/master_data"
+	"chs_cloud_general/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"

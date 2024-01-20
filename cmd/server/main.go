@@ -1,13 +1,13 @@
 package main
 
 import (
-	"chs/config"
-	configIn "chs/internal/config"
-	General "chs/internal/general"
-	"chs/internal/global_var"
-	"chs/internal/init/subscription"
-	"chs/internal/utils/cache"
-	"chs/internal/utils/channel_manager"
+	"chs_cloud_general/config"
+	configIn "chs_cloud_general/internal/config"
+	General "chs_cloud_general/internal/general"
+	"chs_cloud_general/internal/global_var"
+	"chs_cloud_general/internal/init/subscription"
+	"chs_cloud_general/internal/utils/cache"
+	"chs_cloud_general/internal/utils/channel_manager"
 	"context"
 	"fmt"
 	"net/http"
@@ -18,9 +18,9 @@ import (
 	"testing"
 	"time"
 
-	"chs/pkg/discord"
-	logger "chs/pkg/log"
-	"chs/pkg/utils"
+	"chs_cloud_general/pkg/discord"
+	logger "chs_cloud_general/pkg/log"
+	"chs_cloud_general/pkg/utils"
 	"os"
 
 	"github.com/go-playground/validator/v10"

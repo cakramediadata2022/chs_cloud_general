@@ -2,7 +2,7 @@
 package logger
 
 import (
-	"chs/config"
+	"chs_cloud_general/config"
 	"context"
 	"net/http"
 	"os"

@@ -1,7 +1,7 @@
 package websocket
 
 import (
-	"chs/internal/global_var"
+	"chs_cloud_general/internal/global_var"
 	"log"
 	"net/http"
 	"time"

@@ -1,11 +1,11 @@
 package config
 
 import (
-	"chs/config"
-	"chs/internal/general"
-	"chs/internal/global_var"
-	"chs/internal/init/dataset"
-	"chs/internal/utils/cache"
+	"chs_cloud_general/config"
+	"chs_cloud_general/internal/general"
+	"chs_cloud_general/internal/global_var"
+	"chs_cloud_general/internal/init/dataset"
+	"chs_cloud_general/internal/utils/cache"
 	"context"
 	"encoding/json"
 	"errors"

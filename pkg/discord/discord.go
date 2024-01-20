@@ -1,7 +1,7 @@
 package discord
 
 import (
-	"chs/config"
+	"chs_cloud_general/config"
 	"context"
 	"os"
 	"os/signal"
