@@ -1,0 +1,19 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - release
+
+jobs:
+  build:
+    runs-on: [self-hosted]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Deploy
+        run: |
+          cp . /home/chs_cloud_backend .
+          docker restart api

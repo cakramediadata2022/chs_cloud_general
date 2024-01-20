@@ -1,0 +1,104 @@
+version: "3.8"
+
+services:
+  api:
+    container_name: api
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile
+    ports:
+      - "9000:9000"
+    environment:
+      - NODE_ENV=production
+      - CGO_ENABLED=0
+      - PORT=5000
+  depends_on:
+      - mariadb
+      - redis
+    restart: always
+    volumes:
+      - ../chs_cloud_frontend/build:/public
+      - ./:/app
+    networks:
+      - web_api
+
+  redis:
+    image: redis:7-bullseye
+    container_name: api_redis
+    ports:
+      - "49153:6379"
+    restart: always
+    networks:
+      - web_api
+
+  cm:
+    container_name: api_cm
+    build:
+      context: ../chs_cloud_cm
+      dockerfile: docker/Dockerfile
+    ports:
+      - "9005:9000"
+    environment:
+      - PORT=5000
+    restart: always
+    volumes:
+      - ../chs_cloud_cm:/app
+    networks:
+      - web_api
+
+  #  register:
+  #   container_name: api_register
+  #   build:
+  #     context: ../chs_cloud_registration_backend
+  #     dockerfile: docker/Dockerfile
+  #   ports:
+  #     - "9010:9000"
+  #   depends_on:
+  #     - mariadb
+  #   environment:
+  #     - PORT=5000
+  #   restart: always
+  #   volumes:
+  #     - ../chs_cloud_registration_backend:/app
+  #   networks:
+  #     - web_api
+  mariadb:
+    image: mariadb:10.6
+    container_name: api_database
+    environment:
+      MARIADB_ROOT_PASSWORD: kalomang
+    ports:
+      - "3308:3306"
+    restart: always
+    networks:
+      - web_api
+
+  jaeger:
+    container_name: jaeger_container
+    image: jaegertracing/all-in-one:latest
+    environment:
+      - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+    ports:
+      - 16686:16686
+      - 16685:16685
+      - 4317:4317
+      - 4318:4318
+    networks:
+      - web_api
+
+  # web:
+  #   container_name: web_pms
+  #   build:
+  #     context: /home/chs_cloud_frontend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8080:80"
+  #   environment:
+  #     - PORT=5000
+  #   restart: always
+  #   volumes:
+  #     - /home/chs_cloud_frontend/build:/usr/local/apache2/htdocs/
+
+networks:
+  web_api:
+    driver: bridge

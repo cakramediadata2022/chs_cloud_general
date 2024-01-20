@@ -1,0 +1,106 @@
+server:
+  AppName: Cakrasoft Hotel Suite
+  AppVersion: 1.0.0
+  Port: :9000
+  PprofPort: :5555
+  Mode: debug
+  JwtSecretKey: secretkey
+  CookieName: jwt-token
+  ReadTimeout: 5
+  WriteTimeout: 5
+  SSL: false
+  CtxDefaultTimeout: 12
+  CSRF: true
+  Debug: true
+  Staging: false
+  BaseURL: http://localhost:3000
+  Domain: localhost
+  PublicPath: "D:/CODING/_Cakrasoft/Web/chs_cloud_frontend/public"
+  MultiDatabase: true
+
+discord:
+  Api:
+  Run: false
+
+cm:
+  RGURL: http://25.4.184.138:9001
+  CXURL: http://25.4.184.138:9001
+  Username: ketut
+  Password: ketut123456
+
+logger:
+  Development: true
+  DisableCaller: false
+  DisableStacktrace: false
+  LogFileEnabled: false
+  LogMaxSize: 200
+  LogMaxBackups: 7
+  LogMaxAge: 28
+  LogFilename: "./log/api.log"
+  Encoding: json
+  Level: info
+
+postgres:
+  PostgresqlHost: localhost
+  PostgresqlPort: 5432
+  PostgresqlUser: postgres
+  PostgresqlPassword: postgres
+  PostgresqlDbname: auth_db
+  PostgresqlSslmode: false
+  PgDriver: pgx
+
+mysql:
+  MysqlHost: localhost
+  MysqlPort: 3306
+  MysqlUser: root
+  MysqlPassword: 8cd54be5114ee861dd9b8e0101374fa5a4264e6548d9158e47132045
+  MysqlDatabase: 26a4d25910e1ad4cab639f242fdbe0a763beca6d48824ba896b1acbc48817640
+  MaxOpenConns: 100
+  MaxIdleConns: 10
+
+redis:
+  RedisAddr: localhost:49153
+  RedisPassword: redispw
+  RedisDb: 0
+  RedisDefaultdb: 0
+  MinIdleConns: 200
+  PoolSize: 12000
+  PoolTimeout: 240
+  Password: ""
+  DB: 0
+
+cookie:
+  Name: jwt-token
+  MaxAge: 86400
+  Secure: false
+  HttpOnly: true
+
+session:
+  Name: session-id
+  Prefix: api-session
+  Expire: 3600
+
+metrics:
+  Url: 0.0.0.0:7070
+  ServiceName: api
+
+mongodb:
+  MongoURI: uristring
+
+aws:
+  Endpoint: 127.0.0.1:9000
+  MinioAccessKey: minio
+  MinioSecretKey: minio123
+  UseSSL: false
+  MinioEndpoint: http://127.0.0.1:9000
+
+jaeger:
+  Host: localhost:4317
+  ServiceName: PMS_REST_API
+  LogSpans: true
+  SamplerRatio: 1
+  LogQuery: true
+#aws:
+#  Endpoint: play.min.io
+#  MinioAccessKey: Q3AM3UQ867SPQQA43P2F
+#  MinioSecretKey: zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG
