@@ -10,7 +10,6 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/labstack/echo/v4 v4.12.0
-	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.19.1
 	github.com/redis/go-redis/v9 v9.5.3
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1

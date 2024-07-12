@@ -13,8 +13,8 @@ import (
 
 	"github.com/cakramediadata2022/chs_cloud_general/internal/config"
 	"github.com/cakramediadata2022/chs_cloud_general/internal/db_var"
-	"github.com/cakramediadata2022/chs_cloud_general/internal/general"
 	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/general"
 	"github.com/cakramediadata2022/chs_cloud_general/pkg/utils"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"

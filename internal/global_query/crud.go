@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/cakramediadata2022/chs_cloud_general/internal/db_var"
-	"github.com/cakramediadata2022/chs_cloud_general/internal/general"
 	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/general"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
