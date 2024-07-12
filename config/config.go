@@ -24,6 +24,7 @@ type Config struct {
 	AWS      AWS
 	Jaeger   Jaeger
 	Discord  Discord
+	Tada     Tada
 }
 
 // Server config struct
@@ -45,6 +46,7 @@ type ServerConfig struct {
 	BaseURL           string
 	Domain            string
 	PublicPath        string
+	SecretPath        string
 	MultiDatabase     bool
 }
 
@@ -52,6 +54,12 @@ type ServerConfig struct {
 type Discord struct {
 	Api string
 	Run bool
+}
+
+// Discord Config
+type Tada struct {
+	Host        string
+	ServiceName string
 }
 
 // Channel Manager Config

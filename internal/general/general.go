@@ -2,7 +2,6 @@ package general
 
 import (
 	"bytes"
-	"chs_cloud_general/internal/global_var"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/md5"
@@ -17,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
 	"github.com/go-playground/validator/v10"
 
 	"github.com/gin-gonic/gin"

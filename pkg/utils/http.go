@@ -1,12 +1,12 @@
 package utils
 
 import (
-	"chs_cloud_general/internal/global_var"
-	"chs_cloud_general/pkg/httpErrors"
 	"context"
 	"fmt"
 	"net/http"
 
+	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/httpErrors"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/uptrace/opentelemetry-go-extra/otelzap"

@@ -1,14 +1,14 @@
 package test
 
 import (
-	General "chs_cloud_general/internal/general"
-	GlobalVar "chs_cloud_general/internal/global_var"
 	"strconv"
 
 	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/cakramediadata2022/chs_cloud_general/internal/general"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
 	"gorm.io/gorm"
 )
 
@@ -70,7 +70,7 @@ func TestFunction(t *testing.T) {
 	// AuditDate := GlobalQuery. GetAuditDate(c, DB, false)
 	AuditDateStr := "" //General.FormatDate1(AuditDate)
 	var DataOutput []map[string]interface{}
-	err := GlobalVar.Db.Raw(
+	err := global_var.Db.Raw(
 		"SELECT" +
 			" cfg_init_room.number AS RoomNumber," +
 			" cfg_init_room.room_type_code," +
@@ -115,7 +115,7 @@ func TestFunction(t *testing.T) {
 			" LEFT OUTER JOIN sub_folio ON (folio.number = sub_folio.folio_number AND sub_folio.void='0')" +
 			" LEFT OUTER JOIN guest_message ON (folio.number = guest_message.folio_number AND guest_message.is_delivered='0')" +
 			" LEFT OUTER JOIN guest_to_do ON (folio.number = guest_to_do.folio_number AND guest_to_do.is_done='0')" +
-			" WHERE folio.status_code='" + GlobalVar.FolioStatus.Open + "'" +
+			" WHERE folio.status_code='" + global_var.FolioStatus.Open + "'" +
 			"GROUP BY folio.number" +
 			")UNION( " +
 			"SELECT" +
@@ -140,8 +140,8 @@ func TestFunction(t *testing.T) {
 			" LEFT OUTER JOIN guest_group ON (reservation.group_code = guest_group.code)" +
 			" LEFT OUTER JOIN contact_person ON (reservation.contact_person_id1 = contact_person.id)" +
 			" LEFT OUTER JOIN guest_detail ON (reservation.guest_detail_id = guest_detail.id)" +
-			" LEFT OUTER JOIN guest_deposit ON (reservation.number = guest_deposit.reservation_number AND guest_deposit.void='0' AND guest_deposit.system_code='" + GlobalVar.ConstProgramVariable.DefaultSystemCode + "')" +
-			" WHERE reservation.status_code='" + GlobalVar.ReservationStatus.New + "'" +
+			" LEFT OUTER JOIN guest_deposit ON (reservation.number = guest_deposit.reservation_number AND guest_deposit.void='0' AND guest_deposit.system_code='" + global_var.ConstProgramVariable.DefaultSystemCode + "')" +
+			" WHERE reservation.status_code='" + global_var.ReservationStatus.New + "'" +
 			" AND guest_detail.room_number<>''" +
 			" AND DATE(guest_detail.arrival)<='" + AuditDateStr + "'" +
 			" AND DATE(guest_detail.departure)>'" + AuditDateStr + "' " +
@@ -175,7 +175,7 @@ func TestFunction(t *testing.T) {
 			" folio" +
 			" LEFT OUTER JOIN contact_person ON (folio.contact_person_id1 = contact_person.id)" +
 			" LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)" +
-			" WHERE folio.status_code='" + GlobalVar.FolioStatus.Closed + "'" +
+			" WHERE folio.status_code='" + global_var.FolioStatus.Closed + "'" +
 			" AND DATE(guest_detail.departure)<='" + AuditDateStr + "' " +
 			") AS LastCheckOut ON(A.guest_profile_id1 = LastCheckOut.guest_profile_id1)" +
 			" LEFT OUTER JOIN cfg_init_room_type ON (cfg_init_room.room_type_code = cfg_init_room_type.code)" +
@@ -194,8 +194,8 @@ func TestFunction(t *testing.T) {
 	// 		" SUM(IF(DATE(guest_detail.departure)='"+PostingDateStrTomorrow+"', guest_detail.adult + guest_detail.child, NULL)) AS TotalPersonCOTomorrow ").
 	// 	Joins("LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)").
 	// 	Where("guest_detail.departure_unixx=UNIX_TIMESTAMP(?)", PostingDateStrTomorrow).
-	// 	Where("folio.type_code=?", GlobalVar.FolioType.GuestFolio).
-	// 	Where("folio.status_code<>?", GlobalVar.FolioStatus.CancelCheckIn).
+	// 	Where("folio.type_code=?", global_var.FolioType.GuestFolio).
+	// 	Where("folio.status_code<>?", global_var.FolioStatus.CancelCheckIn).
 	// 	Scan(&Data)
 
 	// fmt.Println(Data)
@@ -203,7 +203,7 @@ func TestFunction(t *testing.T) {
 
 func TestEncrypt(t *testing.T) {
 
-	Encrypt, _ := General.EncryptString(GlobalVar.EncryptKey, "cakratendados")
+	Encrypt, _ := general.EncryptString(global_var.EncryptKey, "cakratendados")
 	fmt.Println(Encrypt)
 }
 
@@ -245,27 +245,27 @@ type Composite struct {
 func TestGORM(t *testing.T) {
 	result := &Composite{}
 
-	if err := GlobalVar.Db.Migrator().DropTable(&Thing1{}, &Thing2{}, &Thing3{}); err != nil {
+	if err := global_var.Db.Migrator().DropTable(&Thing1{}, &Thing2{}, &Thing3{}); err != nil {
 		t.Errorf("Failed, got error: %v", err)
 	}
 
-	if err := GlobalVar.Db.AutoMigrate(&Thing1{}, &Thing2{}, &Thing3{}); err != nil {
+	if err := global_var.Db.AutoMigrate(&Thing1{}, &Thing2{}, &Thing3{}); err != nil {
 		t.Errorf("Failed, got error: %v", err)
 	}
 
-	GlobalVar.Db.Create(&Thing1{
+	global_var.Db.Create(&Thing1{
 		Name: "Thing 1",
 		One:  1,
 	})
-	GlobalVar.Db.Create(&Thing2{
+	global_var.Db.Create(&Thing2{
 		Name: "Thing 2",
 		Two:  2,
 	})
-	GlobalVar.Db.Create(&Thing3{
+	global_var.Db.Create(&Thing3{
 		Name:  "Thing 3",
 		Three: 3,
 	})
 
-	GlobalVar.Db.Table("thing1").Joins("Thing2").Joins("Thing3").Find(result)
+	global_var.Db.Table("thing1").Joins("Thing2").Joins("Thing3").Find(result)
 	//fmt.Println(result)
 }

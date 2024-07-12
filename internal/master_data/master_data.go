@@ -1,13 +1,6 @@
 package master_data
 
 import (
-	"chs_cloud_general/internal/config"
-	"chs_cloud_general/internal/db_var"
-	DBVar "chs_cloud_general/internal/db_var"
-	General "chs_cloud_general/internal/general"
-	"chs_cloud_general/internal/global_var"
-	GlobalVar "chs_cloud_general/internal/global_var"
-	"chs_cloud_general/pkg/utils"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cakramediadata2022/chs_cloud_general/internal/config"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/db_var"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/general"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/utils"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -32,7 +30,7 @@ func IsAuthorized(Token string) string {
 			if _, ok := TokenCheck.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("Check Token Error")
 			}
-			return GlobalVar.SigningKey, nil
+			return global_var.SigningKey, nil
 		})
 
 		if Err == nil {
@@ -62,21 +60,21 @@ func SaveTextToFile(S, DestinationFolder string) {
 }
 
 func SendResponse(StatusCode uint, Message interface{}, Result interface{}, c *gin.Context) {
-	var RequestResponse = GlobalVar.TRequestResponse{
+	var RequestResponse = global_var.TRequestResponse{
 		StatusCode: StatusCode,
 		Message:    Message,
 		Result:     Result}
 
-	if RequestResponse.StatusCode == GlobalVar.ResponseCode.Successfully || RequestResponse.StatusCode == GlobalVar.ResponseCode.SuccessfullyWithStatus {
+	if RequestResponse.StatusCode == global_var.ResponseCode.Successfully || RequestResponse.StatusCode == global_var.ResponseCode.SuccessfullyWithStatus {
 		c.JSON(http.StatusOK, &RequestResponse)
-	} else if (RequestResponse.StatusCode == GlobalVar.ResponseCode.NotAuthorized) || (RequestResponse.StatusCode == GlobalVar.ResponseCode.ErrorCreateToken) {
+	} else if (RequestResponse.StatusCode == global_var.ResponseCode.NotAuthorized) || (RequestResponse.StatusCode == global_var.ResponseCode.ErrorCreateToken) {
 		c.JSON(http.StatusUnauthorized, &RequestResponse)
-	} else if (RequestResponse.StatusCode == GlobalVar.ResponseCode.InvalidDataFormat) || (RequestResponse.StatusCode == GlobalVar.ResponseCode.DataNotFound) ||
-		(RequestResponse.StatusCode == GlobalVar.ResponseCode.InvalidDataValue) || (RequestResponse.StatusCode == GlobalVar.ResponseCode.DatabaseValueChanged) ||
-		(RequestResponse.StatusCode == GlobalVar.ResponseCode.DatabaseError) || (RequestResponse.StatusCode == GlobalVar.ResponseCode.DuplicateEntry) ||
-		(RequestResponse.StatusCode == GlobalVar.ResponseCode.OtherResult) || (RequestResponse.StatusCode == GlobalVar.ResponseCode.Unregistered) || (RequestResponse.StatusCode == GlobalVar.ResponseCode.SubscriptionExpired) {
+	} else if (RequestResponse.StatusCode == global_var.ResponseCode.InvalidDataFormat) || (RequestResponse.StatusCode == global_var.ResponseCode.DataNotFound) ||
+		(RequestResponse.StatusCode == global_var.ResponseCode.InvalidDataValue) || (RequestResponse.StatusCode == global_var.ResponseCode.DatabaseValueChanged) ||
+		(RequestResponse.StatusCode == global_var.ResponseCode.DatabaseError) || (RequestResponse.StatusCode == global_var.ResponseCode.DuplicateEntry) ||
+		(RequestResponse.StatusCode == global_var.ResponseCode.OtherResult) || (RequestResponse.StatusCode == global_var.ResponseCode.Unregistered) || (RequestResponse.StatusCode == global_var.ResponseCode.SubscriptionExpired) {
 		c.JSON(http.StatusBadRequest, &RequestResponse)
-	} else if RequestResponse.StatusCode == GlobalVar.ResponseCode.InternalServerError {
+	} else if RequestResponse.StatusCode == global_var.ResponseCode.InternalServerError {
 		c.JSON(http.StatusInternalServerError, &RequestResponse)
 	} else {
 		c.JSON(http.StatusBadRequest, &RequestResponse)
@@ -84,19 +82,19 @@ func SendResponse(StatusCode uint, Message interface{}, Result interface{}, c *g
 }
 
 func SendWebsocketResponse(StatusCode uint, Message interface{}, Result interface{}, con *websocket.Conn) {
-	var RequestResponse = GlobalVar.TRequestResponse{
+	var RequestResponse = global_var.TRequestResponse{
 		StatusCode: StatusCode,
 		Message:    Message,
 		Result:     Result}
 
-	if RequestResponse.StatusCode == GlobalVar.ResponseCode.Successfully || RequestResponse.StatusCode == GlobalVar.ResponseCode.SuccessfullyWithStatus {
+	if RequestResponse.StatusCode == global_var.ResponseCode.Successfully || RequestResponse.StatusCode == global_var.ResponseCode.SuccessfullyWithStatus {
 		con.WriteJSON(&RequestResponse)
-	} else if (RequestResponse.StatusCode == GlobalVar.ResponseCode.NotAuthorized) || (RequestResponse.StatusCode == GlobalVar.ResponseCode.ErrorCreateToken) {
+	} else if (RequestResponse.StatusCode == global_var.ResponseCode.NotAuthorized) || (RequestResponse.StatusCode == global_var.ResponseCode.ErrorCreateToken) {
 		con.WriteJSON(&RequestResponse)
-	} else if (RequestResponse.StatusCode == GlobalVar.ResponseCode.InvalidDataFormat) || (RequestResponse.StatusCode == GlobalVar.ResponseCode.DataNotFound) ||
-		(RequestResponse.StatusCode == GlobalVar.ResponseCode.InvalidDataValue) || (RequestResponse.StatusCode == GlobalVar.ResponseCode.DatabaseValueChanged) ||
-		(RequestResponse.StatusCode == GlobalVar.ResponseCode.DatabaseError) || (RequestResponse.StatusCode == GlobalVar.ResponseCode.DuplicateEntry) ||
-		(RequestResponse.StatusCode == GlobalVar.ResponseCode.OtherResult) {
+	} else if (RequestResponse.StatusCode == global_var.ResponseCode.InvalidDataFormat) || (RequestResponse.StatusCode == global_var.ResponseCode.DataNotFound) ||
+		(RequestResponse.StatusCode == global_var.ResponseCode.InvalidDataValue) || (RequestResponse.StatusCode == global_var.ResponseCode.DatabaseValueChanged) ||
+		(RequestResponse.StatusCode == global_var.ResponseCode.DatabaseError) || (RequestResponse.StatusCode == global_var.ResponseCode.DuplicateEntry) ||
+		(RequestResponse.StatusCode == global_var.ResponseCode.OtherResult) {
 		con.WriteJSON(&RequestResponse)
 	} else {
 		con.WriteJSON(Message)
@@ -105,7 +103,7 @@ func SendWebsocketResponse(StatusCode uint, Message interface{}, Result interfac
 
 // func GetUnitCode(c *gin.Context, DB *gorm.DB) string {
 // 	var Code string
-// 	DB.Table(DBVar.TableName.HotelInformation).Select("code").Take(&Code)
+// 	DB.Table(db_var.TableName.HotelInformation).Select("code").Take(&Code)
 
 // 	return Code
 // }
@@ -114,19 +112,19 @@ func GetConfigurationAllP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
 	var ConfigurationData []map[string]interface{}
-	DB.Table(DBVar.TableName.Configuration).Select("system_code", "category", "name", "value", "default_value").Scan(&ConfigurationData)
-	SendResponse(GlobalVar.ResponseCode.Successfully, "", ConfigurationData, c)
+	DB.Table(db_var.TableName.Configuration).Select("system_code", "category", "name", "value", "default_value").Scan(&ConfigurationData)
+	SendResponse(global_var.ResponseCode.Successfully, "", ConfigurationData, c)
 }
 
 func GetConfiguration(DB *gorm.DB, SystemCode, Category, Name string, GetDefault bool) interface{} {
-	var ConfigurationData DBVar.Configuration
-	DB.Table(DBVar.TableName.Configuration).Where("system_code = ? AND category = ? AND name = ?", SystemCode, Category, Name).Find(&ConfigurationData)
+	var ConfigurationData db_var.Configuration
+	DB.Table(db_var.TableName.Configuration).Where("system_code = ? AND category = ? AND name = ?", SystemCode, Category, Name).Find(&ConfigurationData)
 	if GetDefault {
 		return ConfigurationData.DefaultValue
 	} else {
@@ -158,28 +156,28 @@ func GetConfigurationFloat64(c *gin.Context, DB *gorm.DB, SystemCode, Category, 
 	return t.(float64)
 }
 
-func GetGeneralCodeName(DB *gorm.DB, TableName, OrderCondition string) []DBVar.GeneralCodeNameStruct {
-	var GeneralCodeName []DBVar.GeneralCodeNameStruct
+func GetGeneralCodeName(DB *gorm.DB, TableName, OrderCondition string) []db_var.GeneralCodeNameStruct {
+	var GeneralCodeName []db_var.GeneralCodeNameStruct
 	DB.Table(TableName).Order(OrderCondition).Find(&GeneralCodeName)
 	return GeneralCodeName
 }
 
-func GetGeneralCodeDescription(DB *gorm.DB, TableName, OrderCondition string) []DBVar.GeneralCodeDescriptionStruct {
-	var GeneralCodeDescription []DBVar.GeneralCodeDescriptionStruct
+func GetGeneralCodeDescription(DB *gorm.DB, TableName, OrderCondition string) []db_var.GeneralCodeDescriptionStruct {
+	var GeneralCodeDescription []db_var.GeneralCodeDescriptionStruct
 	DB.Table(TableName).Order(OrderCondition).Find(&GeneralCodeDescription)
 	return GeneralCodeDescription
 }
 
 func GetAccountField(DB *gorm.DB, Field, ConditionField string, ConditionValue interface{}) string {
 	var Data string
-	DB.Table(DBVar.TableName.CfgInitAccount).Select(Field).Joins("JOIN cfg_init_account_sub_group ON (cfg_init_account.sub_group_code = cfg_init_account_sub_group.code)").
+	DB.Table(db_var.TableName.CfgInitAccount).Select(Field).Joins("JOIN cfg_init_account_sub_group ON (cfg_init_account.sub_group_code = cfg_init_account_sub_group.code)").
 		Where(ConditionField+"=?", ConditionValue).Limit(1).Scan(&Data)
 
 	return Data
 }
 
-func GetGeneralCodeNameWithParam(DB *gorm.DB, TableName, FieldConditions string, Condition1, Condition2, Condition3, Condition4, Condition5, OrderCondition interface{}, CountCondition byte) []DBVar.GeneralCodeNameStruct {
-	var GeneralCodeName []DBVar.GeneralCodeNameStruct
+func GetGeneralCodeNameWithParam(DB *gorm.DB, TableName, FieldConditions string, Condition1, Condition2, Condition3, Condition4, Condition5, OrderCondition interface{}, CountCondition byte) []db_var.GeneralCodeNameStruct {
+	var GeneralCodeName []db_var.GeneralCodeNameStruct
 	if CountCondition == 0 {
 		DB.Table(TableName).Order(OrderCondition).Find(&GeneralCodeName)
 	} else if CountCondition == 1 {
@@ -196,14 +194,14 @@ func GetGeneralCodeNameWithParam(DB *gorm.DB, TableName, FieldConditions string,
 	return GeneralCodeName
 }
 
-func GetGeneralCodeNameCondition(DB *gorm.DB, TableName, OrderCondition string, conds ...interface{}) []DBVar.GeneralCodeNameStruct {
-	var GeneralCodeName []DBVar.GeneralCodeNameStruct
+func GetGeneralCodeNameCondition(DB *gorm.DB, TableName, OrderCondition string, conds ...interface{}) []db_var.GeneralCodeNameStruct {
+	var GeneralCodeName []db_var.GeneralCodeNameStruct
 	DB.Table(TableName).Select("code,name").Order(OrderCondition).Find(&GeneralCodeName, conds...)
 	return GeneralCodeName
 }
 
-func GetGeneralCodeNameQuery(DB *gorm.DB, Query string, Condition1, Condition2, Condition3, Condition4, Condition5 interface{}, CountCondition byte) []DBVar.GeneralCodeNameStruct {
-	var GeneralCodeName []DBVar.GeneralCodeNameStruct
+func GetGeneralCodeNameQuery(DB *gorm.DB, Query string, Condition1, Condition2, Condition3, Condition4, Condition5 interface{}, CountCondition byte) []db_var.GeneralCodeNameStruct {
+	var GeneralCodeName []db_var.GeneralCodeNameStruct
 	if CountCondition == 0 {
 		DB.Raw(Query).Scan(&GeneralCodeName)
 	} else if CountCondition == 1 {
@@ -319,12 +317,12 @@ func GetFieldUint(DB *gorm.DB, TableName, Field, ConditionField, ConditionValue 
 }
 
 func ValidateRequestString(c *gin.Context) (uint, string) {
-	var Result uint = GlobalVar.ResponseCode.Successfully
+	var Result uint = global_var.ResponseCode.Successfully
 	var StringValue string
 
 	err := c.BindJSON(&StringValue)
 	if err != nil {
-		Result = GlobalVar.ResponseCode.InvalidDataFormat
+		Result = global_var.ResponseCode.InvalidDataFormat
 		return Result, ""
 	} else {
 		return Result, StringValue
@@ -332,12 +330,12 @@ func ValidateRequestString(c *gin.Context) (uint, string) {
 }
 
 func ValidateRequestUint(c *gin.Context) (uint, uint64) {
-	var Result uint = GlobalVar.ResponseCode.Successfully
+	var Result uint = global_var.ResponseCode.Successfully
 	var UintValue uint64
 
 	err := c.BindJSON(&UintValue)
 	if err != nil {
-		Result = GlobalVar.ResponseCode.InvalidDataFormat
+		Result = global_var.ResponseCode.InvalidDataFormat
 		return Result, 0
 	} else {
 		return Result, UintValue
@@ -345,12 +343,12 @@ func ValidateRequestUint(c *gin.Context) (uint, uint64) {
 }
 
 func ValidateRequestBool(Token string, c *gin.Context) (uint, bool) {
-	var Result uint = GlobalVar.ResponseCode.Successfully
+	var Result uint = global_var.ResponseCode.Successfully
 	var BoolValue bool
 
 	err := c.BindJSON(&BoolValue)
 	if err != nil {
-		Result = GlobalVar.ResponseCode.InvalidDataFormat
+		Result = global_var.ResponseCode.InvalidDataFormat
 		return Result, false
 	} else {
 		return Result, BoolValue
@@ -421,27 +419,27 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return nil
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	//CHS MODULE
 	if DataName == "JournalAccountCategory" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitJournalAccountCategory, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitJournalAccountCategory, "code")
 	} else if DataName == "JournalAccountType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstJournalAccountType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstJournalAccountType, "code")
 	} else if DataName == "JournalAccountSubGroup" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitJournalAccountSubGroup, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitJournalAccountSubGroup, "code")
 	} else if DataName == "JournalAccountGroup" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstJournalAccountGroup, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstJournalAccountGroup, "code")
 	} else if DataName == "JournalAccountSubGroupType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstJournalAccountSubGroupType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstJournalAccountSubGroupType, "code")
 	} else if DataName == "JournalAccount" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitJournalAccount, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitJournalAccount, "code")
 	} else if DataName == "JournalAccountAP" {
-		return GetGeneralCodeNameWithParam(DB, DBVar.TableName.CfgInitJournalAccount, "type_code", GlobalVar.GlobalJournalAccountType.AccountPayable, "", "", "", "", "code", 1)
+		return GetGeneralCodeNameWithParam(DB, db_var.TableName.CfgInitJournalAccount, "type_code", global_var.GlobalJournalAccountType.AccountPayable, "", "", "", "", "code", 1)
 	} else if DataName == "JournalAccountAR" {
-		return GetGeneralCodeNameWithParam(DB, DBVar.TableName.CfgInitJournalAccount, "type_code", GlobalVar.GlobalJournalAccountType.AccountReceivable, "", "", "", "", "code", 1)
+		return GetGeneralCodeNameWithParam(DB, db_var.TableName.CfgInitJournalAccount, "type_code", global_var.GlobalJournalAccountType.AccountReceivable, "", "", "", "", "code", 1)
 	} else if DataName == "JournalAccountIncome" {
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT"+
@@ -453,7 +451,7 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 				" LEFT OUTER JOIN cfg_init_journal_account_sub_group ON (cfg_init_journal_account.sub_group_code = cfg_init_journal_account_sub_group.code)"+
 				" WHERE cfg_init_journal_account_sub_group.group_code=?"+
 				" OR cfg_init_journal_account_sub_group.group_code=? "+
-				"ORDER BY cfg_init_journal_account.code", GlobalVar.GlobalJournalAccountGroup.Income, GlobalVar.GlobalJournalAccountGroup.OtherIncome, "", "", "", 2)
+				"ORDER BY cfg_init_journal_account.code", global_var.GlobalJournalAccountGroup.Income, global_var.GlobalJournalAccountGroup.OtherIncome, "", "", "", 2)
 	} else if DataName == "JournalAccountExpense" {
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT"+
@@ -466,7 +464,7 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 				" WHERE cfg_init_journal_account_sub_group.group_code=?"+
 				" OR cfg_init_journal_account_sub_group.group_code=?"+
 				" OR cfg_init_journal_account_sub_group.group_code=? "+
-				"ORDER BY cfg_init_journal_account.code", GlobalVar.GlobalJournalAccountGroup.Expense1, GlobalVar.GlobalJournalAccountGroup.Expense2, GlobalVar.GlobalJournalAccountGroup.OtherExpense, "", "", 3)
+				"ORDER BY cfg_init_journal_account.code", global_var.GlobalJournalAccountGroup.Expense1, global_var.GlobalJournalAccountGroup.Expense2, global_var.GlobalJournalAccountGroup.OtherExpense, "", "", 3)
 	} else if DataName == "JournalAccountCosting" {
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT"+
@@ -477,7 +475,7 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 				" cfg_init_journal_account"+
 				" LEFT OUTER JOIN cfg_init_journal_account_sub_group ON (cfg_init_journal_account.sub_group_code = cfg_init_journal_account_sub_group.code)"+
 				" WHERE cfg_init_journal_account_sub_group.group_code=? "+
-				"ORDER BY cfg_init_journal_account.code", GlobalVar.GlobalJournalAccountGroup.Cost, "", "", "", "", 1)
+				"ORDER BY cfg_init_journal_account.code", global_var.GlobalJournalAccountGroup.Cost, "", "", "", "", 1)
 	} else if DataName == "JournalAccountInventory" {
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT"+
@@ -490,201 +488,201 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 				" WHERE cfg_init_journal_account.sub_group_code=? "+
 				"ORDER BY cfg_init_journal_account.code", pConfig.Dataset.GlobalJournalAccountSubGroup.Inventory, "", "", "", "", 1)
 	} else if DataName == "BankAccountType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.AccConstBankAccountType, "id_sort")
+		return GetGeneralCodeName(DB, db_var.TableName.AccConstBankAccountType, "id_sort")
 	} else if DataName == "BankAccount" {
-		return GetGeneralCodeName(DB, DBVar.TableName.AccCfgInitBankAccount, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.AccCfgInitBankAccount, "code")
 	} else if DataName == "BankAccountPayment" {
-		return GetGeneralCodeNameWithParam(DB, DBVar.TableName.AccCfgInitBankAccount, "for_payment", 1, nil, nil, nil, nil, "code", 1)
+		return GetGeneralCodeNameWithParam(DB, db_var.TableName.AccCfgInitBankAccount, "for_payment", 1, nil, nil, nil, nil, "code", 1)
 	} else if DataName == "DepartmentType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstDepartmentType, "id_sort")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstDepartmentType, "id_sort")
 	} else if DataName == "Department" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitDepartment, "id_sort")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitDepartment, "id_sort")
 	} else if DataName == "SubDepartment" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitSubDepartment, "id_sort")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitSubDepartment, "id_sort")
 	} else if DataName == "TaxAndService" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitTaxAndService, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitTaxAndService, "code")
 	} else if DataName == "ItemGroup" {
-		return GetGeneralCodeName(DB, DBVar.TableName.InvCfgInitItemGroup, "id_sort")
+		return GetGeneralCodeName(DB, db_var.TableName.InvCfgInitItemGroup, "id_sort")
 	} else if DataName == "SubFolioGroup" {
-		return GetGeneralCodeName(DB, DBVar.TableName.SubFolioGroup, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.SubFolioGroup, "code")
 	} else if DataName == "AccountGroup" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstAccountGroup, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstAccountGroup, "code")
 	} else if DataName == "AccountSubGroup" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitAccountSubGroup, "id_sort")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitAccountSubGroup, "id_sort")
 	} else if DataName == "Account" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitAccount, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitAccount, "code")
 	} else if DataName == "AccountEDC" {
-		return GetGeneralCodeNameWithParam(DB, DBVar.TableName.CfgInitAccount, "sub_group_code", GlobalVar.GlobalAccountSubGroup.CreditDebitCard, "", "", "", "", "code", 1)
+		return GetGeneralCodeNameWithParam(DB, db_var.TableName.CfgInitAccount, "sub_group_code", global_var.GlobalAccountSubGroup.CreditDebitCard, "", "", "", "", "code", 1)
 	} else if DataName == "AccountForCommision" {
-		return GetGeneralCodeNameWithParam(DB, DBVar.TableName.CfgInitAccount, "sub_group_code=? AND code<>? AND code<>?", GlobalVar.GlobalAccountSubGroup.AccountPayable, pConfig.Dataset.Configuration[GlobalVar.ConfigurationCategory.GlobalAccount][GlobalVar.ConfigurationName.AccountAPRefundDeposit].(string), pConfig.Dataset.GlobalAccount.CreditCardAdm, "", "", "code", 3)
+		return GetGeneralCodeNameWithParam(DB, db_var.TableName.CfgInitAccount, "sub_group_code=? AND code<>? AND code<>?", global_var.GlobalAccountSubGroup.AccountPayable, pConfig.Dataset.Configuration[global_var.ConfigurationCategory.GlobalAccount][global_var.ConfigurationName.AccountAPRefundDeposit].(string), pConfig.Dataset.GlobalAccount.CreditCardAdm, "", "", "code", 3)
 	} else if DataName == "CompanyType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCompanyType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCompanyType, "code")
 	} else if DataName == "Company" {
-		return GetGeneralCodeName(DB, DBVar.TableName.Company, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.Company, "code")
 	} else if DataName == "GuestGroup" {
-		return GetGeneralCodeNameCondition(DB, DBVar.TableName.GuestGroup, "name", "is_active=1")
+		return GetGeneralCodeNameCondition(DB, db_var.TableName.GuestGroup, "name", "is_active=1")
 	} else if DataName == "BusinessSource" {
-		return GetGeneralCodeNameWithParam(DB, DBVar.TableName.Company, "is_business_source", 1, "", "", "", "", "code", 1)
+		return GetGeneralCodeNameWithParam(DB, db_var.TableName.Company, "is_business_source", 1, "", "", "", "", "code", 1)
 	} else if DataName == "Currency" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCurrency, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCurrency, "code")
 	} else if DataName == "Market" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitMarket, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitMarket, "code")
 	} else if DataName == "CommissionType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstCommissionType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstCommissionType, "code")
 	} else if DataName == "CommissionTypeForPackage" {
-		return GetGeneralCodeNameWithParam(DB, DBVar.TableName.ConstCommissionType, "code<>? AND code<>? AND code<>? AND code<>?", GlobalVar.CommissionType.PercentFirstNightNettRate, GlobalVar.CommissionType.PercentPerNightNettRate, GlobalVar.CommissionType.PercentOfPriceFullPrice, GlobalVar.CommissionType.PercentOfPriceNettPrice, "", "code", 4)
+		return GetGeneralCodeNameWithParam(DB, db_var.TableName.ConstCommissionType, "code<>? AND code<>? AND code<>? AND code<>?", global_var.CommissionType.PercentFirstNightNettRate, global_var.CommissionType.PercentPerNightNettRate, global_var.CommissionType.PercentOfPriceFullPrice, global_var.CommissionType.PercentOfPriceNettPrice, "", "code", 4)
 	} else if DataName == "ChargeFrequency" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstChargeFrequency, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstChargeFrequency, "code")
 	} else if DataName == "Continent" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitContinent, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitContinent, "code")
 	} else if DataName == "RoomType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitRoomType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitRoomType, "code")
 	} else if DataName == "BedType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitBedType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitBedType, "code")
 	} else if DataName == "RoomView" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitRoomView, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitRoomView, "code")
 	} else if DataName == "Package" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitPackage, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitPackage, "code")
 	} else if DataName == "RoomRateCategory" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitRoomRateCategory, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitRoomRateCategory, "code")
 	} else if DataName == "RoomRateSubCategory" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitRoomRateSubCategory, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitRoomRateSubCategory, "code")
 	} else if DataName == "DynamicRateType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstDynamicRateType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstDynamicRateType, "code")
 	} else if DataName == "RoomRate" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitRoomRate, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitRoomRate, "code")
 	} else if DataName == "RoomStatus" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstRoomStatus, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstRoomStatus, "code")
 	} else if DataName == "Floor" {
 		return GetGeneralCodeNameQuery(DB, "Select distinct floor as code, floor as name FROM cfg_init_room ORDER BY floor", nil, nil, nil, nil, nil, 0)
 	} else if DataName == "Building" {
 		return GetGeneralCodeNameQuery(DB, "Select distinct building as code, building as name FROM cfg_init_room ORDER BY building", nil, nil, nil, nil, nil, 0)
 	} else if DataName == "RoomAmenities" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitRoomAmenities, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitRoomAmenities, "code")
 	} else if DataName == "Room" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitRoom, "number")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitRoom, "number")
 	} else if DataName == "RoomBoy" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitRoomBoy, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitRoomBoy, "code")
 	} else if DataName == "Owner" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitOwner, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitOwner, "code")
 	} else if DataName == "GuestTitle" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitTitle, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitTitle, "code")
 	} else if DataName == "GuestType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitGuestType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitGuestType, "code")
 	} else if DataName == "Country" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCountry, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCountry, "code")
 	} else if DataName == "State" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitState, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitState, "code")
 	} else if DataName == "Regency" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitRegency, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitRegency, "code")
 	} else if DataName == "City" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCity, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCity, "code")
 	} else if DataName == "Nationality" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitNationality, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitNationality, "code")
 	} else if DataName == "Language" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitLanguage, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitLanguage, "code")
 	} else if DataName == "IDCardType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitIdCardType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitIdCardType, "code")
 	} else if DataName == "PaymentGroup" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstPaymentGroup, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstPaymentGroup, "code")
 	} else if DataName == "PaymentType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitPaymentType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitPaymentType, "code")
 	} else if DataName == "MarketCategory" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitMarketCategory, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitMarketCategory, "code")
 	} else if DataName == "Market" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitMarket, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitMarket, "code")
 	} else if DataName == "BookingSource" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitBookingSource, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitBookingSource, "code")
 	} else if DataName == "Sales" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitSales, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitSales, "code")
 	} else if DataName == "SalesSalary" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitSalesSalary, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitSalesSalary, "code")
 	} else if DataName == "PurposeOf" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitPurposeOf, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitPurposeOf, "code")
 	} else if DataName == "CardBank" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCardBank, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCardBank, "code")
 	} else if DataName == "CardType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCardType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCardType, "code")
 	} else if DataName == "LoanItem" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitLoanItem, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitLoanItem, "code")
 	} else if DataName == "PhoneBookType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitPhoneBookType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitPhoneBookType, "code")
 	} else if DataName == "MemberPointType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitMemberPointType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitMemberPointType, "code")
 	} else if DataName == "VoucherReason" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitVoucherReason, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitVoucherReason, "code")
 	} else if DataName == "CompetitorCategory" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCompetitorCategory, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCompetitorCategory, "code")
 	} else if DataName == "Competitor" {
-		return GetGeneralCodeName(DB, DBVar.TableName.Competitor, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.Competitor, "code")
 	} else if DataName == "MemberType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstMemberType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstMemberType, "code")
 	} else if DataName == "CustomLookupField01" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField01, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField01, "code")
 	} else if DataName == "CustomLookupField02" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField02, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField02, "code")
 	} else if DataName == "CustomLookupField03" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField03, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField03, "code")
 	} else if DataName == "CustomLookupField04" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField04, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField04, "code")
 	} else if DataName == "CustomLookupField05" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField05, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField05, "code")
 	} else if DataName == "CustomLookupField06" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField06, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField06, "code")
 	} else if DataName == "CustomLookupField07" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField07, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField07, "code")
 	} else if DataName == "CustomLookupField08" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField08, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField08, "code")
 	} else if DataName == "CustomLookupField09" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField09, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField09, "code")
 	} else if DataName == "CustomLookupField10" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField10, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField10, "code")
 	} else if DataName == "CustomLookupField11" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField11, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField11, "code")
 	} else if DataName == "CustomLookupField12" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitCustomLookupField12, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField12, "code")
 	} else if DataName == "Timezone" {
-		var DataOutput []DBVar.GeneralCodeNameStruct
-		DB.Table(DBVar.TableName.CfgInitTimezone).Select("name, cfg_init_timezone.offset/3600 AS code").Scan(&DataOutput)
+		var DataOutput []db_var.GeneralCodeNameStruct
+		DB.Table(db_var.TableName.CfgInitTimezone).Select("name, cfg_init_timezone.offset/3600 AS code").Scan(&DataOutput)
 
 		return DataOutput
-		// return GetGeneralCodeName(DB, DBVar.TableName.CfgInitTimezone, "name")
+		// return GetGeneralCodeName(DB, db_var.TableName.CfgInitTimezone, "name")
 		//POS MODULE
 	} else if DataName == "Outlet" {
 		DataOutput := make([]map[string]interface{}, 0)
-		DB.Table(DBVar.TableName.PosCfgInitOutlet).Select("code", "name", "sub_department_code").Scan(&DataOutput)
+		DB.Table(db_var.TableName.PosCfgInitOutlet).Select("code", "name", "sub_department_code").Scan(&DataOutput)
 
 		return DataOutput
 	} else if DataName == "Tenan" {
-		return GetGeneralCodeName(DB, DBVar.TableName.PosCfgInitTenan, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.PosCfgInitTenan, "code")
 	} else if DataName == "ProductCategory" {
-		return GetGeneralCodeName(DB, DBVar.TableName.PosCfgInitProductCategory, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.PosCfgInitProductCategory, "code")
 	} else if DataName == "ProductGroup" {
-		return GetGeneralCodeName(DB, DBVar.TableName.PosCfgInitProductGroup, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.PosCfgInitProductGroup, "code")
 	} else if DataName == "Product" {
 		DataOutput := make([]map[string]interface{}, 0)
-		DB.Table(DBVar.TableName.PosCfgInitProduct).Select("pos_cfg_init_product.code", "pos_cfg_init_product.name", "pos_cfg_init_product_group.account_code").
+		DB.Table(db_var.TableName.PosCfgInitProduct).Select("pos_cfg_init_product.code", "pos_cfg_init_product.name", "pos_cfg_init_product_group.account_code").
 			Joins("LEFT JOIN pos_cfg_init_product_group ON (pos_cfg_init_product.group_code=pos_cfg_init_product_group.code)").
 			Scan(&DataOutput)
 
 		return DataOutput
 	} else if DataName == "POSMarket" {
-		return GetGeneralCodeName(DB, DBVar.TableName.PosCfgInitMarket, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.PosCfgInitMarket, "code")
 	} else if DataName == "SpaRoom" {
-		return GetGeneralCodeName(DB, DBVar.TableName.PosCfgInitSpaRoom, "number")
+		return GetGeneralCodeName(DB, db_var.TableName.PosCfgInitSpaRoom, "number")
 	} else if DataName == "Table" {
-		return GetGeneralCodeName(DB, DBVar.TableName.PosCfgInitTable, "number")
+		return GetGeneralCodeName(DB, db_var.TableName.PosCfgInitTable, "number")
 	} else if DataName == "TableType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.PosCfgInitTableType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.PosCfgInitTableType, "code")
 	} else if DataName == "Waitress" {
-		return GetGeneralCodeName(DB, DBVar.TableName.PosCfgInitWaitress, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.PosCfgInitWaitress, "code")
 	} else if DataName == "Printer" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitPrinter, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitPrinter, "code")
 		//CAMS MODULE
 	} else if DataName == "ShippingAddress" {
-		return GetGeneralCodeName(DB, DBVar.TableName.AstCfgInitShippingAddress, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.AstCfgInitShippingAddress, "code")
 	} else if DataName == "UOM" {
-		return GetGeneralCodeName(DB, DBVar.TableName.InvCfgInitUom, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.InvCfgInitUom, "code")
 	} else if DataName == "InventoryStore" {
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT"+
@@ -694,11 +692,11 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 				" inv_cfg_init_store "+
 				" WHERE is_room='0'", "", "", "", "", "", 0)
 	} else if DataName == "Store" {
-		return GetGeneralCodeName(DB, DBVar.TableName.InvCfgInitStore, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.InvCfgInitStore, "code")
 	} else if DataName == "ItemCategory" {
-		return GetGeneralCodeName(DB, DBVar.TableName.InvCfgInitItemCategory, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.InvCfgInitItemCategory, "code")
 	} else if DataName == "ItemGroupType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.InvConstItemGroupType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.InvConstItemGroupType, "code")
 	} else if DataName == "Item" {
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT"+
@@ -708,24 +706,24 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 				" inv_cfg_init_item "+
 				" WHERE is_active='1'", "", "", "", "", "", 0)
 	} else if DataName == "ReturnStockReason" {
-		return GetGeneralCodeName(DB, DBVar.TableName.InvCfgInitReturnStockReason, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.InvCfgInitReturnStockReason, "code")
 	} else if DataName == "FAManufacture" {
-		return GetGeneralCodeName(DB, DBVar.TableName.FaCfgInitManufacture, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.FaCfgInitManufacture, "code")
 	} else if DataName == "FALocationType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.FaConstLocationType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.FaConstLocationType, "code")
 	} else if DataName == "FALocation" {
-		return GetGeneralCodeName(DB, DBVar.TableName.FaCfgInitLocation, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.FaCfgInitLocation, "code")
 	} else if DataName == "FAItemCategory" {
-		return GetGeneralCodeName(DB, DBVar.TableName.FaCfgInitItemCategory, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.FaCfgInitItemCategory, "code")
 	} else if DataName == "FAItem" {
-		return GetGeneralCodeName(DB, DBVar.TableName.FaCfgInitItem, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.FaCfgInitItem, "code")
 		//Global All Module
 	} else if DataName == "UserGroup" {
-		return GetGeneralCodeName(DB, DBVar.TableName.UserGroupAccess, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.UserGroupAccess, "code")
 	} else if DataName == "User" {
-		return GetGeneralCodeName(DB, DBVar.TableName.User, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.User, "code")
 	} else if DataName == "ReservationStatus" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstReservationStatus, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstReservationStatus, "code")
 	} else if DataName == "Shift" {
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT"+
@@ -735,15 +733,15 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 				" working_shift "+
 				"ORDER BY working_shift.shift", "", "", "", "", "", 0)
 	} else if DataName == "CfgInitSubAccount" {
-		return GetGeneralCodeName(DB, DBVar.TableName.CfgInitAccountSubGroup, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.CfgInitAccountSubGroup, "code")
 	} else if DataName == "VoucherType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstVoucherType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstVoucherType, "code")
 	} else if DataName == "VoucherStatus" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstVoucherStatus, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstVoucherStatus, "code")
 	} else if DataName == "VoucherStatusApprove" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstVoucherStatusApprove, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstVoucherStatusApprove, "code")
 	} else if DataName == "VoucherStatusSold" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstVoucherStatusSold, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstVoucherStatusSold, "code")
 	} else if DataName == "RoomBuilding" {
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT"+
@@ -761,21 +759,21 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 				" cfg_init_room "+
 				"ORDER BY cfg_init_room.floor", "", "", "", "", "", 0)
 	} else if DataName == "ComplimentType" {
-		return GetGeneralCodeName(DB, DBVar.TableName.PosConstComplimentType, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.PosConstComplimentType, "code")
 	} else if DataName == "SalesSegment" {
-		return GetGeneralCodeName(DB, DBVar.TableName.SalCfgInitSegment, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.SalCfgInitSegment, "code")
 	} else if DataName == "SalesStatus" {
-		return GetGeneralCodeName(DB, DBVar.TableName.SalConstStatus, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.SalConstStatus, "code")
 	} else if DataName == "SalesSource" {
-		return GetGeneralCodeName(DB, DBVar.TableName.SalCfgInitSource, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.SalCfgInitSource, "code")
 	} else if DataName == "SalesTaskStatus" {
-		return GetGeneralCodeName(DB, DBVar.TableName.SalConstTaskStatus, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.SalConstTaskStatus, "code")
 	} else if DataName == "SalesTaskRepeat" {
-		return GetGeneralCodeName(DB, DBVar.TableName.SalCfgInitTaskRepeat, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.SalCfgInitTaskRepeat, "code")
 	} else if DataName == "SalesProposalStatus" {
-		return GetGeneralCodeName(DB, DBVar.TableName.SalConstProposalStatus, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.SalConstProposalStatus, "code")
 	} else if DataName == "ChannelManagerVendor" {
-		return GetGeneralCodeName(DB, DBVar.TableName.ConstChannelManagerVendor, "code")
+		return GetGeneralCodeName(DB, db_var.TableName.ConstChannelManagerVendor, "code")
 	} else if DataName == "DirectBill" {
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT"+
@@ -804,9 +802,9 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 	return nil
 }
 
-func FilterGeneralCodeDescription(c *gin.Context, DB *gorm.DB, DataName string) []DBVar.GeneralCodeDescriptionStruct {
+func FilterGeneralCodeDescription(c *gin.Context, DB *gorm.DB, DataName string) []db_var.GeneralCodeDescriptionStruct {
 	if DataName == "RoomUnavailableReason" {
-		return GetGeneralCodeDescription(DB, DBVar.TableName.CfgInitRoomUnavailableReason, "code")
+		return GetGeneralCodeDescription(DB, db_var.TableName.CfgInitRoomUnavailableReason, "code")
 	}
 
 	return nil
@@ -818,12 +816,12 @@ func GetMasterDataCodeNameArrayP(c *gin.Context) {
 	err := json.Unmarshal([]byte(Param), &DataNameList)
 	GeneralCodeNameArray := make(map[string]interface{})
 	if err != nil {
-		SendResponse(GlobalVar.ResponseCode.InvalidDataFormat, "", nil, c)
+		SendResponse(global_var.ResponseCode.InvalidDataFormat, "", nil, c)
 	} else {
 		// Get Program Configuration
 		val, exist := c.Get("pConfig")
 		if !exist {
-			SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+			SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 			return
 		}
 		pConfig := val.(*config.CompanyDataConfiguration)
@@ -833,7 +831,7 @@ func GetMasterDataCodeNameArrayP(c *gin.Context) {
 			GeneralCodeNameArray[DataName] = GeneralCodeName
 		}
 	}
-	SendResponse(GlobalVar.ResponseCode.Successfully, "", GeneralCodeNameArray, c)
+	SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeNameArray, c)
 }
 
 func GetMasterDataCodeNameP(c *gin.Context) {
@@ -841,13 +839,13 @@ func GetMasterDataCodeNameP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
 	GeneralCodeName := FilterGeneralCodeName(c, DB, DataName)
-	SendResponse(GlobalVar.ResponseCode.Successfully, "", GeneralCodeName, c)
+	SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeName, c)
 }
 
 func GetMasterDataCodeDescriptionP(c *gin.Context) {
@@ -855,231 +853,231 @@ func GetMasterDataCodeDescriptionP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
 	GeneralCodeDescription := FilterGeneralCodeDescription(c, DB, DataName)
-	SendResponse(GlobalVar.ResponseCode.Successfully, "", GeneralCodeDescription, c)
+	SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeDescription, c)
 }
 
 func GetMasterDataTableName(DataName string) string {
 	if DataName == "JournalAccount" {
-		return DBVar.TableName.CfgInitJournalAccount
+		return db_var.TableName.CfgInitJournalAccount
 	} else if DataName == "JournalAccountCategory" {
-		return DBVar.TableName.CfgInitJournalAccountSubGroup
+		return db_var.TableName.CfgInitJournalAccountSubGroup
 	} else if DataName == "JournalAccountCategory" {
-		return DBVar.TableName.CfgInitJournalAccountCategory
+		return db_var.TableName.CfgInitJournalAccountCategory
 	} else if DataName == "Department" {
-		return DBVar.TableName.CfgInitDepartment
+		return db_var.TableName.CfgInitDepartment
 	} else if DataName == "SubDepartment" {
-		return DBVar.TableName.CfgInitSubDepartment
+		return db_var.TableName.CfgInitSubDepartment
 	} else if DataName == "TaxAndService" {
-		return DBVar.TableName.CfgInitTaxAndService
+		return db_var.TableName.CfgInitTaxAndService
 	} else if DataName == "AccountSubGroup" {
-		return DBVar.TableName.CfgInitAccountSubGroup
+		return db_var.TableName.CfgInitAccountSubGroup
 	} else if DataName == "Account" {
-		return DBVar.TableName.CfgInitAccount
+		return db_var.TableName.CfgInitAccount
 	} else if DataName == "BankAccount" {
-		return DBVar.TableName.AccCfgInitBankAccount
+		return db_var.TableName.AccCfgInitBankAccount
 	} else if DataName == "CompanyType" {
-		return DBVar.TableName.CfgInitCompanyType
+		return db_var.TableName.CfgInitCompanyType
 	} else if DataName == "Company" {
-		return DBVar.TableName.Company
+		return db_var.TableName.Company
 	} else if DataName == "Currency" {
-		return DBVar.TableName.CfgInitCurrency
+		return db_var.TableName.CfgInitCurrency
 	} else if DataName == "CurrencyNominal" {
-		return DBVar.TableName.CfgInitCurrencyNominal
+		return db_var.TableName.CfgInitCurrencyNominal
 	} else if DataName == "RoomType" {
-		return DBVar.TableName.CfgInitRoomType
+		return db_var.TableName.CfgInitRoomType
 	} else if DataName == "BedType" {
-		return DBVar.TableName.CfgInitBedType
+		return db_var.TableName.CfgInitBedType
 	} else if DataName == "Package" {
-		return DBVar.TableName.CfgInitPackage
+		return db_var.TableName.CfgInitPackage
 	} else if DataName == "PackageBreakdown" {
-		return DBVar.TableName.CfgInitPackageBreakdown
+		return db_var.TableName.CfgInitPackageBreakdown
 	} else if DataName == "PackageBusinessSource" {
-		return DBVar.TableName.CfgInitPackageBusinessSource
+		return db_var.TableName.CfgInitPackageBusinessSource
 	} else if DataName == "RoomRateCategory" {
-		return DBVar.TableName.CfgInitRoomRateCategory
+		return db_var.TableName.CfgInitRoomRateCategory
 	} else if DataName == "RoomRateSubCategory" {
-		return DBVar.TableName.CfgInitRoomRateSubCategory
+		return db_var.TableName.CfgInitRoomRateSubCategory
 	} else if DataName == "RoomRate" {
-		return DBVar.TableName.CfgInitRoomRate
+		return db_var.TableName.CfgInitRoomRate
 	} else if DataName == "RoomRateBreakdown" {
-		return DBVar.TableName.CfgInitRoomRateBreakdown
+		return db_var.TableName.CfgInitRoomRateBreakdown
 	} else if DataName == "RoomRateBusinessSource" {
-		return DBVar.TableName.CfgInitRoomRateBusinessSource
+		return db_var.TableName.CfgInitRoomRateBusinessSource
 	} else if DataName == "RoomRateDynamic" {
-		return DBVar.TableName.CfgInitRoomRateDynamic
+		return db_var.TableName.CfgInitRoomRateDynamic
 	} else if DataName == "RoomRateCurrency" {
-		return DBVar.TableName.CfgInitRoomRateCurrency
+		return db_var.TableName.CfgInitRoomRateCurrency
 	} else if DataName == "RoomView" {
-		return DBVar.TableName.CfgInitRoomView
+		return db_var.TableName.CfgInitRoomView
 	} else if DataName == "RoomAmenities" {
-		return DBVar.TableName.CfgInitRoomAmenities
+		return db_var.TableName.CfgInitRoomAmenities
 	} else if DataName == "Room" {
-		return DBVar.TableName.CfgInitRoom
+		return db_var.TableName.CfgInitRoom
 	} else if DataName == "RoomBoy" {
-		return DBVar.TableName.CfgInitRoomBoy
+		return db_var.TableName.CfgInitRoomBoy
 	} else if DataName == "RoomUnavailableReason" {
-		return DBVar.TableName.CfgInitRoomUnavailableReason
+		return db_var.TableName.CfgInitRoomUnavailableReason
 	} else if DataName == "Owner" {
-		return DBVar.TableName.CfgInitOwner
+		return db_var.TableName.CfgInitOwner
 	} else if DataName == "Title" {
-		return DBVar.TableName.CfgInitTitle
+		return db_var.TableName.CfgInitTitle
 	} else if DataName == "Continent" {
-		return DBVar.TableName.CfgInitContinent
+		return db_var.TableName.CfgInitContinent
 	} else if DataName == "Country" {
-		return DBVar.TableName.CfgInitCountry
+		return db_var.TableName.CfgInitCountry
 	} else if DataName == "State" {
-		return DBVar.TableName.CfgInitState
+		return db_var.TableName.CfgInitState
 	} else if DataName == "Regency" {
-		return DBVar.TableName.CfgInitRegency
+		return db_var.TableName.CfgInitRegency
 	} else if DataName == "City" {
-		return DBVar.TableName.CfgInitCity
+		return db_var.TableName.CfgInitCity
 	} else if DataName == "Nationality" {
-		return DBVar.TableName.CfgInitNationality
+		return db_var.TableName.CfgInitNationality
 	} else if DataName == "Language" {
-		return DBVar.TableName.CfgInitLanguage
+		return db_var.TableName.CfgInitLanguage
 	} else if DataName == "IdCardType" {
-		return DBVar.TableName.CfgInitIdCardType
+		return db_var.TableName.CfgInitIdCardType
 	} else if DataName == "PaymentType" {
-		return DBVar.TableName.CfgInitPaymentType
+		return db_var.TableName.CfgInitPaymentType
 	} else if DataName == "MarketCategory" {
-		return DBVar.TableName.CfgInitMarketCategory
+		return db_var.TableName.CfgInitMarketCategory
 	} else if DataName == "Market" {
-		return DBVar.TableName.CfgInitMarket
+		return db_var.TableName.CfgInitMarket
 	} else if DataName == "BookingSource" {
-		return DBVar.TableName.CfgInitBookingSource
+		return db_var.TableName.CfgInitBookingSource
 	} else if DataName == "PurposeOf" {
-		return DBVar.TableName.CfgInitPurposeOf
+		return db_var.TableName.CfgInitPurposeOf
 	} else if DataName == "CardBank" {
-		return DBVar.TableName.CfgInitCardBank
+		return db_var.TableName.CfgInitCardBank
 	} else if DataName == "CardType" {
-		return DBVar.TableName.CfgInitCardType
+		return db_var.TableName.CfgInitCardType
 	} else if DataName == "LoanItem" {
-		return DBVar.TableName.CfgInitLoanItem
+		return db_var.TableName.CfgInitLoanItem
 	} else if DataName == "CreditCardCharge" {
-		return DBVar.TableName.CfgInitCreditCardCharge
+		return db_var.TableName.CfgInitCreditCardCharge
 	} else if DataName == "PhoneBookType" {
-		return DBVar.TableName.CfgInitPhoneBookType
+		return db_var.TableName.CfgInitPhoneBookType
 	} else if DataName == "MemberOutletDiscount" {
-		return DBVar.TableName.PosCfgInitMemberOutletDiscount
+		return db_var.TableName.PosCfgInitMemberOutletDiscount
 	} else if DataName == "MemberOutletDiscountDetail" {
-		return DBVar.TableName.PosCfgInitMemberOutletDiscountDetail
+		return db_var.TableName.PosCfgInitMemberOutletDiscountDetail
 	} else if DataName == "MemberPointType" {
-		return DBVar.TableName.CfgInitMemberPointType
+		return db_var.TableName.CfgInitMemberPointType
 	} else if DataName == "VoucherReason" {
-		return DBVar.TableName.CfgInitVoucherReason
+		return db_var.TableName.CfgInitVoucherReason
 	} else if DataName == "CompetitorCategory" {
-		return DBVar.TableName.CfgInitCompetitorCategory
+		return db_var.TableName.CfgInitCompetitorCategory
 	} else if DataName == "Competitor" {
-		return DBVar.TableName.Competitor
+		return db_var.TableName.Competitor
 	} else if DataName == "Sales" {
-		return DBVar.TableName.CfgInitSales
+		return db_var.TableName.CfgInitSales
 	} else if DataName == "SalesSalary" {
-		return DBVar.TableName.CfgInitSalesSalary
+		return db_var.TableName.CfgInitSalesSalary
 	} else if DataName == "SalesSegment" {
-		return DBVar.TableName.SalCfgInitSegment
+		return db_var.TableName.SalCfgInitSegment
 	} else if DataName == "SalesSource" {
-		return DBVar.TableName.SalCfgInitSource
+		return db_var.TableName.SalCfgInitSource
 	} else if DataName == "SalesTaskAction" {
-		return DBVar.TableName.SalCfgInitTaskAction
+		return db_var.TableName.SalCfgInitTaskAction
 	} else if DataName == "SalesTaskRepeat" {
-		return DBVar.TableName.SalCfgInitTaskRepeat
+		return db_var.TableName.SalCfgInitTaskRepeat
 	} else if DataName == "CustomLookupField01" {
-		return DBVar.TableName.CfgInitCustomLookupField01
+		return db_var.TableName.CfgInitCustomLookupField01
 	} else if DataName == "CustomLookupField02" {
-		return DBVar.TableName.CfgInitCustomLookupField02
+		return db_var.TableName.CfgInitCustomLookupField02
 	} else if DataName == "CustomLookupField03" {
-		return DBVar.TableName.CfgInitCustomLookupField03
+		return db_var.TableName.CfgInitCustomLookupField03
 	} else if DataName == "CustomLookupField04" {
-		return DBVar.TableName.CfgInitCustomLookupField04
+		return db_var.TableName.CfgInitCustomLookupField04
 	} else if DataName == "CustomLookupField05" {
-		return DBVar.TableName.CfgInitCustomLookupField05
+		return db_var.TableName.CfgInitCustomLookupField05
 	} else if DataName == "CustomLookupField06" {
-		return DBVar.TableName.CfgInitCustomLookupField06
+		return db_var.TableName.CfgInitCustomLookupField06
 	} else if DataName == "CustomLookupField07" {
-		return DBVar.TableName.CfgInitCustomLookupField07
+		return db_var.TableName.CfgInitCustomLookupField07
 	} else if DataName == "CustomLookupField08" {
-		return DBVar.TableName.CfgInitCustomLookupField08
+		return db_var.TableName.CfgInitCustomLookupField08
 	} else if DataName == "CustomLookupField09" {
-		return DBVar.TableName.CfgInitCustomLookupField09
+		return db_var.TableName.CfgInitCustomLookupField09
 	} else if DataName == "CustomLookupField10" {
-		return DBVar.TableName.CfgInitCustomLookupField10
+		return db_var.TableName.CfgInitCustomLookupField10
 	} else if DataName == "CustomLookupField11" {
-		return DBVar.TableName.CfgInitCustomLookupField11
+		return db_var.TableName.CfgInitCustomLookupField11
 	} else if DataName == "CustomLookupField12" {
-		return DBVar.TableName.CfgInitCustomLookupField12
+		return db_var.TableName.CfgInitCustomLookupField12
 	} else if DataName == "GuestType" {
-		return DBVar.TableName.CfgInitGuestType
+		return db_var.TableName.CfgInitGuestType
 	} else if DataName == "Timezone" {
-		return DBVar.TableName.CfgInitTimezone
+		return db_var.TableName.CfgInitTimezone
 		//POS MODULE
 	} else if DataName == "Outlet" {
-		return DBVar.TableName.PosCfgInitOutlet
+		return db_var.TableName.PosCfgInitOutlet
 	} else if DataName == "Tenan" {
-		return DBVar.TableName.PosCfgInitTenan
+		return db_var.TableName.PosCfgInitTenan
 	} else if DataName == "ProductCategory" {
-		return DBVar.TableName.PosCfgInitProductCategory
+		return db_var.TableName.PosCfgInitProductCategory
 	} else if DataName == "ProductGroup" {
-		return DBVar.TableName.PosCfgInitProductGroup
+		return db_var.TableName.PosCfgInitProductGroup
 	} else if DataName == "Product" {
-		return DBVar.TableName.PosCfgInitProduct
+		return db_var.TableName.PosCfgInitProduct
 	} else if DataName == "POSMarket" {
-		return DBVar.TableName.PosCfgInitMarket
+		return db_var.TableName.PosCfgInitMarket
 	} else if DataName == "POSPaymentGroup" {
-		return DBVar.TableName.PosCfgInitPaymentGroup
+		return db_var.TableName.PosCfgInitPaymentGroup
 	} else if DataName == "SpaRoom" {
-		return DBVar.TableName.PosCfgInitSpaRoom
+		return db_var.TableName.PosCfgInitSpaRoom
 	} else if DataName == "Table" {
-		return DBVar.TableName.PosCfgInitTable
+		return db_var.TableName.PosCfgInitTable
 	} else if DataName == "TableType" {
-		return DBVar.TableName.PosCfgInitTableType
+		return db_var.TableName.PosCfgInitTableType
 	} else if DataName == "Waitress" {
-		return DBVar.TableName.PosCfgInitWaitress
+		return db_var.TableName.PosCfgInitWaitress
 	} else if DataName == "Printer" {
-		return DBVar.TableName.CfgInitPrinter
+		return db_var.TableName.CfgInitPrinter
 	} else if DataName == "DiscountLimit" {
-		return DBVar.TableName.PosCfgInitDiscountLimit
+		return db_var.TableName.PosCfgInitDiscountLimit
 		//CAMS MODULE
 	} else if DataName == "ShippingAddress" {
-		return DBVar.TableName.AstCfgInitShippingAddress
+		return db_var.TableName.AstCfgInitShippingAddress
 	} else if DataName == "UOM" {
-		return DBVar.TableName.InvCfgInitUom
+		return db_var.TableName.InvCfgInitUom
 	} else if DataName == "Store" {
-		return DBVar.TableName.InvCfgInitStore
+		return db_var.TableName.InvCfgInitStore
 	} else if DataName == "ItemCategory" {
-		return DBVar.TableName.InvCfgInitItemCategory
+		return db_var.TableName.InvCfgInitItemCategory
 	} else if DataName == "ItemCategoryOtherCOGS" {
-		return DBVar.TableName.InvCfgInitItemCategoryOtherCogs
+		return db_var.TableName.InvCfgInitItemCategoryOtherCogs
 	} else if DataName == "ItemCategoryOtherCOGS2" {
-		return DBVar.TableName.InvCfgInitItemCategoryOtherCogs2
+		return db_var.TableName.InvCfgInitItemCategoryOtherCogs2
 	} else if DataName == "ItemCategoryOtherExpense" {
-		return DBVar.TableName.InvCfgInitItemCategoryOtherExpense
+		return db_var.TableName.InvCfgInitItemCategoryOtherExpense
 	} else if DataName == "Item" {
-		return DBVar.TableName.InvCfgInitItem
+		return db_var.TableName.InvCfgInitItem
 	} else if DataName == "ItemUOM" {
-		return DBVar.TableName.InvCfgInitItem
+		return db_var.TableName.InvCfgInitItem
 	} else if DataName == "ItemGroup" {
-		return DBVar.TableName.InvCfgInitItemGroup
+		return db_var.TableName.InvCfgInitItemGroup
 	} else if DataName == "ReturnStockReason" {
-		return DBVar.TableName.InvCfgInitReturnStockReason
+		return db_var.TableName.InvCfgInitReturnStockReason
 	} else if DataName == "MarketList" {
-		return DBVar.TableName.InvCfgInitMarketList
+		return db_var.TableName.InvCfgInitMarketList
 	} else if DataName == "FAManufacture" {
-		return DBVar.TableName.FaCfgInitManufacture
+		return db_var.TableName.FaCfgInitManufacture
 	} else if DataName == "FALocation" {
-		return DBVar.TableName.FaCfgInitLocation
+		return db_var.TableName.FaCfgInitLocation
 	} else if DataName == "FAItemCategory" {
-		return DBVar.TableName.FaCfgInitItemCategory
+		return db_var.TableName.FaCfgInitItemCategory
 	} else if DataName == "FAItem" {
-		return DBVar.TableName.FaCfgInitItem
+		return db_var.TableName.FaCfgInitItem
 		//Global All Module
 	} else if DataName == "UserGroup" {
-		return DBVar.TableName.UserGroupAccess
+		return db_var.TableName.UserGroupAccess
 	}
 	return ""
 }
@@ -2578,12 +2576,12 @@ func GetMasterDataListP(c *gin.Context) {
 	}
 
 	if err != nil {
-		SendResponse(GlobalVar.ResponseCode.InvalidDataFormat, "", nil, c)
+		SendResponse(global_var.ResponseCode.InvalidDataFormat, "", nil, c)
 	} else {
 		// Get Program Configuration
 		val, exist := c.Get("pConfig")
 		if !exist {
-			SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+			SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 			return
 		}
 		pConfig := val.(*config.CompanyDataConfiguration)
@@ -2619,9 +2617,9 @@ func GetMasterDataListP(c *gin.Context) {
 		}
 
 		if err == nil {
-			SendResponse(GlobalVar.ResponseCode.Successfully, "", DataOutput, c)
+			SendResponse(global_var.ResponseCode.Successfully, "", DataOutput, c)
 		} else {
-			SendResponse(GlobalVar.ResponseCode.DatabaseError, "", nil, c)
+			SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
 		}
 	}
 }
@@ -2641,7 +2639,7 @@ func GetDetailDataListP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
@@ -2727,9 +2725,9 @@ func GetDetailDataListP(c *gin.Context) {
 	}
 
 	if err == nil {
-		SendResponse(GlobalVar.ResponseCode.Successfully, "", DataOutputArray, c)
+		SendResponse(global_var.ResponseCode.Successfully, "", DataOutputArray, c)
 	} else {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
 	}
 }
 
@@ -2749,12 +2747,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 	DB := pConfig.DB
 
 	if DataName == "JournalAccount" {
-		var DataInputX DBVar.Cfg_init_journal_account
+		var DataInputX db_var.Cfg_init_journal_account
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2763,12 +2761,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "JournalAccountSubGroup" {
-		var DataInputX DBVar.Cfg_init_journal_account_sub_group
+		var DataInputX db_var.Cfg_init_journal_account_sub_group
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2777,12 +2775,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "JournalAccountCategory" {
-		var DataInputX DBVar.Cfg_init_journal_account_category
+		var DataInputX db_var.Cfg_init_journal_account_category
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2791,12 +2789,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Department" {
-		var DataInputX DBVar.Cfg_init_department
+		var DataInputX db_var.Cfg_init_department
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2805,12 +2803,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "SubDepartment" {
-		var DataInputX DBVar.Cfg_init_sub_department
+		var DataInputX db_var.Cfg_init_sub_department
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2819,12 +2817,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "TaxAndService" {
-		var DataInputX DBVar.Cfg_init_tax_and_service
+		var DataInputX db_var.Cfg_init_tax_and_service
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2833,12 +2831,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "AccountSubGroup" {
-		var DataInputX DBVar.Cfg_init_account_sub_group
+		var DataInputX db_var.Cfg_init_account_sub_group
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2847,12 +2845,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Account" {
-		var DataInputX DBVar.Cfg_init_account
+		var DataInputX db_var.Cfg_init_account
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2861,30 +2859,30 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "BankAccount" {
-		var DataInputX DBVar.Acc_cfg_init_bank_account
+		var DataInputX db_var.Acc_cfg_init_bank_account
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckData21(c, DB, TableName, "code", "journal_account_code", DataInputX.Code, DataInputX.JournalAccountCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			} else {
 				if CheckData22(c, DB, TableName, "id", "journal_account_code", DataInputX.Id, DataInputX.JournalAccountCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			}
 		}
 	} else if DataName == "CompanyType" {
-		var DataInputX DBVar.Cfg_init_company_type
+		var DataInputX db_var.Cfg_init_company_type
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2893,12 +2891,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Company" {
-		var DataInputX DBVar.Company
+		var DataInputX db_var.Company
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2907,12 +2905,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Currency" {
-		var DataInputX DBVar.Cfg_init_currency
+		var DataInputX db_var.Cfg_init_currency
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2921,18 +2919,18 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "CurrencyNominal" {
-		var DataInputX DBVar.Cfg_init_currency_nominal
+		var DataInputX db_var.Cfg_init_currency_nominal
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			DataInputMarshal, err = json.Marshal(DataInputX)
 		}
 	} else if DataName == "RoomType" {
-		var DataInputX DBVar.Cfg_init_room_type
+		var DataInputX db_var.Cfg_init_room_type
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2941,12 +2939,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "BedType" {
-		var DataInputX DBVar.Cfg_init_bed_type
+		var DataInputX db_var.Cfg_init_bed_type
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2955,12 +2953,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Package" {
-		var DataInputX DBVar.Cfg_init_package
+		var DataInputX db_var.Cfg_init_package
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2969,24 +2967,24 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "PackageBreakdown" {
-		var DataInputX DBVar.Cfg_init_package_breakdown
+		var DataInputX db_var.Cfg_init_package_breakdown
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			DataInputMarshal, err = json.Marshal(DataInputX)
 		}
 	} else if DataName == "PackageBusinessSource" {
-		var DataInputX DBVar.Cfg_init_package_business_source
+		var DataInputX db_var.Cfg_init_package_business_source
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			DataInputMarshal, err = json.Marshal(DataInputX)
 		}
 	} else if DataName == "RoomRateCategory" {
-		var DataInputX DBVar.Cfg_init_room_rate_category
+		var DataInputX db_var.Cfg_init_room_rate_category
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -2995,12 +2993,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "RoomRateSubCategory" {
-		var DataInputX DBVar.Cfg_init_room_rate_sub_category
+		var DataInputX db_var.Cfg_init_room_rate_sub_category
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3009,12 +3007,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "RoomRate" {
-		var DataInputX DBVar.Cfg_init_room_rate
+		var DataInputX db_var.Cfg_init_room_rate
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3023,36 +3021,36 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "RoomRateBreakdown" {
-		var DataInputX DBVar.Cfg_init_room_rate_breakdown
+		var DataInputX db_var.Cfg_init_room_rate_breakdown
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			DataInputMarshal, err = json.Marshal(DataInputX)
 		}
 	} else if DataName == "RoomRateBusinessSource" {
-		var DataInputX DBVar.Cfg_init_room_rate_business_source
+		var DataInputX db_var.Cfg_init_room_rate_business_source
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			DataInputMarshal, err = json.Marshal(DataInputX)
 		}
 	} else if DataName == "RoomRateDynamic" {
-		var DataInputX DBVar.Cfg_init_room_rate_dynamic
+		var DataInputX db_var.Cfg_init_room_rate_dynamic
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			DataInputMarshal, err = json.Marshal(DataInputX)
 		}
 	} else if DataName == "RoomRateCurrency" {
-		var DataInputX DBVar.Cfg_init_room_rate_currency
+		var DataInputX db_var.Cfg_init_room_rate_currency
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			DataInputMarshal, err = json.Marshal(DataInputX)
 		}
 	} else if DataName == "RoomView" {
-		var DataInputX DBVar.Cfg_init_room_view
+		var DataInputX db_var.Cfg_init_room_view
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3061,12 +3059,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "RoomAmenities" {
-		var DataInputX DBVar.Cfg_init_room_amenities
+		var DataInputX db_var.Cfg_init_room_amenities
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3075,12 +3073,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Room" {
-		var DataInputX DBVar.Cfg_init_room
+		var DataInputX db_var.Cfg_init_room
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckNumber(c, DB, TableName, DataInputX.Number) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3089,12 +3087,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "RoomBoy" {
-		var DataInputX DBVar.Cfg_init_room_boy
+		var DataInputX db_var.Cfg_init_room_boy
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3103,12 +3101,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "RoomUnavailableReason" {
-		var DataInputX DBVar.Cfg_init_room_unavailable_reason
+		var DataInputX db_var.Cfg_init_room_unavailable_reason
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3117,12 +3115,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Owner" {
-		var DataInputX DBVar.Cfg_init_owner
+		var DataInputX db_var.Cfg_init_owner
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3131,12 +3129,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Title" {
-		var DataInputX DBVar.Cfg_init_owner
+		var DataInputX db_var.Cfg_init_owner
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3145,12 +3143,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Continent" {
-		var DataInputX DBVar.Cfg_init_continent
+		var DataInputX db_var.Cfg_init_continent
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3159,12 +3157,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Country" {
-		var DataInputX DBVar.Cfg_init_country
+		var DataInputX db_var.Cfg_init_country
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3173,12 +3171,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "State" {
-		var DataInputX DBVar.Cfg_init_state
+		var DataInputX db_var.Cfg_init_state
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3187,12 +3185,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Regency" {
-		var DataInputX DBVar.Cfg_init_regency
+		var DataInputX db_var.Cfg_init_regency
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3201,12 +3199,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "City" {
-		var DataInputX DBVar.Cfg_init_city
+		var DataInputX db_var.Cfg_init_city
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3215,12 +3213,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Nationality" {
-		var DataInputX DBVar.Cfg_init_nationality
+		var DataInputX db_var.Cfg_init_nationality
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3229,12 +3227,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Language" {
-		var DataInputX DBVar.Cfg_init_language
+		var DataInputX db_var.Cfg_init_language
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3243,12 +3241,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "IdCardType" {
-		var DataInputX DBVar.Cfg_init_id_card_type
+		var DataInputX db_var.Cfg_init_id_card_type
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3257,12 +3255,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "PaymentType" {
-		var DataInputX DBVar.Cfg_init_payment_type
+		var DataInputX db_var.Cfg_init_payment_type
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3271,12 +3269,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "MarketCategory" {
-		var DataInputX DBVar.Cfg_init_market_category
+		var DataInputX db_var.Cfg_init_market_category
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3285,12 +3283,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Market" {
-		var DataInputX DBVar.Cfg_init_market
+		var DataInputX db_var.Cfg_init_market
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3299,12 +3297,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "BookingSource" {
-		var DataInputX DBVar.Cfg_init_booking_source
+		var DataInputX db_var.Cfg_init_booking_source
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3313,12 +3311,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "PurposeOf" {
-		var DataInputX DBVar.Cfg_init_purpose_of
+		var DataInputX db_var.Cfg_init_purpose_of
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3327,12 +3325,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "CardBank" {
-		var DataInputX DBVar.Cfg_init_card_bank
+		var DataInputX db_var.Cfg_init_card_bank
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3341,12 +3339,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "CardType" {
-		var DataInputX DBVar.Cfg_init_card_type
+		var DataInputX db_var.Cfg_init_card_type
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3355,12 +3353,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "LoanItem" {
-		var DataInputX DBVar.Cfg_init_loan_item
+		var DataInputX db_var.Cfg_init_loan_item
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3369,30 +3367,30 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "CreditCardCharge" {
-		var DataInputX DBVar.Cfg_init_credit_card_charge
+		var DataInputX db_var.Cfg_init_credit_card_charge
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckData(c, DB, TableName, "account_code", DataInputX.AccountCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			} else {
 				if CheckData22(c, DB, TableName, "id", "account_code", DataInputX.Id, DataInputX.AccountCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			}
 		}
 	} else if DataName == "PhoneBookType" {
-		var DataInputX DBVar.Cfg_init_phone_book_type
+		var DataInputX db_var.Cfg_init_phone_book_type
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3401,12 +3399,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "MemberPointType" {
-		var DataInputX DBVar.Cfg_init_member_point_type
+		var DataInputX db_var.Cfg_init_member_point_type
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3415,12 +3413,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "MemberOutletDiscount" {
-		var DataInputX DBVar.Pos_cfg_init_member_outlet_discount
+		var DataInputX db_var.Pos_cfg_init_member_outlet_discount
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3429,19 +3427,19 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "MemberOutletDiscountDetail" {
-		var DataInputX DBVar.Pos_cfg_init_member_outlet_discount_detail
+		var DataInputX db_var.Pos_cfg_init_member_outlet_discount_detail
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			DataInputMarshal, err = json.Marshal(DataInputX)
 
 		}
 	} else if DataName == "VoucherReason" {
-		var DataInputX DBVar.Cfg_init_voucher_reason
+		var DataInputX db_var.Cfg_init_voucher_reason
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3450,12 +3448,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "CompetitorCategory" {
-		var DataInputX DBVar.Cfg_init_competitor_category
+		var DataInputX db_var.Cfg_init_competitor_category
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3464,12 +3462,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Competitor" {
-		var DataInputX DBVar.Competitor
+		var DataInputX db_var.Competitor
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3478,12 +3476,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Sales" {
-		var DataInputX DBVar.Cfg_init_sales
+		var DataInputX db_var.Cfg_init_sales
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3492,12 +3490,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "SalesSegment" {
-		var DataInputX DBVar.Sal_cfg_init_segment
+		var DataInputX db_var.Sal_cfg_init_segment
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3506,12 +3504,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "SalesSource" {
-		var DataInputX DBVar.Sal_cfg_init_source
+		var DataInputX db_var.Sal_cfg_init_source
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3520,12 +3518,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "SalesTaskAction" {
-		var DataInputX DBVar.Sal_cfg_init_task_action
+		var DataInputX db_var.Sal_cfg_init_task_action
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3534,12 +3532,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "SalesTaskRepeat" {
-		var DataInputX DBVar.Sal_cfg_init_task_repeat
+		var DataInputX db_var.Sal_cfg_init_task_repeat
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3548,12 +3546,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "SalesTaskTag" {
-		var DataInputX DBVar.Sal_cfg_init_task_tag
+		var DataInputX db_var.Sal_cfg_init_task_tag
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3563,12 +3561,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 		}
 		//POS MODULE
 	} else if DataName == "Outlet" {
-		var DataInputX DBVar.Pos_cfg_init_outlet
+		var DataInputX db_var.Pos_cfg_init_outlet
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) || CheckData(c, DB, TableName, "check_prefix", DataInputX.CheckPrefix) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3577,12 +3575,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "ProductCategory" {
-		var DataInputX DBVar.Pos_cfg_init_product_category
+		var DataInputX db_var.Pos_cfg_init_product_category
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3591,12 +3589,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Tenan" {
-		var DataInputX DBVar.Pos_cfg_init_tenan
+		var DataInputX db_var.Pos_cfg_init_tenan
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3605,12 +3603,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "ProductGroup" {
-		var DataInputX DBVar.Pos_cfg_init_product_group
+		var DataInputX db_var.Pos_cfg_init_product_group
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3619,12 +3617,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Product" {
-		var DataInputX DBVar.Pos_cfg_init_product
+		var DataInputX db_var.Pos_cfg_init_product
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3633,12 +3631,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "POSMarket" {
-		var DataInputX DBVar.Pos_cfg_init_market
+		var DataInputX db_var.Pos_cfg_init_market
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3647,12 +3645,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "POSPaymentGroup" {
-		var DataInputX DBVar.Pos_cfg_init_payment_group
+		var DataInputX db_var.Pos_cfg_init_payment_group
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckData(c, DB, TableName, "account_code", DataInputX.AccountCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3661,12 +3659,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "SpaRoom" {
-		var DataInputX DBVar.Pos_cfg_init_spa_room
+		var DataInputX db_var.Pos_cfg_init_spa_room
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckNumber(c, DB, TableName, DataInputX.Number) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3675,12 +3673,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "TableType" {
-		var DataInputX DBVar.Pos_cfg_init_table_type
+		var DataInputX db_var.Pos_cfg_init_table_type
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3689,12 +3687,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Table" {
-		var DataInputX DBVar.Pos_cfg_init_table
+		var DataInputX db_var.Pos_cfg_init_table
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckNumber(c, DB, TableName, DataInputX.Number) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3703,12 +3701,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Waitress" {
-		var DataInputX DBVar.Pos_cfg_init_waitress
+		var DataInputX db_var.Pos_cfg_init_waitress
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3717,12 +3715,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Printer" {
-		var DataInputX DBVar.Cfg_init_printer
+		var DataInputX db_var.Cfg_init_printer
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3731,18 +3729,18 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "DiscountLimit" {
-		var DataInputX DBVar.Pos_cfg_init_discount_limit
+		var DataInputX db_var.Pos_cfg_init_discount_limit
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckData2(c, DB, TableName, "outlet_code", "user_group_code", DataInputX.OutletCode, DataInputX.UserGroupCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			} else {
 				if CheckData31(c, DB, TableName, "id", "outlet_code", "user_group_code", DataInputX.Id, DataInputX.OutletCode, DataInputX.UserGroupCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3750,12 +3748,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 		}
 		//CAMS MODULE
 	} else if DataName == "ShippingAddress" {
-		var DataInputX DBVar.Ast_cfg_init_shipping_address
+		var DataInputX db_var.Ast_cfg_init_shipping_address
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3764,12 +3762,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "UOM" {
-		var DataInputX DBVar.Inv_cfg_init_uom
+		var DataInputX db_var.Inv_cfg_init_uom
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3778,12 +3776,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "Store" {
-		var DataInputX DBVar.Inv_cfg_init_store
+		var DataInputX db_var.Inv_cfg_init_store
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3792,12 +3790,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "ItemCategory" {
-		var DataInputX DBVar.Inv_cfg_init_item_category
+		var DataInputX db_var.Inv_cfg_init_item_category
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3806,66 +3804,66 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "ItemCategoryOtherCOGS" {
-		var DataInputX DBVar.Inv_cfg_init_item_category_other_cogs
+		var DataInputX db_var.Inv_cfg_init_item_category_other_cogs
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckData2(c, DB, TableName, "sub_department_code", "category_code", DataInputX.SubDepartmentCode, DataInputX.CategoryCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			} else {
 				if CheckData31(c, DB, TableName, "id", "sub_department_code", "category_code", DataInputX.Id, DataInputX.SubDepartmentCode, DataInputX.CategoryCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			}
 		}
 	} else if DataName == "ItemCategoryOtherCOGS2" {
-		var DataInputX DBVar.Inv_cfg_init_item_category_other_cogs2
+		var DataInputX db_var.Inv_cfg_init_item_category_other_cogs2
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckData2(c, DB, TableName, "sub_department_code", "category_code", DataInputX.SubDepartmentCode, DataInputX.CategoryCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			} else {
 				if CheckData31(c, DB, TableName, "id", "sub_department_code", "category_code", DataInputX.Id, DataInputX.SubDepartmentCode, DataInputX.CategoryCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			}
 		}
 	} else if DataName == "ItemCategoryOtherExpense" {
-		var DataInputX DBVar.Inv_cfg_init_item_category_other_expense
+		var DataInputX db_var.Inv_cfg_init_item_category_other_expense
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckData2(c, DB, TableName, "sub_department_code", "category_code", DataInputX.SubDepartmentCode, DataInputX.CategoryCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			} else {
 				if CheckData31(c, DB, TableName, "id", "sub_department_code", "category_code", DataInputX.Id, DataInputX.SubDepartmentCode, DataInputX.CategoryCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			}
 		}
 	} else if DataName == "Item" {
-		var DataInputX DBVar.Inv_cfg_init_item
+		var DataInputX db_var.Inv_cfg_init_item
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3874,30 +3872,30 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "ItemUOM" {
-		var DataInputX DBVar.Inv_cfg_init_item_uom
+		var DataInputX db_var.Inv_cfg_init_item_uom
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckData2(c, DB, TableName, "uom_code", "item_code", DataInputX.UomCode, DataInputX.ItemCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			} else {
 				if CheckData31(c, DB, TableName, "id", "uom_code", "item_code", DataInputX.Id, DataInputX.UomCode, DataInputX.ItemCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			}
 		}
 	} else if DataName == "ReturnStockReason" {
-		var DataInputX DBVar.Inv_cfg_init_return_stock_reason
+		var DataInputX db_var.Inv_cfg_init_return_stock_reason
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3906,12 +3904,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "MarketList" {
-		var DataInputX DBVar.Inv_cfg_init_market_list
+		var DataInputX db_var.Inv_cfg_init_market_list
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckData31(c, DB, TableName, "id", "company_code", "item_code", DataInputX.Id, DataInputX.CompanyCode, DataInputX.ItemCode) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3920,12 +3918,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "FAManufacture" {
-		var DataInputX DBVar.Fa_cfg_init_manufacture
+		var DataInputX db_var.Fa_cfg_init_manufacture
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3934,12 +3932,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "FALocation" {
-		var DataInputX DBVar.Fa_cfg_init_location
+		var DataInputX db_var.Fa_cfg_init_location
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3948,12 +3946,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "FAItemCategory" {
-		var DataInputX DBVar.Fa_cfg_init_item_category
+		var DataInputX db_var.Fa_cfg_init_item_category
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3962,12 +3960,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "FAItem" {
-		var DataInputX DBVar.Fa_cfg_init_item
+		var DataInputX db_var.Fa_cfg_init_item
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3976,12 +3974,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "ItemGroup" {
-		var DataInputX DBVar.Inv_cfg_init_item_group
+		var DataInputX db_var.Inv_cfg_init_item_group
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -3990,12 +3988,12 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 			}
 		}
 	} else if DataName == "GuestType" {
-		var DataInputX DBVar.Cfg_init_guest_type
+		var DataInputX db_var.Cfg_init_guest_type
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
-					err = errors.New(GlobalVar.ResponseText.DuplicateEntry)
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
@@ -4024,18 +4022,18 @@ func InsertMasterDataP(c *gin.Context) {
 	if DataName != "" {
 		TableName, DataInput, err := MasterDataValidation(0, c, DataName)
 		if err != nil {
-			if err.Error() == GlobalVar.ResponseText.DuplicateEntry {
-				SendResponse(GlobalVar.ResponseCode.DuplicateEntry, "", nil, c)
+			if err.Error() == global_var.ResponseText.DuplicateEntry {
+				SendResponse(global_var.ResponseCode.DuplicateEntry, "", nil, c)
 			} else {
-				StrError := General.GenerateValidateErrorMsg(c, err)
-				SendResponse(GlobalVar.ResponseCode.InvalidDataFormat, StrError, nil, c)
+				StrError := general.GenerateValidateErrorMsg(c, err)
+				SendResponse(global_var.ResponseCode.InvalidDataFormat, StrError, nil, c)
 			}
 		} else {
 
 			// Get Program Configuration
 			val, exist := c.Get("pConfig")
 			if !exist {
-				SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+				SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 				return
 			}
 			pConfig := val.(*config.CompanyDataConfiguration)
@@ -4047,20 +4045,20 @@ func InsertMasterDataP(c *gin.Context) {
 			var result *gorm.DB
 			if DataName == "Room" {
 				var TotalRoom int64
-				DB.WithContext(ctx).Table(DBVar.TableName.CfgInitRoom).Count(&TotalRoom)
+				DB.WithContext(ctx).Table(db_var.TableName.CfgInitRoom).Count(&TotalRoom)
 
 				if TotalRoom >= pConfig.Rooms {
-					SendResponse(GlobalVar.ResponseCode.OtherResult, "Cannot add more room", nil, c)
+					SendResponse(global_var.ResponseCode.OtherResult, "Cannot add more room", nil, c)
 					return
 				}
 
-				DataInput["start_date"] = General.StrZToDate(DataInput["start_date"].(string))
+				DataInput["start_date"] = general.StrZToDate(DataInput["start_date"].(string))
 				result = DB.WithContext(ctx).Table(TableName).Omit("status_code", "block_status_code", "temp_status_code", "remark", "pos_x", "pos_y", "width", "height", "created_at", "updated_at", "id").Create(&DataInput)
 			} else if DataName == "SpaRoom" {
 				result = DB.WithContext(ctx).Table(TableName).Omit("left", "top", "width", "height", "created_at", "updated_at", "id").Create(&DataInput)
 			} else if DataName == "Table" {
-				width := pConfig.Dataset.Configuration[GlobalVar.ConfigurationCategoryPOS.TableView][GlobalVar.ConfigurationNamePOS.MinRoomWidth].(string)
-				height := pConfig.Dataset.Configuration[GlobalVar.ConfigurationCategoryPOS.TableView][GlobalVar.ConfigurationNamePOS.MinRoomHeight].(string)
+				width := pConfig.Dataset.Configuration[global_var.ConfigurationCategoryPOS.TableView][global_var.ConfigurationNamePOS.MinRoomWidth].(string)
+				height := pConfig.Dataset.Configuration[global_var.ConfigurationCategoryPOS.TableView][global_var.ConfigurationNamePOS.MinRoomHeight].(string)
 
 				DataInput["width"] = width
 				DataInput["height"] = height
@@ -4068,16 +4066,16 @@ func InsertMasterDataP(c *gin.Context) {
 
 				result = DB.WithContext(ctx).Table(TableName).Omit("left", "top", "created_at", "updated_at", "id").Create(&DataInput)
 			} else if DataName == "RoomRate" {
-				DataInput["cm_start_date"] = General.StrZToDate(DataInput["cm_start_date"].(string))
-				DataInput["cm_end_date"] = General.StrZToDate(DataInput["cm_end_date"].(string))
-				DataInput["from_date"] = General.StrZToDate(DataInput["from_date"].(string))
-				DataInput["to_date"] = General.StrZToDate(DataInput["to_date"].(string))
+				DataInput["cm_start_date"] = general.StrZToDate(DataInput["cm_start_date"].(string))
+				DataInput["cm_end_date"] = general.StrZToDate(DataInput["cm_end_date"].(string))
+				DataInput["from_date"] = general.StrZToDate(DataInput["from_date"].(string))
+				DataInput["to_date"] = general.StrZToDate(DataInput["to_date"].(string))
 				result = DB.WithContext(ctx).Table(TableName).Omit("is_cm_updated", "is_cm_updated_inclusion", "is_sent", "created_at", "updated_at", "id").Create(&DataInput)
 			} else if DataName == "Product" {
 				result = DB.WithContext(ctx).Table(TableName).Omit("is_sold", "created_at", "updated_at", "id").Create(&DataInput)
 			} else if DataName == "MemberOutletDiscountDetail" {
 				if DataInput["discount_percent"].(float64) > 100 || DataInput["discount_percent"].(float64) < 0 {
-					SendResponse(GlobalVar.ResponseCode.InvalidDataFormat, "Invalid discount value", nil, c)
+					SendResponse(global_var.ResponseCode.InvalidDataFormat, "Invalid discount value", nil, c)
 					return
 				}
 
@@ -4088,7 +4086,7 @@ func InsertMasterDataP(c *gin.Context) {
 					Limit(1).
 					Scan(&ID).Error; err != nil {
 					// utils.LogResponseError(c, ctx, global_var.AppLogger, errors.Wrap(err, "ProcessMemberProductDiscountP.query"))
-					SendResponse(GlobalVar.ResponseCode.DatabaseError, "", nil, c)
+					SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
 					return
 				}
 
@@ -4100,25 +4098,25 @@ func InsertMasterDataP(c *gin.Context) {
 						Omit("created_at, created_by,product_code,outlet_code, member_outlet_discount_code,id, updated_at").
 						Updates(&DataInput).Error; err != nil {
 						// utils.LogResponseError(c, ctx, global_var.AppLogger, errors.Wrap(err, "ProcessMemberProductDiscountP.UpdatePosCfgInitMemberProductDiscount"))
-						SendResponse(GlobalVar.ResponseCode.DatabaseError, "", nil, c)
+						SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
 						return
 					}
 				} else {
 					if err := DB.WithContext(ctx).Table(TableName).Omit("created_at,updated_at,id").Create(&DataInput).Error; err != nil {
 						// utils.LogResponseError(c, ctx, global_var.AppLogger, errors.Wrap(err, "ProcessMemberProductDiscountP.InsertPosCfgInitMemberProductDiscount"))
-						SendResponse(GlobalVar.ResponseCode.DatabaseError, "", nil, c)
+						SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
 						return
 					}
 				}
-				SendResponse(GlobalVar.ResponseCode.Successfully, "", nil, c)
+				SendResponse(global_var.ResponseCode.Successfully, "", nil, c)
 				return
 			} else {
 				result = DB.WithContext(ctx).Table(TableName).Omit("created_at", "updated_at", "id").Create(&DataInput)
 			}
 			if result.Error == nil {
-				SendResponse(GlobalVar.ResponseCode.Successfully, "", nil, c)
+				SendResponse(global_var.ResponseCode.Successfully, "", nil, c)
 			} else {
-				SendResponse(GlobalVar.ResponseCode.DatabaseError, "", nil, c)
+				SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
 			}
 		}
 	}
@@ -4134,7 +4132,7 @@ func GetMasterDataP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
@@ -4154,9 +4152,9 @@ func GetMasterDataP(c *gin.Context) {
 		result = DB.Table(TableName).Where("code=?", Param).Scan(&DataOutput)
 	}
 	if result.Error == nil {
-		SendResponse(GlobalVar.ResponseCode.Successfully, "", DataOutput, c)
+		SendResponse(global_var.ResponseCode.Successfully, "", DataOutput, c)
 	} else {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
 	}
 }
 
@@ -4166,7 +4164,7 @@ func UpdateMasterDataP(c *gin.Context) {
 		// Get Program Configuration
 		val, exist := c.Get("pConfig")
 		if !exist {
-			SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+			SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 			return
 		}
 		pConfig := val.(*config.CompanyDataConfiguration)
@@ -4185,49 +4183,49 @@ func UpdateMasterDataP(c *gin.Context) {
 		}
 		TableName, DataInput, err := MasterDataValidation(1, c, DataName)
 		if err != nil {
-			if err.Error() == GlobalVar.ResponseText.DuplicateEntry {
-				SendResponse(GlobalVar.ResponseCode.DuplicateEntry, "", nil, c)
+			if err.Error() == global_var.ResponseText.DuplicateEntry {
+				SendResponse(global_var.ResponseCode.DuplicateEntry, "", nil, c)
 			} else {
-				StrError := General.GenerateValidateErrorMsg(c, err)
-				SendResponse(GlobalVar.ResponseCode.InvalidDataFormat, StrError, nil, c)
+				StrError := general.GenerateValidateErrorMsg(c, err)
+				SendResponse(global_var.ResponseCode.InvalidDataFormat, StrError, nil, c)
 			}
 		} else {
 			ValidUserCode := c.GetString("ValidUserCode")
 			DataInput["updated_by"] = ValidUserCode
 			var result *gorm.DB
 			if DataName == "Room" {
-				DataInput["start_date"] = General.StrZToDate(DataInput["start_date"].(string))
+				DataInput["start_date"] = general.StrZToDate(DataInput["start_date"].(string))
 				result = DB.Table(TableName).Where(KeyField+"=?", DataInput[KeyField]).Omit(KeyField, "status_code", "block_status_code", "temp_status_code", "remark", "pos_x", "pos_y", "width", "height", "created_at", "created_by", "updated_at", "id").Updates(&DataInput)
 			} else if DataName == "SpaRoom" {
 				result = DB.Table(TableName).Where(KeyField+"=?", DataInput[KeyField]).Omit(KeyField, "left", "top", "width", "height", "created_at", "created_by", "updated_at", "id").Updates(&DataInput)
 			} else if DataName == "Table" {
 				result = DB.Table(TableName).Where(KeyField+"=?", DataInput[KeyField]).Omit(KeyField, "start_date", "left", "top", "width", "height", "created_at", "created_by", "updated_at", "id").Updates(&DataInput)
 			} else if DataName == "RoomRate" {
-				DataInput["cm_start_date"] = General.StrZToDate(DataInput["cm_start_date"].(string))
-				DataInput["cm_end_date"] = General.StrZToDate(DataInput["cm_end_date"].(string))
-				DataInput["from_date"] = General.StrZToDate(DataInput["from_date"].(string))
-				DataInput["to_date"] = General.StrZToDate(DataInput["to_date"].(string))
+				DataInput["cm_start_date"] = general.StrZToDate(DataInput["cm_start_date"].(string))
+				DataInput["cm_end_date"] = general.StrZToDate(DataInput["cm_end_date"].(string))
+				DataInput["from_date"] = general.StrZToDate(DataInput["from_date"].(string))
+				DataInput["to_date"] = general.StrZToDate(DataInput["to_date"].(string))
 				result = DB.Table(TableName).Where(KeyField+"=?", DataInput[KeyField]).Omit(KeyField, "is_cm_updated", "is_cm_updated_inclusion", "is_sent", "created_at", "created_by", "updated_at", "id").Updates(&DataInput)
 			} else if (DataName == "PackageBreakdown") || (DataName == "PackageBusinessSource") {
-				result = DB.Table(TableName).Where(KeyField+"=?", General.InterfaceToUint64(DataInput[KeyField])).Omit("package_code", "created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
+				result = DB.Table(TableName).Where(KeyField+"=?", general.InterfaceToUint64(DataInput[KeyField])).Omit("package_code", "created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
 			} else if (DataName == "RoomRateBreakdown") || (DataName == "RoomRateBusinessSource") || (DataName == "RoomRateDynamic") || (DataName == "RoomRateCurrency") {
-				result = DB.Table(TableName).Where(KeyField+"=?", General.InterfaceToUint64(DataInput[KeyField])).Omit("room_rate_code", "created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
+				result = DB.Table(TableName).Where(KeyField+"=?", general.InterfaceToUint64(DataInput[KeyField])).Omit("room_rate_code", "created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
 			} else if DataName == "CurrencyNominal" {
-				result = DB.Table(TableName).Where(KeyField+"=?", General.InterfaceToUint64(DataInput[KeyField])).Omit("package_code", "created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
+				result = DB.Table(TableName).Where(KeyField+"=?", general.InterfaceToUint64(DataInput[KeyField])).Omit("package_code", "created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
 			} else if DataName == "Outlet" {
 				result = DB.Table(TableName).Where(KeyField+"=?", DataInput[KeyField]).Omit("check_prefix", "created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
 			} else if DataName == "Product" {
 				result = DB.Table(TableName).Where(KeyField+"=?", DataInput[KeyField]).Omit("is_sold", "created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
 			} else if (DataName == "ItemCategoryOtherCOGS") || (DataName == "ItemCategoryOtherCOGS2") || (DataName == "ItemCategoryOtherExpense") || (DataName == "ItemUOM") {
-				result = DB.Table(TableName).Where(KeyField+"=?", General.InterfaceToUint64(DataInput[KeyField])).Omit("created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
+				result = DB.Table(TableName).Where(KeyField+"=?", general.InterfaceToUint64(DataInput[KeyField])).Omit("created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
 			} else {
 				result = DB.Table(TableName).Where(KeyField+"=?", DataInput[KeyField]).Omit(KeyField, "created_at", "created_by", "updated_at", "id").Updates(&DataInput)
 			}
 
 			if result.Error == nil {
-				SendResponse(GlobalVar.ResponseCode.Successfully, "", nil, c)
+				SendResponse(global_var.ResponseCode.Successfully, "", nil, c)
 			} else {
-				SendResponse(GlobalVar.ResponseCode.DatabaseError, "", nil, c)
+				SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
 			}
 		}
 	}
@@ -4241,7 +4239,7 @@ func DeleteMasterDataP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
@@ -4270,9 +4268,9 @@ func DeleteMasterDataP(c *gin.Context) {
 		return nil
 	})
 	if err == nil {
-		SendResponse(GlobalVar.ResponseCode.Successfully, "", nil, c)
+		SendResponse(global_var.ResponseCode.Successfully, "", nil, c)
 	} else {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
 	}
 }
 
@@ -4280,68 +4278,68 @@ func DeleteMasterDataP(c *gin.Context) {
 
 func GetMasterDataCodeName(DB *gorm.DB, TableName, Condition string, c *gin.Context) {
 	Result, StrValue := ValidateRequestString(c)
-	if Result != GlobalVar.ResponseCode.Successfully {
+	if Result != global_var.ResponseCode.Successfully {
 		SendResponse(Result, "", nil, c)
 	} else {
-		var GeneralCodeName DBVar.GeneralCodeNameStruct
+		var GeneralCodeName db_var.GeneralCodeNameStruct
 		if Condition == "" {
 			DB.Table(TableName).Select("code", "name").Where(Condition+" = ?", StrValue).First(&GeneralCodeName)
 		} else {
 			DB.Table(TableName).Select("code", "name").First(&GeneralCodeName)
 		}
-		SendResponse(GlobalVar.ResponseCode.Successfully, "", GeneralCodeName, c)
+		SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeName, c)
 	}
 }
 
 func GetMasterDataCodeNameList(DB *gorm.DB, TableName, Condition string, c *gin.Context) {
 	// Result, StrValue := ValidateRequestString(c)
 	StrValue := c.Param("Code")
-	// if Result != GlobalVar.ResponseCode.Successfully {
+	// if Result != global_var.ResponseCode.Successfully {
 	// 	SendResponse(Result, "", nil, c)
 	// } else {
-	var GeneralCodeName []DBVar.GeneralCodeNameStruct
+	var GeneralCodeName []db_var.GeneralCodeNameStruct
 	if Condition == "" {
 		DB.Table(TableName).Select("code", "name").Scan(&GeneralCodeName)
 	} else {
 		DB.Table(TableName).Select("code", "name").Where(Condition+" = ?", StrValue).Scan(&GeneralCodeName)
 	}
-	SendResponse(GlobalVar.ResponseCode.Successfully, "", GeneralCodeName, c)
+	SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeName, c)
 	// }
 }
 
 func GetMasterDataCodeNameQuery(DB *gorm.DB, SQLQuery string, WithCondition bool, c *gin.Context) {
 	Result, StrValue := ValidateRequestString(c)
-	if Result != GlobalVar.ResponseCode.Successfully {
+	if Result != global_var.ResponseCode.Successfully {
 		SendResponse(Result, "", nil, c)
 	} else {
-		var GeneralCodeName DBVar.GeneralCodeNameStruct
+		var GeneralCodeName db_var.GeneralCodeNameStruct
 		if WithCondition {
 			DB.Raw(SQLQuery, StrValue).First(&GeneralCodeName)
 		} else {
 			DB.Raw(SQLQuery).First(&GeneralCodeName)
 		}
-		SendResponse(GlobalVar.ResponseCode.Successfully, "", GeneralCodeName, c)
+		SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeName, c)
 	}
 }
 
 func GetMasterDataCodeNameListQuery(DB *gorm.DB, SQLQuery string, WithCondition bool, c *gin.Context) {
 	Result, StrValue := ValidateRequestString(c)
-	if Result != GlobalVar.ResponseCode.Successfully {
+	if Result != global_var.ResponseCode.Successfully {
 		SendResponse(Result, "", nil, c)
 	} else {
-		var GeneralCodeName []DBVar.GeneralCodeNameStruct
+		var GeneralCodeName []db_var.GeneralCodeNameStruct
 		if WithCondition {
 			DB.Raw(SQLQuery, StrValue).Scan(&GeneralCodeName)
 		} else {
 			DB.Raw(SQLQuery).Scan(&GeneralCodeName)
 		}
-		SendResponse(GlobalVar.ResponseCode.Successfully, "", GeneralCodeName, c)
+		SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeName, c)
 	}
 }
 
-func GetBusinessSourceCodeNameList(DB *gorm.DB) []DBVar.GeneralCodeNameStruct {
-	var GeneralCodeName []DBVar.GeneralCodeNameStruct
-	DB.Table(DBVar.TableName.Company).Where("is_business_source = ?", 1).Find(&GeneralCodeName)
+func GetBusinessSourceCodeNameList(DB *gorm.DB) []db_var.GeneralCodeNameStruct {
+	var GeneralCodeName []db_var.GeneralCodeNameStruct
+	DB.Table(db_var.TableName.Company).Where("is_business_source = ?", 1).Find(&GeneralCodeName)
 	return GeneralCodeName
 }
 
@@ -4349,7 +4347,7 @@ func GetBedTypeByRoomTypeP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
@@ -4370,7 +4368,7 @@ func GetBedTypeByRoomNumberP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
@@ -4392,7 +4390,7 @@ func GetStateByCountryP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
@@ -4402,7 +4400,7 @@ func GetStateByCountryP(c *gin.Context) {
 			" WHERE (country_code=?) "+
 			"ORDER BY name;", Code, "", "", "", "", 1)
 
-	SendResponse(GlobalVar.ResponseCode.Successfully, "", GeneralCodeName, c)
+	SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeName, c)
 }
 
 func GetCityByStateP(c *gin.Context) {
@@ -4410,7 +4408,7 @@ func GetCityByStateP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
@@ -4418,69 +4416,69 @@ func GetCityByStateP(c *gin.Context) {
 	GeneralCodeName := GetGeneralCodeNameQuery(DB,
 		"SELECT code, name FROM cfg_init_city"+
 			" WHERE (state_code=? OR code =?) "+
-			"ORDER BY name;", Code, GlobalVar.ConstProgramVariable.CityOtherCode, "", "", "", 2)
+			"ORDER BY name;", Code, global_var.ConstProgramVariable.CityOtherCode, "", "", "", 2)
 
-	SendResponse(GlobalVar.ResponseCode.Successfully, "", GeneralCodeName, c)
+	SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeName, c)
 }
 
 // func GetReservationComboListP(c *gin.Context) {
-// 	var ReservationComboList DBVar.ReservationComboListStruct
-// 	GeneralCodeName := GetGeneralCodeName(DB,DBVar.TableName.CfgInitRoomType, "")
+// 	var ReservationComboList db_var.ReservationComboListStruct
+// 	GeneralCodeName := GetGeneralCodeName(DB,db_var.TableName.CfgInitRoomType, "")
 // 	ReservationComboList.RoomType = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitCurrency, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitCurrency, "")
 // 	ReservationComboList.Currency = GeneralCodeName
 // 	GeneralCodeName = GetBusinessSourceCodeNameList()
 // 	ReservationComboList.BusinessSource = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.ConstCommissionType, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.ConstCommissionType, "")
 // 	ReservationComboList.CommissionType = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitMarket, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitMarket, "")
 // 	ReservationComboList.Market = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitBookingSource, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitBookingSource, "")
 // 	ReservationComboList.BookingSource = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitPaymentType, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitPaymentType, "")
 // 	ReservationComboList.PaymentType = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.Member, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.Member, "")
 // 	ReservationComboList.Member = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitTitle, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitTitle, "")
 // 	ReservationComboList.Title = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitCountry, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitCountry, "")
 // 	ReservationComboList.Country = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitNationality, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitNationality, "")
 // 	ReservationComboList.Nationality = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.Company, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.Company, "")
 // 	ReservationComboList.Company = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitGuestType, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitGuestType, "")
 // 	ReservationComboList.GuestType = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitIdCardType, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitIdCardType, "")
 // 	ReservationComboList.CardType = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitPurposeOf, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitPurposeOf, "")
 // 	ReservationComboList.PurposeOf = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.GuestGroup, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.GuestGroup, "")
 // 	ReservationComboList.GuestGroup = GeneralCodeName
-// 	GeneralCodeName = GetGeneralCodeName(DB,DBVar.TableName.CfgInitSales, "")
+// 	GeneralCodeName = GetGeneralCodeName(DB,db_var.TableName.CfgInitSales, "")
 // 	ReservationComboList.Sales = GeneralCodeName
 
-// 	SendResponse(GlobalVar.ResponseCode.Successfully, "", ReservationComboList, c)
+// 	SendResponse(global_var.ResponseCode.Successfully, "", ReservationComboList, c)
 // }
 
 func GetReservationDepositComboListP(c *gin.Context) {
-	var ReservationDepositComboList DBVar.ReservationDepositComboListStruct
+	var ReservationDepositComboList db_var.ReservationDepositComboListStruct
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
-	GeneralCodeName := GetGeneralCodeName(DB, DBVar.TableName.CfgInitCurrency, "")
+	GeneralCodeName := GetGeneralCodeName(DB, db_var.TableName.CfgInitCurrency, "")
 	ReservationDepositComboList.Currency = GeneralCodeName
-	GeneralCodeName = GetGeneralCodeName(DB, DBVar.TableName.SubFolioGroup, "")
+	GeneralCodeName = GetGeneralCodeName(DB, db_var.TableName.SubFolioGroup, "")
 	ReservationDepositComboList.SubFolioGroup = GeneralCodeName
-	GeneralCodeName = GetGeneralCodeName(DB, DBVar.TableName.CfgInitSubDepartment, "")
+	GeneralCodeName = GetGeneralCodeName(DB, db_var.TableName.CfgInitSubDepartment, "")
 	ReservationDepositComboList.SubDepartment = GeneralCodeName
 
-	SendResponse(GlobalVar.ResponseCode.Successfully, "", ReservationDepositComboList, c)
+	SendResponse(global_var.ResponseCode.Successfully, "", ReservationDepositComboList, c)
 }
 
 func GetAccountCodeFromCurrency(c *gin.Context, DB *gorm.DB, CurrencyCode string) string {
@@ -4533,8 +4531,8 @@ func GetAccountBySubDepartmentTransactionEditor(c *gin.Context, DB *gorm.DB, Mod
 				"FROM" +
 				" cfg_init_account" +
 				" LEFT OUTER JOIN cfg_init_account_sub_group ON (cfg_init_account.sub_group_code = cfg_init_account_sub_group.code)" +
-				" WHERE cfg_init_account_sub_group.group_code='" + GlobalVar.GlobalAccountGroup.Charge + "'" +
-				" AND cfg_init_account.sub_group_code<>'" + GlobalVar.GlobalAccountSubGroup.AccountPayable + "'" +
+				" WHERE cfg_init_account_sub_group.group_code='" + global_var.GlobalAccountGroup.Charge + "'" +
+				" AND cfg_init_account.sub_group_code<>'" + global_var.GlobalAccountSubGroup.AccountPayable + "'" +
 				" AND cfg_init_account.sub_department_code LIKE '%" + SubDepartmentCode + "%' " +
 				"ORDER BY cfg_init_account.code;").Scan(&DataOutput)
 	} else if (ModeEditor == 1) || (ModeEditor == 6) {
@@ -4545,11 +4543,11 @@ func GetAccountBySubDepartmentTransactionEditor(c *gin.Context, DB *gorm.DB, Mod
 		// 	"FROM" +
 		// 	" cfg_init_account" +
 		// 	" LEFT OUTER JOIN cfg_init_account_sub_group ON (cfg_init_account.sub_group_code = cfg_init_account_sub_group.code)" +
-		// 	" WHERE cfg_init_account_sub_group.group_code='" + GlobalVar.GlobalAccountGroup.Payment + "'" +
-		// 	" AND cfg_init_account.sub_group_code<>'" + GlobalVar.GlobalAccountSubGroup.Payment + "'" +
-		// 	" AND cfg_init_account.sub_group_code<>'" + GlobalVar.GlobalAccountSubGroup.CreditDebitCard + "'" +
-		// 	" AND cfg_init_account.sub_group_code<>'" + GlobalVar.GlobalAccountSubGroup.AccountReceivable + "'" +
-		// 	" AND cfg_init_account.sub_group_code<>'" + GlobalVar.GlobalAccountSubGroup.Compliment + "'" +
+		// 	" WHERE cfg_init_account_sub_group.group_code='" + global_var.GlobalAccountGroup.Payment + "'" +
+		// 	" AND cfg_init_account.sub_group_code<>'" + global_var.GlobalAccountSubGroup.Payment + "'" +
+		// 	" AND cfg_init_account.sub_group_code<>'" + global_var.GlobalAccountSubGroup.CreditDebitCard + "'" +
+		// 	" AND cfg_init_account.sub_group_code<>'" + global_var.GlobalAccountSubGroup.AccountReceivable + "'" +
+		// 	" AND cfg_init_account.sub_group_code<>'" + global_var.GlobalAccountSubGroup.Compliment + "'" +
 		// 	" AND cfg_init_account.sub_department_code LIKE '%" + SubDepartmentCode + "%' " +
 		// 	"ORDER BY cfg_init_account.code;"
 		// // SaveTextToFile(S, "C:/Temp/A.txt")
@@ -4561,11 +4559,11 @@ func GetAccountBySubDepartmentTransactionEditor(c *gin.Context, DB *gorm.DB, Mod
 				"FROM" +
 				" cfg_init_account" +
 				" LEFT OUTER JOIN cfg_init_account_sub_group ON (cfg_init_account.sub_group_code = cfg_init_account_sub_group.code)" +
-				" WHERE cfg_init_account_sub_group.group_code='" + GlobalVar.GlobalAccountGroup.Payment + "'" +
-				" AND cfg_init_account.sub_group_code<>'" + GlobalVar.GlobalAccountSubGroup.Payment + "'" +
-				" AND cfg_init_account.sub_group_code<>'" + GlobalVar.GlobalAccountSubGroup.CreditDebitCard + "'" +
-				" AND cfg_init_account.sub_group_code<>'" + GlobalVar.GlobalAccountSubGroup.AccountReceivable + "'" +
-				" AND cfg_init_account.sub_group_code<>'" + GlobalVar.GlobalAccountSubGroup.Compliment + "'" +
+				" WHERE cfg_init_account_sub_group.group_code='" + global_var.GlobalAccountGroup.Payment + "'" +
+				" AND cfg_init_account.sub_group_code<>'" + global_var.GlobalAccountSubGroup.Payment + "'" +
+				" AND cfg_init_account.sub_group_code<>'" + global_var.GlobalAccountSubGroup.CreditDebitCard + "'" +
+				" AND cfg_init_account.sub_group_code<>'" + global_var.GlobalAccountSubGroup.AccountReceivable + "'" +
+				" AND cfg_init_account.sub_group_code<>'" + global_var.GlobalAccountSubGroup.Compliment + "'" +
 				" AND cfg_init_account.sub_department_code LIKE '%" + SubDepartmentCode + "%' " +
 				"ORDER BY cfg_init_account.code;").Scan(&DataOutput)
 
@@ -4589,19 +4587,19 @@ func GetAccountBySubDepartmentTransactionEditor(c *gin.Context, DB *gorm.DB, Mod
 	} else if (ModeEditor == 3) || (ModeEditor == 8) {
 		DB.Raw(
 			"SELECT code, name, sub_folio_group_code FROM cfg_init_account" +
-				" WHERE sub_group_code='" + GlobalVar.GlobalAccountSubGroup.CreditDebitCard + "'" +
+				" WHERE sub_group_code='" + global_var.GlobalAccountSubGroup.CreditDebitCard + "'" +
 				" AND sub_department_code LIKE '%" + SubDepartmentCode + "%' " +
 				"ORDER BY code;").Scan(&DataOutput)
 	} else if ModeEditor == 5 {
 		DB.Raw(
 			"SELECT code, name, sub_folio_group_code FROM cfg_init_account" +
-				" WHERE sub_group_code='" + GlobalVar.GlobalAccountSubGroup.AccountReceivable + "'" +
+				" WHERE sub_group_code='" + global_var.GlobalAccountSubGroup.AccountReceivable + "'" +
 				" AND sub_department_code LIKE '%" + SubDepartmentCode + "%' " +
 				"ORDER BY code;").Scan(&DataOutput)
 	} else if ModeEditor == 10 {
 		DB.Raw(
 			"SELECT code, name, sub_folio_group_code FROM cfg_init_account" +
-				" WHERE sub_group_code='" + GlobalVar.GlobalAccountSubGroup.AccountPayable + "'" +
+				" WHERE sub_group_code='" + global_var.GlobalAccountSubGroup.AccountPayable + "'" +
 				" AND sub_department_code LIKE '%" + SubDepartmentCode + "%' " +
 				"ORDER BY code;").Scan(&DataOutput)
 
@@ -4619,19 +4617,19 @@ func GetAccountBySubDepartmentTransactionEditorP(c *gin.Context) {
 	var DataInput DataInputStruct
 	err := c.Bind(&DataInput)
 	if err != nil {
-		SendResponse(GlobalVar.ResponseCode.InvalidDataFormat, "", nil, c)
+		SendResponse(global_var.ResponseCode.InvalidDataFormat, "", nil, c)
 	} else {
 		// Get Program Configuration
 		val, exist := c.Get("pConfig")
 		if !exist {
-			SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+			SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 			return
 		}
 		pConfig := val.(*config.CompanyDataConfiguration)
 		DB := pConfig.DB
 
 		GeneralCodeName := GetAccountBySubDepartmentTransactionEditor(c, DB, DataInput.ModeEditor, DataInput.CurrencyCode, DataInput.SubDepartmentCode)
-		SendResponse(GlobalVar.ResponseCode.Successfully, "", GeneralCodeName, c)
+		SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeName, c)
 	}
 }
 
@@ -4640,7 +4638,7 @@ func GetAccountSubGroupByAccountCode1P(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
@@ -4648,37 +4646,37 @@ func GetAccountSubGroupByAccountCode1P(c *gin.Context) {
 
 	err := c.Bind(&AccountCode)
 	if err != nil {
-		SendResponse(GlobalVar.ResponseCode.InvalidDataFormat, "", nil, c)
+		SendResponse(global_var.ResponseCode.InvalidDataFormat, "", nil, c)
 	} else {
 		var SubGroupCode string
-		DB.Table(DBVar.TableName.CfgInitAccount).Select("sub_group_code").Where("code = ?", AccountCode).Find(&SubGroupCode)
-		SendResponse(GlobalVar.ResponseCode.Successfully, "", SubGroupCode, c)
+		DB.Table(db_var.TableName.CfgInitAccount).Select("sub_group_code").Where("code = ?", AccountCode).Find(&SubGroupCode)
+		SendResponse(global_var.ResponseCode.Successfully, "", SubGroupCode, c)
 	}
 }
 
 func GetReservationDepositCardComboListP(c *gin.Context) {
-	var ReservationDepositCardComboList DBVar.ReservationDepositCardComboListStruct
+	var ReservationDepositCardComboList db_var.ReservationDepositCardComboListStruct
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
 
-	GeneralCodeName := GetGeneralCodeName(DB, DBVar.TableName.CfgInitCurrency, "")
+	GeneralCodeName := GetGeneralCodeName(DB, db_var.TableName.CfgInitCurrency, "")
 	ReservationDepositCardComboList.Currency = GeneralCodeName
-	GeneralCodeName = GetGeneralCodeName(DB, DBVar.TableName.SubFolioGroup, "")
+	GeneralCodeName = GetGeneralCodeName(DB, db_var.TableName.SubFolioGroup, "")
 	ReservationDepositCardComboList.SubFolioGroup = GeneralCodeName
-	GeneralCodeName = GetGeneralCodeName(DB, DBVar.TableName.CfgInitSubDepartment, "")
+	GeneralCodeName = GetGeneralCodeName(DB, db_var.TableName.CfgInitSubDepartment, "")
 	ReservationDepositCardComboList.SubDepartment = GeneralCodeName
-	GeneralCodeName = GetGeneralCodeName(DB, DBVar.TableName.CfgInitCardBank, "")
+	GeneralCodeName = GetGeneralCodeName(DB, db_var.TableName.CfgInitCardBank, "")
 	ReservationDepositCardComboList.CardBank = GeneralCodeName
-	GeneralCodeName = GetGeneralCodeName(DB, DBVar.TableName.CfgInitCardType, "")
+	GeneralCodeName = GetGeneralCodeName(DB, db_var.TableName.CfgInitCardType, "")
 	ReservationDepositCardComboList.CardType = GeneralCodeName
 
-	SendResponse(GlobalVar.ResponseCode.Successfully, "", ReservationDepositCardComboList, c)
+	SendResponse(global_var.ResponseCode.Successfully, "", ReservationDepositCardComboList, c)
 }
 
 func GetInvCostingMethod(c *gin.Context) (CostingMethod string) {
@@ -4686,11 +4684,11 @@ func GetInvCostingMethod(c *gin.Context) (CostingMethod string) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
-	CostingMethod = pConfig.Dataset.Configuration[GlobalVar.ConfigurationCategory.Inventory][GlobalVar.ConfigurationName.CostingMethod].(string)
+	CostingMethod = pConfig.Dataset.Configuration[global_var.ConfigurationCategory.Inventory][global_var.ConfigurationName.CostingMethod].(string)
 	return
 }
 
@@ -4703,29 +4701,29 @@ func GetBusinessSourceCommissionRateP(c *gin.Context) {
 	err := c.BindQuery(&DataInput)
 	if err != nil {
 		//fmt.Println(err.Error())
-		errMsg := General.GenerateValidateErrorMsg(c, err)
-		SendResponse(GlobalVar.ResponseCode.InvalidDataFormat, errMsg, nil, c)
+		errMsg := general.GenerateValidateErrorMsg(c, err)
+		SendResponse(global_var.ResponseCode.InvalidDataFormat, errMsg, nil, c)
 		return
 	}
 
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
 
 	var DataOutput map[string]interface{}
-	if err := DB.Table(DBVar.TableName.CfgInitRoomRateBusinessSource).Select("commission_type_code, commission_value").
+	if err := DB.Table(db_var.TableName.CfgInitRoomRateBusinessSource).Select("commission_type_code, commission_value").
 		Where("room_rate_code=?", DataInput.RoomRateCode).
 		Where("company_code=?", DataInput.BusinessSourceCode).
 		Limit(1).
 		Scan(&DataOutput).Error; err != nil {
-		SendResponse(GlobalVar.ResponseCode.DatabaseError, "", "", c)
+		SendResponse(global_var.ResponseCode.DatabaseError, "", "", c)
 		return
 	}
 
-	SendResponse(GlobalVar.ResponseCode.Successfully, "", DataOutput, c)
+	SendResponse(global_var.ResponseCode.Successfully, "", DataOutput, c)
 }

@@ -2,12 +2,12 @@
 package logger
 
 import (
-	"chs_cloud_general/config"
 	"context"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/cakramediadata2022/chs_cloud_general/config"
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

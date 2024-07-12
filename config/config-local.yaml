@@ -16,6 +16,7 @@ server:
   BaseURL: http://localhost:3000
   Domain: localhost
   PublicPath: "D:/CODING/_Cakrasoft/Web/chs_cloud_frontend/public"
+  SecretPath: "D:/CODING/SSH/key"
   MultiDatabase: true
 
 discord:
@@ -100,6 +101,10 @@ jaeger:
   LogSpans: true
   SamplerRatio: 1
   LogQuery: true
+
+tada:
+  Host: localhost:9001
+  ServiceName: TADA_SERVICE
 #aws:
 #  Endpoint: play.min.io
 #  MinioAccessKey: Q3AM3UQ867SPQQA43P2F

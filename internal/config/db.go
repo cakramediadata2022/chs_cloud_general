@@ -1,17 +1,17 @@
 package config
 
 import (
-	"chs_cloud_general/config"
-	"chs_cloud_general/internal/general"
-	"chs_cloud_general/internal/global_var"
-	"chs_cloud_general/internal/init/dataset"
-	"chs_cloud_general/internal/utils/cache"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 
+	"github.com/cakramediadata2022/chs_cloud_general/config"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/general"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/init/dataset"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/utils/cache"
 	"github.com/gin-gonic/gin"
 	"github.com/uptrace/opentelemetry-go-extra/otelgorm"
 	"github.com/uptrace/opentelemetry-go-extra/otelzap"
@@ -321,8 +321,8 @@ func (p *TDBPool) GetConnection(Hostname string, CompanyCode string) (*CompanyDa
 	// Retrieve the database name for the company
 	var DatabaseName string
 	query := mainDB.Table("company").Select("database_name").
-		Joins("LEFT JOIN company_database ON company.company_id = company_database.company_id").
-		Joins("LEFT JOIN subscription ON company.company_id = subscription.company_id")
+		Joins("INNER JOIN company_database ON company.company_id = company_database.company_id").
+		Joins("INNER JOIN subscription ON company.company_id = subscription.company_id")
 		// Where("subscription.start_date<=NOW()").
 		// Where("subscription.end_date>NOW()")
 
@@ -331,6 +331,8 @@ func (p *TDBPool) GetConnection(Hostname string, CompanyCode string) (*CompanyDa
 	} else if Hostname != "" {
 		query.Where("company.subdomain=?", Hostname).
 			Or("company.domain=?", Hostname)
+	} else {
+		return nil, errors.New("company code/ hostname not found")
 	}
 	if err := query.Take(&DatabaseName).Error; err != nil {
 		return nil, err

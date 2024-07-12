@@ -16,6 +16,7 @@ server:
   BaseURL: https://cakrasoft.net
   Domain: cakrasoft.net
   PublicPath: "/public"
+  SecretPath: "./"
   BackupPath: "/backup"
   MultiDatabase: true
 

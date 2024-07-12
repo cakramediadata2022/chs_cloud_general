@@ -1,12 +1,12 @@
 package discord
 
 import (
-	"chs_cloud_general/config"
 	"context"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/cakramediadata2022/chs_cloud_general/config"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
@@ -18,8 +18,8 @@ import (
 )
 
 var mainConfig *config.Config
-var token = "MTA5NTk1NTE0MTcyMDU1MTQ2NQ.GcH-6f.B3RVj5mOrliwQKB82HNuYFpCE0CTWJ_y6tB3s4"
-var webhookClient = webhook.New(snowflake.ID(1095914000157515836), "NdPUiF2oRvXUx5lct-TXLVhc3Ee8lCRWfK5u4AUFPytSqF8ws3gjcObt3lMPDWKTgJDb",
+var token = ""
+var webhookClient = webhook.New(snowflake.ID(1095914000157515836), "",
 	// webhook.WithLogger(logrus.New()),
 	webhook.WithDefaultAllowedMentions(discord.AllowedMentions{
 		RepliedUser: false,

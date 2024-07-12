@@ -1,11 +1,11 @@
 package websocket
 
 import (
-	"chs_cloud_general/internal/global_var"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )

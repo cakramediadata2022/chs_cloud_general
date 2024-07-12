@@ -16,6 +16,7 @@ server:
   BaseURL: https://cakrasoft.net
   Domain: cakrasoft.net
   PublicPath: "/public"
+  SecretPath: "/secret/key"
   BackupPath: "/backup"
   MultiDatabase: true
 
@@ -96,11 +97,15 @@ aws:
   MinioEndpoint: http://127.0.0.1:9000
 
 jaeger:
-  Host: jaeger_container:4731
+  Host: jaeger_container:4317
   ServiceName: PMS_REST_API
   LogSpans: true
   SamplerRatio: .5
   LogQuery: false
+
+tada:
+  Host: http://209.97.160.250:8001
+  ServiceName: TADA_SERVICE
 #aws:
 #  Endpoint: play.min.io
 #  MinioAccessKey: Q3AM3UQ867SPQQA43P2F

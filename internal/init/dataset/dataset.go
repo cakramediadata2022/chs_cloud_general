@@ -1,11 +1,11 @@
 package dataset
 
 import (
-	"chs_cloud_general/internal/db_var"
-	"chs_cloud_general/internal/general"
-	"chs_cloud_general/internal/global_var"
 	"fmt"
 
+	"github.com/cakramediadata2022/chs_cloud_general/internal/db_var"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/general"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
 	"gorm.io/gorm"
 )
 

@@ -1,15 +1,11 @@
 package global_query
 
 import (
-	"chs_cloud_general/internal/config"
-	"chs_cloud_general/internal/db_var"
-	DBVar "chs_cloud_general/internal/db_var"
-	General "chs_cloud_general/internal/general"
-	"chs_cloud_general/internal/global_var"
-	GlobalVar "chs_cloud_general/internal/global_var"
-	MasterData "chs_cloud_general/internal/master_data"
-	"chs_cloud_general/internal/utils/cache"
-	"chs_cloud_general/internal/utils/websocket"
+	// "chs_cloud_general/internal/config"
+	// "chs_cloud_general/internal/db_var"
+	// "chs_cloud_general/internal/global_var"
+	// "chs_cloud_general/internal/utils/cache"
+	// "chs_cloud_general/internal/utils/websocket"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -22,6 +18,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cakramediadata2022/chs_cloud_general/internal/config"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/db_var"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/general"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/master_data"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/utils/cache"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/utils/websocket"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -56,7 +59,7 @@ func IsAuthorized(Token string) string {
 			if _, ok := TokenCheck.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("Check Token Error")
 			}
-			return GlobalVar.SigningKey, nil
+			return global_var.SigningKey, nil
 		})
 
 		if Err == nil {
@@ -85,16 +88,16 @@ func GetAuditDate(c *gin.Context, DB *gorm.DB, Reload bool) time.Time {
 	CompanyCode := pConfig.CompanyCode
 	DateX, err := cache.DataCache.GetString(c, CompanyCode, "AUDIT_DATE")
 	if err != nil || Reload {
-		Date := MasterData.GetFieldTimeQuery(DB,
+		Date := master_data.GetFieldTimeQuery(DB,
 			"SELECT audit_date FROM audit_log "+
 				"ORDER BY id DESC "+
 				"LIMIT 1")
 
 		cache.DataCache.Set(c, CompanyCode, "AUDIT_DATE", Date, 6*time.Hour)
-		return General.DateOf(Date)
+		return general.DateOf(Date)
 	}
 
-	return General.StrZToDate(DateX)
+	return general.StrZToDate(DateX)
 
 }
 
@@ -102,33 +105,33 @@ func GetAuditDateP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		MasterData.SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		master_data.SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
 	AuditDate := GetAuditDate(c, DB, false)
-	MasterData.SendResponse(GlobalVar.ResponseCode.Successfully, "", AuditDate, c)
+	master_data.SendResponse(global_var.ResponseCode.Successfully, "", AuditDate, c)
 }
 
 func GetServerDateTime(c *gin.Context, DB *gorm.DB) time.Time {
-	return MasterData.GetFieldTimeQuery(DB, "SELECT NOW() AS DateServer;")
+	return master_data.GetFieldTimeQuery(DB, "SELECT NOW() AS DateServer;")
 }
 
 func GetServerDateTimeP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		MasterData.SendResponse(GlobalVar.ResponseCode.DatabaseError, "pConfig", nil, c)
+		master_data.SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
-	MasterData.SendResponse(GlobalVar.ResponseCode.Successfully, "", GetServerDateTime(c, DB), c)
+	master_data.SendResponse(global_var.ResponseCode.Successfully, "", GetServerDateTime(c, DB), c)
 }
 
 func GetServerDate(c *gin.Context, DB *gorm.DB) time.Time {
-	return MasterData.GetFieldTimeQuery(DB, "SELECT DATE(NOW()) AS DateServer;")
+	return master_data.GetFieldTimeQuery(DB, "SELECT DATE(NOW()) AS DateServer;")
 }
 
 func GetServerID(DB *gorm.DB) int {
@@ -141,12 +144,12 @@ func GetServerDateP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		MasterData.SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
+		master_data.SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
-	MasterData.SendResponse(GlobalVar.ResponseCode.Successfully, "", GetServerDate(c, DB), c)
+	master_data.SendResponse(global_var.ResponseCode.Successfully, "", GetServerDate(c, DB), c)
 }
 
 func IsDiscountLimit(c *gin.Context, DB *gorm.DB, UserID string, RateOriginal, RateOverride float64) bool {
@@ -156,7 +159,7 @@ func IsDiscountLimit(c *gin.Context, DB *gorm.DB, UserID string, RateOriginal, R
 		DiscountPercent = (DiscountAmount) / RateOriginal * 100
 	}
 	var Code string
-	if err := DB.Table(DBVar.TableName.User).Select("IFNULL(user_group_access.code,'') AS Code").
+	if err := DB.Table(db_var.TableName.User).Select("IFNULL(user_group_access.code,'') AS Code").
 		Joins("INNER JOIN user_group_access ON (user.user_group_access_code = user_group_access.code)").
 		Joins("INNER JOIN user_group ON (user_group_access.user_group_id = user_group.id)").
 		Where("user.code=?", UserID).
@@ -172,7 +175,7 @@ func IsDiscountLimit(c *gin.Context, DB *gorm.DB, UserID string, RateOriginal, R
 
 func GetReservationStatusCode(DB *gorm.DB, ReservationNumber uint64) string {
 	Status := ""
-	DB.Table(DBVar.TableName.Reservation).Select("status_code").Where("number = ?", ReservationNumber).Take(&Status)
+	DB.Table(db_var.TableName.Reservation).Select("status_code").Where("number = ?", ReservationNumber).Take(&Status)
 
 	return Status
 }
@@ -188,7 +191,7 @@ func GetAvailableRoomCountByType(DB *gorm.DB, ArrivalDate, DepartureDate time.Ti
 	FieldCountFolio := ""
 	FieldCountUnavailable := ""
 	FieldCountAllotment := ""
-	CountDay := General.DaysBetween(ArrivalDate, DepartureDate)
+	CountDay := general.DaysBetween(ArrivalDate, DepartureDate)
 	if CountDay <= 0 {
 		FieldCountRoomTotal = " SUM(IFNULL(A.RoomCount, 0)) AS AvailableRoomCount1 "
 		FieldCountRoom = " COUNT(number) AS RoomCount "
@@ -202,7 +205,7 @@ func GetAvailableRoomCountByType(DB *gorm.DB, ArrivalDate, DepartureDate time.Ti
 		}
 	} else {
 		for Count := 1; Count <= CountDay; Count++ {
-			CurrentDateStr := General.FormatDate1(General.IncDay(ArrivalDate, Count-1))
+			CurrentDateStr := general.FormatDate1(general.IncDay(ArrivalDate, Count-1))
 			CountString := strconv.Itoa(Count)
 			FieldCountRoomTotal = FieldCountRoomTotal + " SUM(IFNULL(A.RoomCount" + CountString + ", 0)) AS AvailableRoomCount" + CountString
 			FieldCountRoom = FieldCountRoom + " COUNT(number) AS RoomCount" + CountString
@@ -258,14 +261,14 @@ func GetAvailableRoomCountByType(DB *gorm.DB, ArrivalDate, DepartureDate time.Ti
 	}
 
 	//Allotment Only
-	QueryCondition1 = QueryCondition1 + " AND reservation.is_from_allotment='" + General.BoolToUint8String(AllotmentOnly) + "'"
+	QueryCondition1 = QueryCondition1 + " AND reservation.is_from_allotment='" + general.BoolToUint8String(AllotmentOnly) + "'"
 	QueryNot := ""
 	QueryRoom := ""
 	QueryRoomUnavailable := ""
 	QueryRoomAllotment := ""
 	//TODO optimize query, not using prepare statement
 	if AllotmentOnly {
-		QueryCondition2A = QueryCondition2A + " AND folio.is_from_allotment='" + General.BoolToUint8String(AllotmentOnly) + "'"
+		QueryCondition2A = QueryCondition2A + " AND folio.is_from_allotment='" + general.BoolToUint8String(AllotmentOnly) + "'"
 		QueryRoomAllotment =
 			" WHERE DATE(room_allotment.from_date)<='" + ArrivalDateStr + "'" +
 				" AND ADDDATE(DATE(room_allotment.to_date), INTERVAL 1 DAY)>='" + DepartureDateStr + "'"
@@ -315,7 +318,7 @@ func GetAvailableRoomCountByType(DB *gorm.DB, ArrivalDate, DepartureDate time.Ti
 			" reservation" +
 			" LEFT OUTER JOIN guest_detail ON (reservation.guest_detail_id = guest_detail.id)" +
 			" LEFT OUTER JOIN cfg_init_room ON (guest_detail.room_number = cfg_init_room.number)" +
-			" WHERE reservation.status_code='" + GlobalVar.ReservationStatus.New + "'" +
+			" WHERE reservation.status_code='" + global_var.ReservationStatus.New + "'" +
 			" AND guest_detail.room_type_code='" + RoomTypeCode + "'" +
 			QueryCondition4x +
 			" AND DATE(guest_detail.arrival)<'" + DepartureDateStr + "'" +
@@ -329,8 +332,8 @@ func GetAvailableRoomCountByType(DB *gorm.DB, ArrivalDate, DepartureDate time.Ti
 			" folio" +
 			" LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)" +
 			" LEFT OUTER JOIN cfg_init_room ON (guest_detail.room_number = cfg_init_room.number)" +
-			" WHERE folio.status_code='" + GlobalVar.FolioStatus.Open + "'" +
-			" AND folio.type_code='" + GlobalVar.FolioType.GuestFolio + "'" +
+			" WHERE folio.status_code='" + global_var.FolioStatus.Open + "'" +
+			" AND folio.type_code='" + global_var.FolioType.GuestFolio + "'" +
 			" AND guest_detail.room_type_code='" + RoomTypeCode + "'" +
 			QueryCondition4 +
 			" AND DATE(guest_detail.arrival)<'" + DepartureDateStr + "'" +
@@ -356,11 +359,11 @@ func GetAvailableRoomCountByType(DB *gorm.DB, ArrivalDate, DepartureDate time.Ti
 		return 0, nil
 	}
 	var AvailableRoomCount int64
-	AvailableRoomCount = General.StrToInt64(AvailableRoomCountArray[0]["AvailableRoomCount1"].(string))
+	AvailableRoomCount = general.StrToInt64(AvailableRoomCountArray[0]["AvailableRoomCount1"].(string))
 	if CountDay > 1 {
 		for _, roomCount := range AvailableRoomCountArray {
 			for count := range roomCount {
-				var countX = General.StrToInt64(roomCount[count].(string))
+				var countX = general.StrToInt64(roomCount[count].(string))
 				if AvailableRoomCount > countX {
 					AvailableRoomCount = countX
 				}
@@ -374,14 +377,14 @@ func GetAvailableRoomCountByType(DB *gorm.DB, ArrivalDate, DepartureDate time.Ti
 		if err := DB.Raw(
 			"SELECT COUNT(number) AS AvailableRoomCountReady FROM cfg_init_room" +
 				" WHERE room_type_code='" + RoomTypeCode + "'" +
-				" AND status_code='" + GlobalVar.RoomStatus.Ready + "'" +
+				" AND status_code='" + global_var.RoomStatus.Ready + "'" +
 				QueryCondition4 + " " +
 				"AND number NOT IN(SELECT" +
 				" guest_detail.room_number " +
 				"FROM" +
 				" reservation" +
 				" LEFT OUTER JOIN guest_detail ON (reservation.guest_detail_id = guest_detail.id)" +
-				" WHERE reservation.status_code='" + GlobalVar.ReservationStatus.New + "'" +
+				" WHERE reservation.status_code='" + global_var.ReservationStatus.New + "'" +
 				" AND guest_detail.room_type_code='" + RoomTypeCode + "'" +
 				" AND guest_detail.room_number<>''" +
 				" AND DATE(guest_detail.arrival)<'" + DepartureDateStr + "'" +
@@ -392,8 +395,8 @@ func GetAvailableRoomCountByType(DB *gorm.DB, ArrivalDate, DepartureDate time.Ti
 				"FROM" +
 				" folio" +
 				" LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)" +
-				" WHERE folio.status_code='" + GlobalVar.FolioStatus.Open + "'" +
-				" AND folio.type_code='" + GlobalVar.FolioType.GuestFolio + "'" +
+				" WHERE folio.status_code='" + global_var.FolioStatus.Open + "'" +
+				" AND folio.type_code='" + global_var.FolioType.GuestFolio + "'" +
 				" AND guest_detail.room_type_code='" + RoomTypeCode + "'" +
 				" AND DATE(guest_detail.arrival)<'" + DepartureDateStr + "'" +
 				" AND DATE(guest_detail.departure)>'" + ArrivalDateStr + "'" +
@@ -433,7 +436,7 @@ func GetAvailableRoomCountByType(DB *gorm.DB, ArrivalDate, DepartureDate time.Ti
 	return Result, nil
 }
 
-func GetAvailableRoomByType(DB *gorm.DB, Dataset *GlobalVar.TDataset, ArrivalDate, DepartureDate time.Time, RoomTypeCode, BedTypeCode string, ReservationNumber, FolioNumber, RoomUnavailableID, RoomAllotmentID uint64, ReadyOnly, AllotmentOnly bool) []RoomNumberListStruct {
+func GetAvailableRoomByType(DB *gorm.DB, Dataset *global_var.TDataset, ArrivalDate, DepartureDate time.Time, RoomTypeCode, BedTypeCode string, ReservationNumber, FolioNumber, RoomUnavailableID, RoomAllotmentID uint64, ReadyOnly, AllotmentOnly bool) []RoomNumberListStruct {
 	ArrivalDateStr := ArrivalDate.Format("2006-01-02")
 	DepartureDateStr := DepartureDate.Format("2006-01-02")
 
@@ -470,7 +473,7 @@ func GetAvailableRoomByType(DB *gorm.DB, Dataset *GlobalVar.TDataset, ArrivalDat
 
 	QueryCondition5 := ""
 	if ReadyOnly {
-		QueryCondition5 = "status_code='" + GlobalVar.RoomStatus.Ready + "' AND "
+		QueryCondition5 = "status_code='" + global_var.RoomStatus.Ready + "' AND "
 	}
 
 	//Allotment Only
@@ -509,7 +512,7 @@ func GetAvailableRoomByType(DB *gorm.DB, Dataset *GlobalVar.TDataset, ArrivalDat
 			"FROM" +
 			" reservation" +
 			" LEFT OUTER JOIN guest_detail ON (reservation.guest_detail_id = guest_detail.id)" +
-			" WHERE reservation.status_code='" + GlobalVar.ReservationStatus.New + "'" +
+			" WHERE reservation.status_code='" + global_var.ReservationStatus.New + "'" +
 			QueryConditionRoomType2 +
 			" AND guest_detail.room_number<>''" +
 			" AND DATE(guest_detail.arrival)<'" + DepartureDateStr + "'" +
@@ -520,8 +523,8 @@ func GetAvailableRoomByType(DB *gorm.DB, Dataset *GlobalVar.TDataset, ArrivalDat
 			"FROM" +
 			" folio" +
 			" LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)" +
-			" WHERE folio.status_code='" + GlobalVar.FolioStatus.Open + "'" +
-			" AND folio.type_code='" + GlobalVar.FolioType.GuestFolio + "'" +
+			" WHERE folio.status_code='" + global_var.FolioStatus.Open + "'" +
+			" AND folio.type_code='" + global_var.FolioType.GuestFolio + "'" +
 			QueryConditionRoomType2 +
 			" AND DATE(guest_detail.arrival)<'" + DepartureDateStr + "'" +
 			" AND DATE(guest_detail.departure)>'" + ArrivalDateStr + "'" +
@@ -558,7 +561,7 @@ func GetAvailableRoomByType(DB *gorm.DB, Dataset *GlobalVar.TDataset, ArrivalDat
 
 func GetRoomRate(DB *gorm.DB, Dataset *global_var.TDataset, RoomTypeCode, BusinessSourceCode, MarketCode, CompanyCode, ArrivalDate string) []map[string]interface{} {
 	var DataArray []map[string]interface{}
-	ArrivalDateStr := General.FormatDate1(General.StrZToDate(ArrivalDate))
+	ArrivalDateStr := general.FormatDate1(general.StrZToDate(ArrivalDate))
 	if RoomTypeCode == "" || ArrivalDate == "" {
 		DB.Raw(
 			"SELECT code, name, weekday_rate1, weekend_rate1 " +
@@ -637,7 +640,7 @@ func GetRoomRate(DB *gorm.DB, Dataset *global_var.TDataset, RoomTypeCode, Busine
 	return DataArray
 }
 
-func GetRoomRateAmount(ctx context.Context, DB *gorm.DB, Dataset *GlobalVar.TDataset, RoomRateCode, PostingDateStr string, Adult, Child int, IsWeekend bool) float64 {
+func GetRoomRateAmount(ctx context.Context, DB *gorm.DB, Dataset *global_var.TDataset, RoomRateCode, PostingDateStr string, Adult, Child int, IsWeekend bool) float64 {
 	ctx, span := global_var.Tracer.Start(ctx, "GetRoomRateAmount")
 	defer span.End()
 
@@ -702,7 +705,7 @@ func GetRoomRateAmount(ctx context.Context, DB *gorm.DB, Dataset *GlobalVar.TDat
 		//If Null Date
 		if PostingDateStr != "" {
 			PostingDate, _ := time.Parse("2006-01-02", PostingDateStr)
-			IsWeekend = General.IsWeekend(PostingDate, Dataset)
+			IsWeekend = general.IsWeekend(PostingDate, Dataset)
 		}
 
 		if IsWeekend {
@@ -784,8 +787,8 @@ func GetRoomRateAmount(ctx context.Context, DB *gorm.DB, Dataset *GlobalVar.TDat
 	return Rate
 }
 
-func CopyGuestProfileToContactPerson(GuestProfileData DBVar.Guest_profile) DBVar.Contact_person {
-	var ContactPersonData DBVar.Contact_person
+func CopyGuestProfileToContactPerson(GuestProfileData db_var.Guest_profile) db_var.Contact_person {
+	var ContactPersonData db_var.Contact_person
 	ContactPersonData.TitleCode = &GuestProfileData.TitleCode
 	ContactPersonData.FullName = &GuestProfileData.FullName
 	ContactPersonData.Street = &GuestProfileData.Street
@@ -838,8 +841,8 @@ func CopyGuestProfileToContactPerson(GuestProfileData DBVar.Guest_profile) DBVar
 	return ContactPersonData
 }
 
-func SaveGuestProfileContactPerson(Db *gorm.DB, ValidUserCode string, GuestProfileData DBVar.Guest_profile, ContactPersonId, GuestProfileId uint64) (uint64, uint64, error) {
-	GuestProfileData.TypeCode = GlobalVar.CPType.Guest
+func SaveGuestProfileContactPerson(Db *gorm.DB, ValidUserCode string, GuestProfileData db_var.Guest_profile, ContactPersonId, GuestProfileId uint64) (uint64, uint64, error) {
+	GuestProfileData.TypeCode = global_var.CPType.Guest
 	GuestProfileData.UpdatedBy = ValidUserCode
 	GuestProfileData.CreatedBy = ValidUserCode
 	ContactPersonData := CopyGuestProfileToContactPerson(GuestProfileData)
@@ -871,11 +874,11 @@ func SaveGuestProfileContactPerson(Db *gorm.DB, ValidUserCode string, GuestProfi
 		// 	GuestProfileData.CustomLookupFieldCode04,GuestProfileData.CustomLookupFieldCode05,GuestProfileData.CustomLookupFieldCode06,GuestProfileData.CustomLookupFieldCode07,GuestProfileData.CustomLookupFieldCode08,
 		// 	GuestProfileData.CustomLookupFieldCode09,GuestProfileData.CustomLookupFieldCode10,GuestProfileData.CustomLookupFieldCode11,GuestProfileData.CustomLookupFieldCode12,1,0,GuestProfileData.CustomerCode,GuestProfileData.Source,ValidUserCode)
 
-		err := Db.Table(DBVar.TableName.GuestProfile).Omit(OmitX, OmitSource).Save(&GuestProfileData).Error
+		err := Db.Table(db_var.TableName.GuestProfile).Omit(OmitX, OmitSource).Save(&GuestProfileData).Error
 		if err != nil {
 			return 0, 0, err
 		}
-		err = Db.Table(DBVar.TableName.ContactPerson).Omit(OmitY).Save(&ContactPersonData).Error
+		err = Db.Table(db_var.TableName.ContactPerson).Omit(OmitY).Save(&ContactPersonData).Error
 		if err != nil {
 			return 0, 0, err
 		}
@@ -892,20 +895,20 @@ func SaveGuestProfileContactPerson(Db *gorm.DB, ValidUserCode string, GuestProfi
 // 	var DataInput DataInputStruct
 // 	err := c.BindJSON(&DataInput)
 // 	if err != nil {
-// 		MasterData.SendResponse(GlobalVar.ResponseCode.InvalidDataFormat, "", nil, c)
+// 		master_data.SendResponse(global_var.ResponseCode.InvalidDataFormat, "", nil, c)
 // 	} else {
 // 		var FolioTransfer []string
 // 		var IsFolioAutoTransferAccount bool
-// 		DB.Table(DBVar.TableName.FolioRouting).Select("folio_transfer").Where("folio_number = ? AND account_code = ?", DataInput.FolioNumber, DataInput.AccountCode).Find(&FolioTransfer)
+// 		DB.Table(db_var.TableName.FolioRouting).Select("folio_transfer").Where("folio_number = ? AND account_code = ?", DataInput.FolioNumber, DataInput.AccountCode).Find(&FolioTransfer)
 // 		IsFolioAutoTransferAccount = len(FolioTransfer) > 0
-// 		MasterData.SendResponse(GlobalVar.ResponseCode.Successfully, "", IsFolioAutoTransferAccount, c)
+// 		master_data.SendResponse(global_var.ResponseCode.Successfully, "", IsFolioAutoTransferAccount, c)
 // 	}
 // }
 
 func GetDefaultCurrencyCode(DB *gorm.DB) string {
 	Result := ""
 	var Code []string
-	DB.Table(DBVar.TableName.CfgInitCurrency).Select("code").Where("is_default = ?", 1).Find(&Code)
+	DB.Table(db_var.TableName.CfgInitCurrency).Select("code").Where("is_default = ?", 1).Find(&Code)
 
 	if len(Code) > 0 {
 		Result = Code[0]
@@ -916,13 +919,13 @@ func GetDefaultCurrencyCode(DB *gorm.DB) string {
 }
 
 func GetExchangeRateCurrency(DB *gorm.DB, CurrencyCode string) float64 {
-	return MasterData.GetFieldFloat(DB, DBVar.TableName.CfgInitCurrency, "exchange_rate", "code", CurrencyCode, 1)
+	return master_data.GetFieldFloat(DB, db_var.TableName.CfgInitCurrency, "exchange_rate", "code", CurrencyCode, 1)
 }
 
 func GetGuestDepositCorrectionBreakDown(DB *gorm.DB) uint64 {
 	var Result uint64 = 1
 	var CorrectionBreakdown []uint64
-	DB.Table(DBVar.TableName.GuestDeposit).Select("correction_breakdown").Order("correction_breakdown desc").Limit(1).Find(&CorrectionBreakdown)
+	DB.Table(db_var.TableName.GuestDeposit).Select("correction_breakdown").Order("correction_breakdown desc").Limit(1).Find(&CorrectionBreakdown)
 
 	if len(CorrectionBreakdown) > 0 {
 		Result = CorrectionBreakdown[0] + 1
@@ -932,18 +935,18 @@ func GetGuestDepositCorrectionBreakDown(DB *gorm.DB) uint64 {
 }
 
 func GetAccountSubGroupCode(DB *gorm.DB, AccountCode string) string {
-	return MasterData.GetFieldString(DB, DBVar.TableName.CfgInitAccount, "sub_group_code", "code", AccountCode, "")
+	return master_data.GetFieldString(DB, db_var.TableName.CfgInitAccount, "sub_group_code", "code", AccountCode, "")
 }
 
 func GetTotalDepositReservation(DB *gorm.DB, ReservationNumber uint64) float64 {
-	return MasterData.GetFieldFloatQuery(DB,
+	return master_data.GetFieldFloatQuery(DB,
 		"SELECT"+
 			" SUM(IF(type_code='C', amount, -amount)) AS TotalDeposit "+
 			"FROM"+
 			" guest_deposit"+
 			" WHERE reservation_number=?"+
 			" AND void='0'"+
-			" AND system_code='"+GlobalVar.ConstProgramVariable.DefaultSystemCode+"' "+
+			" AND system_code='"+global_var.ConstProgramVariable.DefaultSystemCode+"' "+
 			"GROUP BY reservation_number", 0, ReservationNumber)
 }
 
@@ -955,20 +958,20 @@ func UpdateReservationRoomNumber(c *gin.Context, DB *gorm.DB, GuestDetailID uint
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	if pConfig.Dataset.ProgramConfiguration.IsRoomByName {
-		RoomNumber = MasterData.GetFieldString(DB, DBVar.TableName.CfgInitRoom, "number", "name", RoomNumber, "")
+		RoomNumber = master_data.GetFieldString(DB, db_var.TableName.CfgInitRoom, "number", "name", RoomNumber, "")
 	}
-	// if MasterData.GetConfigurationBool(DB, GlobalVar.SystemCode.Hotel, GlobalVar.ConfigurationCategory.General, GlobalVar.ConfigurationName.IsRoomByName, false) {
-	// 	RoomNumber = MasterData.GetFieldString(DBVar.TableName.CfgInitRoom, "number", "name", RoomNumber, "")
+	// if master_data.GetConfigurationBool(DB, global_var.SystemCode.Hotel, global_var.ConfigurationCategory.General, global_var.ConfigurationName.IsRoomByName, false) {
+	// 	RoomNumber = master_data.GetFieldString(db_var.TableName.CfgInitRoom, "number", "name", RoomNumber, "")
 	// }
 
-	DB.Table(DBVar.TableName.GuestDetail).Select("room_number", "updated_by").Where("id = ?", GuestDetailID).Updates(&map[string]interface{}{
+	DB.Table(db_var.TableName.GuestDetail).Select("room_number", "updated_by").Where("id = ?", GuestDetailID).Updates(&map[string]interface{}{
 		"room_number": RoomNumber,
 		"updated_by":  UpdatedBy,
 	})
 	return RoomNumber
 }
 
-func AssignRoom(c *gin.Context, DB *gorm.DB, Dataset *GlobalVar.TDataset, ReservationNumber uint64, BedTypeCode string, ReadyOnly bool, UpdatedBy string) string {
+func AssignRoom(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset, ReservationNumber uint64, BedTypeCode string, ReadyOnly bool, UpdatedBy string) string {
 	var RoomNumber string
 	var DataOutput map[string]interface{}
 	DB.Raw(
@@ -985,14 +988,14 @@ func AssignRoom(c *gin.Context, DB *gorm.DB, Dataset *GlobalVar.TDataset, Reserv
 			" WHERE reservation.number=?"+
 			" AND reservation.status_code=?"+
 			" AND guest_detail.room_number='' "+
-			"ORDER BY guest_detail.room_number", ReservationNumber, GlobalVar.ReservationStatus.New).Find(&DataOutput)
+			"ORDER BY guest_detail.room_number", ReservationNumber, global_var.ReservationStatus.New).Find(&DataOutput)
 
 	if len(DataOutput) > 0 {
-		RoomList := GetAvailableRoomByType(DB, Dataset, (DataOutput["DateArrival"].(time.Time)), (DataOutput["DateDeparture"].(time.Time)), DataOutput["room_type_code"].(string), BedTypeCode, 0, 0, 0, 0, ReadyOnly, General.InterfaceToBool(DataOutput["is_from_allotment"]))
+		RoomList := GetAvailableRoomByType(DB, Dataset, (DataOutput["DateArrival"].(time.Time)), (DataOutput["DateDeparture"].(time.Time)), DataOutput["room_type_code"].(string), BedTypeCode, 0, 0, 0, 0, ReadyOnly, general.InterfaceToBool(DataOutput["is_from_allotment"]))
 		if len(RoomList) > 0 {
 			RoomNumber = RoomList[0].RoomNumber
 			if RoomNumber != "" {
-				UpdateReservationRoomNumber(c, DB, General.InterfaceToUint64(DataOutput["id"]), RoomNumber, UpdatedBy)
+				UpdateReservationRoomNumber(c, DB, general.InterfaceToUint64(DataOutput["id"]), RoomNumber, UpdatedBy)
 				return RoomNumber
 			}
 		}
@@ -1007,10 +1010,10 @@ func GetBasicTaxService(DB *gorm.DB, AccountCode, TaxAndServiceCodeManual string
 	var IsTaxIncluded, IsServiceIncluded bool
 	isDebug := false
 
-	GroupCode := MasterData.GetAccountField(DB, "group_code", "cfg_init_account.code", AccountCode)
-	if GroupCode == GlobalVar.GlobalAccountGroup.Charge {
+	GroupCode := master_data.GetAccountField(DB, "group_code", "cfg_init_account.code", AccountCode)
+	if GroupCode == global_var.GlobalAccountGroup.Charge {
 		if TaxAndServiceCodeManual == "" {
-			TaxServiceCode = MasterData.GetAccountField(DB, "tax_and_service_code", "cfg_init_account.code", AccountCode)
+			TaxServiceCode = master_data.GetAccountField(DB, "tax_and_service_code", "cfg_init_account.code", AccountCode)
 		} else {
 			TaxServiceCode = TaxAndServiceCodeManual
 		}
@@ -1018,18 +1021,18 @@ func GetBasicTaxService(DB *gorm.DB, AccountCode, TaxAndServiceCodeManual string
 			fmt.Println("txCode", TaxServiceCode)
 		}
 		if TaxServiceCode != "" {
-			var TaxAndServiceData DBVar.Cfg_init_tax_and_service
-			DB.Table(DBVar.TableName.CfgInitTaxAndService).Where("code", TaxServiceCode).Limit(1).Scan(&TaxAndServiceData)
+			var TaxAndServiceData db_var.Cfg_init_tax_and_service
+			DB.Table(db_var.TableName.CfgInitTaxAndService).Where("code", TaxServiceCode).Limit(1).Scan(&TaxAndServiceData)
 
-			TaxPercent = TaxAndServiceData.Tax                         //MasterData.GetFieldFloat(DB, DBVar.TableName.CfgInitTaxAndService, "tax", "code", TaxServiceCode, 0)
-			ServicePercent = TaxAndServiceData.Service                 // MasterData.GetFieldFloat(DB, DBVar.TableName.CfgInitTaxAndService, "service", "code", TaxServiceCode, 0)
-			ServiceTaxPercent = TaxAndServiceData.ServiceTax           //MasterData.GetFieldFloat(DB, DBVar.TableName.CfgInitTaxAndService, "service_tax", "code", TaxServiceCode, 0)
-			IsTaxIncluded = TaxAndServiceData.IsTaxInclude > 0         //MasterData.GetFieldBool(DB, DBVar.TableName.CfgInitTaxAndService, "is_tax_include", "code", TaxServiceCode, false)
-			IsServiceIncluded = TaxAndServiceData.IsServiceInclude > 0 //MasterData.GetFieldBool(DB, DBVar.TableName.CfgInitTaxAndService, "is_service_include", "code", TaxServiceCode, false)
+			TaxPercent = TaxAndServiceData.Tax                         //master_data.GetFieldFloat(DB, db_var.TableName.CfgInitTaxAndService, "tax", "code", TaxServiceCode, 0)
+			ServicePercent = TaxAndServiceData.Service                 // master_data.GetFieldFloat(DB, db_var.TableName.CfgInitTaxAndService, "service", "code", TaxServiceCode, 0)
+			ServiceTaxPercent = TaxAndServiceData.ServiceTax           //master_data.GetFieldFloat(DB, db_var.TableName.CfgInitTaxAndService, "service_tax", "code", TaxServiceCode, 0)
+			IsTaxIncluded = TaxAndServiceData.IsTaxInclude > 0         //master_data.GetFieldBool(DB, db_var.TableName.CfgInitTaxAndService, "is_tax_include", "code", TaxServiceCode, false)
+			IsServiceIncluded = TaxAndServiceData.IsServiceInclude > 0 //master_data.GetFieldBool(DB, db_var.TableName.CfgInitTaxAndService, "is_service_include", "code", TaxServiceCode, false)
 			//Tax and Service Include
 			if IsTaxIncluded && IsServiceIncluded {
-				Tax = General.RoundToX3(Amount * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) / (100 + TaxPercent + ServicePercent + (ServiceTaxPercent * ServicePercent / 100)))
-				Service = General.RoundToX3(Amount * ServicePercent / (100 + TaxPercent + ServicePercent + (ServiceTaxPercent * ServicePercent / 100)))
+				Tax = general.RoundToX3(Amount * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) / (100 + TaxPercent + ServicePercent + (ServiceTaxPercent * ServicePercent / 100)))
+				Service = general.RoundToX3(Amount * ServicePercent / (100 + TaxPercent + ServicePercent + (ServiceTaxPercent * ServicePercent / 100)))
 				Basic = Amount - Tax - Service
 				if isDebug {
 					fmt.Println("1")
@@ -1041,8 +1044,8 @@ func GetBasicTaxService(DB *gorm.DB, AccountCode, TaxAndServiceCodeManual string
 				//Tax and Service Exclude
 			} else if !IsTaxIncluded && !IsServiceIncluded {
 				Basic = Amount
-				Tax = General.RoundToX3(Amount * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) / 100)
-				Service = General.RoundToX3(Amount * ServicePercent / 100)
+				Tax = general.RoundToX3(Amount * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) / 100)
+				Service = general.RoundToX3(Amount * ServicePercent / 100)
 				if isDebug {
 					fmt.Println("2")
 					fmt.Println(Basic)
@@ -1052,13 +1055,13 @@ func GetBasicTaxService(DB *gorm.DB, AccountCode, TaxAndServiceCodeManual string
 				}
 				//Tax Exclude and Service Include
 			} else if !IsTaxIncluded && IsServiceIncluded {
-				Service = General.RoundToX3(Amount / (100 + ServicePercent) * ServicePercent)
+				Service = general.RoundToX3(Amount / (100 + ServicePercent) * ServicePercent)
 				Basic = Amount - Service
-				Tax = General.RoundToX3(Basic * TaxPercent / 100)
+				Tax = general.RoundToX3(Basic * TaxPercent / 100)
 				if ServiceTaxPercent > 0 {
-					Tax = General.RoundToX3(Amount * TaxPercent / 100)
+					Tax = general.RoundToX3(Amount * TaxPercent / 100)
 				}
-				Tax = General.RoundToX3(Amount * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) / 100)
+				Tax = general.RoundToX3(Amount * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) / 100)
 				if isDebug {
 					fmt.Println("3")
 					fmt.Println(Basic)
@@ -1068,9 +1071,9 @@ func GetBasicTaxService(DB *gorm.DB, AccountCode, TaxAndServiceCodeManual string
 				}
 				//Tax Include and Service Exclude
 			} else if IsTaxIncluded && !IsServiceIncluded {
-				Tax = General.RoundToX3(Amount / (100 + TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)))
+				Tax = general.RoundToX3(Amount / (100 + TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)))
 				Basic = Amount - Tax
-				Service = General.RoundToX3((Amount - (Amount / (100 + TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)))) * ServicePercent / 100)
+				Service = general.RoundToX3((Amount - (Amount / (100 + TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)))) * ServicePercent / 100)
 
 				if isDebug {
 					fmt.Println("4")
@@ -1099,7 +1102,7 @@ func GetBasicTaxService2(DB *gorm.DB, AccountCode, TaxServiceCodeManual string, 
 	}
 
 	var DataOutputAccount DataOutputAccountStruct
-	DB.Table(DBVar.TableName.CfgInitAccount).
+	DB.Table(db_var.TableName.CfgInitAccount).
 		Select("cfg_init_account.tax_and_service_code",
 			"cfg_init_account_sub_group.group_code as account_group_code",
 			"cfg_init_tax_and_service.tax",
@@ -1109,7 +1112,7 @@ func GetBasicTaxService2(DB *gorm.DB, AccountCode, TaxServiceCodeManual string, 
 		Joins("LEFT JOIN cfg_init_tax_and_service ON (cfg_init_account.tax_and_service_code=cfg_init_tax_and_service.code)").
 		Where("cfg_init_account.code = ?", AccountCode).Take(&DataOutputAccount)
 
-	if DataOutputAccount.AccountGroupCode == GlobalVar.GlobalAccountGroup.Charge {
+	if DataOutputAccount.AccountGroupCode == global_var.GlobalAccountGroup.Charge {
 		if TaxServiceCodeManual == "" {
 			TaxServiceCode = DataOutputAccount.TaxAndServiceCode
 		} else {
@@ -1124,8 +1127,8 @@ func GetBasicTaxService2(DB *gorm.DB, AccountCode, TaxServiceCodeManual string, 
 			// IsTaxIncluded = DataOutputAccount.TaxAndService.IsTaxInclude > 0
 			// IsServiceIncluded = DataOutputAccount.TaxAndService.IsServiceInclude > 0
 
-			Tax = General.RoundToX3(Amount * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) / (100 + TaxPercent + ServicePercent + (ServiceTaxPercent * ServicePercent / 100)))
-			Service = General.RoundToX3(Amount * ServicePercent / (100 + TaxPercent + ServicePercent + (ServiceTaxPercent * ServicePercent / 100)))
+			Tax = general.RoundToX3(Amount * (TaxPercent + (ServiceTaxPercent * ServicePercent / 100)) / (100 + TaxPercent + ServicePercent + (ServiceTaxPercent * ServicePercent / 100)))
+			Service = general.RoundToX3(Amount * ServicePercent / (100 + TaxPercent + ServicePercent + (ServiceTaxPercent * ServicePercent / 100)))
 			Basic = Amount - Tax - Service
 		}
 	}
@@ -1135,13 +1138,13 @@ func GetBasicTaxService2(DB *gorm.DB, AccountCode, TaxServiceCodeManual string, 
 func GetBasicTaxServiceForeign(Tax, Service, AmountForeign, ExchangeRate float64) (BasicForeign float64, TaxForeign float64, ServiceForeign float64) {
 	// var TaxForeign, ServiceForeign, BasicForeign float64
 	if Tax > 0 {
-		TaxForeign = General.RoundToX3(Tax / ExchangeRate)
+		TaxForeign = general.RoundToX3(Tax / ExchangeRate)
 	} else {
 		TaxForeign = 0
 	}
 
 	if Service > 0 {
-		ServiceForeign = General.RoundToX3(Service / ExchangeRate)
+		ServiceForeign = general.RoundToX3(Service / ExchangeRate)
 	} else {
 		ServiceForeign = AmountForeign
 	}
@@ -1159,13 +1162,13 @@ func GetSubFolioCorrectionBreakdown(c *gin.Context, DB *gorm.DB) uint64 {
 		" A.correction_breakdown " +
 		"FROM " +
 		"(SELECT correction_breakdown FROM sub_folio " +
-		"WHERE sub_folio.audit_date BETWEEN  DATE(DATE_ADD('" + General.FormatDate1(AuditDate) + "', INTERVAL -1 DAY)) AND DATE('" + General.FormatDate1(AuditDate) + "') " +
+		"WHERE sub_folio.audit_date BETWEEN  DATE(DATE_ADD('" + general.FormatDate1(AuditDate) + "', INTERVAL -1 DAY)) AND DATE('" + general.FormatDate1(AuditDate) + "') " +
 		") AS A " +
 		"ORDER BY A.correction_breakdown DESC " +
 		"LIMIT 1;").Scan(&CorrectionBreakdown)
 
 	if CorrectionBreakdown <= 0 {
-		DB.Table(DBVar.TableName.SubFolio).Select("correction_breakdown").Order("correction_breakdown DESC").Limit(1).Scan(&CorrectionBreakdown)
+		DB.Table(db_var.TableName.SubFolio).Select("correction_breakdown").Order("correction_breakdown DESC").Limit(1).Scan(&CorrectionBreakdown)
 	}
 
 	return CorrectionBreakdown + 1
@@ -1180,13 +1183,13 @@ func GetSubFolioBreakdown1(c *gin.Context, DB *gorm.DB) uint64 {
 		" A.breakdown1 " +
 		"FROM " +
 		"(SELECT breakdown1 FROM sub_folio " +
-		"WHERE sub_folio.audit_date BETWEEN  DATE(DATE_ADD('" + General.FormatDate1(AuditDate) + "', INTERVAL -1 DAY)) AND DATE('" + General.FormatDate1(AuditDate) + "') " +
+		"WHERE sub_folio.audit_date BETWEEN  DATE(DATE_ADD('" + general.FormatDate1(AuditDate) + "', INTERVAL -1 DAY)) AND DATE('" + general.FormatDate1(AuditDate) + "') " +
 		") AS A " +
 		"ORDER BY A.breakdown1 DESC " +
 		"LIMIT 1;").Scan(&Breakdown1)
 
 	if Breakdown1 <= 0 {
-		DB.Table(DBVar.TableName.SubFolio).Select("breakdown1").Order("breakdown1 DESC").Limit(1).Scan(&Breakdown1)
+		DB.Table(db_var.TableName.SubFolio).Select("breakdown1").Order("breakdown1 DESC").Limit(1).Scan(&Breakdown1)
 	}
 
 	return Breakdown1 + 1
@@ -1201,7 +1204,7 @@ func GetSubFolioBreakdown2(c *gin.Context, DB *gorm.DB, Breakdown1 uint64) (Brea
 		"FROM " +
 		"(SELECT breakdown2 FROM sub_folio " +
 		"WHERE breakdown1='" + strconv.FormatUint(Breakdown1, 10) + "' " +
-		"AND sub_folio.audit_date BETWEEN  DATE(DATE_ADD('" + General.FormatDate1(AuditDate) + "', INTERVAL -1 DAY)) AND DATE('" + General.FormatDate1(AuditDate) + "') " +
+		"AND sub_folio.audit_date BETWEEN  DATE(DATE_ADD('" + general.FormatDate1(AuditDate) + "', INTERVAL -1 DAY)) AND DATE('" + general.FormatDate1(AuditDate) + "') " +
 		") AS A " +
 		"ORDER BY A.breakdown2 DESC " +
 		"LIMIT 1;").Scan(&Breakdown2)
@@ -1218,8 +1221,8 @@ func GetRoomNumberFromConfigurationIsRoomName(c *gin.Context, DB *gorm.DB, RoomN
 		//
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
-	if General.StrToBool(pConfig.Dataset.Configuration[GlobalVar.ConfigurationCategory.General][GlobalVar.ConfigurationName.IsRoomByName].(string)) {
-		Result = MasterData.GetFieldString(DB, DBVar.TableName.CfgInitRoom, "number", "name", RoomName, RoomName)
+	if general.StrToBool(pConfig.Dataset.Configuration[global_var.ConfigurationCategory.General][global_var.ConfigurationName.IsRoomByName].(string)) {
+		Result = master_data.GetFieldString(DB, db_var.TableName.CfgInitRoom, "number", "name", RoomName, RoomName)
 	}
 	return Result
 }
@@ -1230,26 +1233,26 @@ func GetRoomNameFromConfigurationIsRoomName(c *gin.Context, DB *gorm.DB, RoomNum
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		// MasterData.SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
+		// master_data.SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		// return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 
-	IsRoomByName := General.StrToBool(pConfig.Dataset.Configuration[GlobalVar.ConfigurationCategory.General][GlobalVar.ConfigurationName.IsRoomByName].(string))
+	IsRoomByName := general.StrToBool(pConfig.Dataset.Configuration[global_var.ConfigurationCategory.General][global_var.ConfigurationName.IsRoomByName].(string))
 	if IsRoomByName {
-		Result = MasterData.GetFieldString(DB, DBVar.TableName.CfgInitRoom, "name", "number", RoomNumber, RoomNumber)
+		Result = master_data.GetFieldString(DB, db_var.TableName.CfgInitRoom, "name", "number", RoomNumber, RoomNumber)
 	}
 	return Result
 }
 
 func GetAutoRouting(DB *gorm.DB, BelongsTo uint64, AccountCode string) (uint64, string) {
-	var FolioRouting DBVar.Folio_routing
-	DB.Table(DBVar.TableName.FolioRouting).Select("folio_transfer, sub_folio_transfer").Where("folio_number=?", BelongsTo).Where("account_code=?", AccountCode).Limit(1).Scan(&FolioRouting)
+	var FolioRouting db_var.Folio_routing
+	DB.Table(db_var.TableName.FolioRouting).Select("folio_transfer, sub_folio_transfer").Where("folio_number=?", BelongsTo).Where("account_code=?", AccountCode).Limit(1).Scan(&FolioRouting)
 
 	return FolioRouting.FolioTransfer, FolioRouting.SubFolioTransfer
 }
 
-func InsertSubFolioX(c *gin.Context, Dataset *GlobalVar.TDataset, IDCorrected uint64, DataInput DBVar.Sub_folio, DB *gorm.DB) (uint64, error) {
+func InsertSubFolioX(c *gin.Context, Dataset *global_var.TDataset, IDCorrected uint64, DataInput db_var.Sub_folio, DB *gorm.DB) (uint64, error) {
 	var err error
 	var Id uint64
 
@@ -1261,9 +1264,9 @@ func InsertSubFolioX(c *gin.Context, Dataset *GlobalVar.TDataset, IDCorrected ui
 	DataInput.AmountForeign = DataInput.Amount
 
 	if DataInput.CurrencyCode != DataInput.DefaultCurrencyCode {
-		DataInput.Amount = General.RoundToX3(DataInput.Amount * DataInput.ExchangeRate)
+		DataInput.Amount = general.RoundToX3(DataInput.Amount * DataInput.ExchangeRate)
 	}
-	IsRoomByName := General.StrToBool(Dataset.Configuration[GlobalVar.ConfigurationCategory.General][GlobalVar.ConfigurationName.IsRoomByName].(string))
+	IsRoomByName := general.StrToBool(Dataset.Configuration[global_var.ConfigurationCategory.General][global_var.ConfigurationName.IsRoomByName].(string))
 	if IsRoomByName {
 		DataInput.RoomNumber = GetRoomNumberFromConfigurationIsRoomName(c, DB, DataInput.RoomNumber)
 	}
@@ -1273,29 +1276,29 @@ func InsertSubFolioX(c *gin.Context, Dataset *GlobalVar.TDataset, IDCorrected ui
 		DataInput.AuditDateUnixx = int(AuditDate.Unix())
 	}
 	DataInput.Id = 0
-	if err := DB.Table(DBVar.TableName.SubFolio).Omit("id").Create(&DataInput).Error; err != nil {
+	if err := DB.Table(db_var.TableName.SubFolio).Omit("id").Create(&DataInput).Error; err != nil {
 		return Id, err
 	}
 	Id = DataInput.Id
 	// Insert Foreign Cash
-	if (GetAccountSubGroupCode(DB, DataInput.AccountCode) == GlobalVar.GlobalAccountSubGroup.Payment || GetAccountSubGroupCode(DB, DataInput.AccountCode) == GlobalVar.GlobalAccountSubGroup.CreditDebitCard || GetAccountSubGroupCode(DB, DataInput.AccountCode) == GlobalVar.GlobalAccountSubGroup.BankTransfer) && DataInput.CurrencyCode != DataInput.DefaultCurrencyCode {
+	if (GetAccountSubGroupCode(DB, DataInput.AccountCode) == global_var.GlobalAccountSubGroup.Payment || GetAccountSubGroupCode(DB, DataInput.AccountCode) == global_var.GlobalAccountSubGroup.CreditDebitCard || GetAccountSubGroupCode(DB, DataInput.AccountCode) == global_var.GlobalAccountSubGroup.BankTransfer) && DataInput.CurrencyCode != DataInput.DefaultCurrencyCode {
 		RemarkForeignCash := "Payment for Folio: " + strconv.FormatUint(DataInput.FolioNumber, 10) + ", Room: " + DataInput.RoomNumber + ", Doc#: " + DataInput.DocumentNumber
-		TypeCodeX := GlobalVar.TransactionType.Debit
-		if DataInput.TypeCode == GlobalVar.TransactionType.Debit {
-			TypeCodeX = GlobalVar.TransactionType.Credit
+		TypeCodeX := global_var.TransactionType.Debit
+		if DataInput.TypeCode == global_var.TransactionType.Debit {
+			TypeCodeX = global_var.TransactionType.Credit
 		}
-		if General.Uint8ToBool(DataInput.IsCorrection) {
+		if general.Uint8ToBool(DataInput.IsCorrection) {
 			RemarkForeignCash = "Payment Correction  for Folio: " + strconv.FormatUint(DataInput.FolioNumber, 10) + ", Room: " + DataInput.RoomNumber + ", Doc#: " + DataInput.DocumentNumber
 		}
 
-		var ForeignCash DBVar.Acc_foreign_cash
+		var ForeignCash db_var.Acc_foreign_cash
 		ForeignCash.IdTransaction = DataInput.FolioNumber
 		ForeignCash.IdCorrected = IDCorrected
 		ForeignCash.IdChange = 0
-		ForeignCash.IdTable = GlobalVar.ForeignCashTableID.SubFolio
+		ForeignCash.IdTable = global_var.ForeignCashTableID.SubFolio
 		ForeignCash.Breakdown = 0
 		ForeignCash.RefNumber = ""
-		ForeignCash.Date = GlobalVar.ProgramVariable.AuditDate
+		ForeignCash.Date = global_var.ProgramVariable.AuditDate
 		ForeignCash.TypeCode = TypeCodeX
 		ForeignCash.Amount = DataInput.Amount
 		ForeignCash.Stock = DataInput.AmountForeign
@@ -1306,14 +1309,14 @@ func InsertSubFolioX(c *gin.Context, Dataset *GlobalVar.TDataset, IDCorrected ui
 		ForeignCash.Remark = RemarkForeignCash
 		ForeignCash.IsCorrection = DataInput.IsCorrection
 		ForeignCash.CreatedBy = DataInput.CreatedBy
-		if err := DB.Table(DBVar.TableName.AccForeignCash).Create(&ForeignCash).Error; err != nil {
+		if err := DB.Table(db_var.TableName.AccForeignCash).Create(&ForeignCash).Error; err != nil {
 			return Id, err
 		}
 	}
 	return Id, err
 }
 
-func InsertSubFolio(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset, IsCanAutoTransfer bool, AccountCodeTransfer, TaxServiceManual string, DataInput DBVar.Sub_folio) (Result string, SubFolioID uint64, Error error) {
+func InsertSubFolio(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset, IsCanAutoTransfer bool, AccountCodeTransfer, TaxServiceManual string, DataInput db_var.Sub_folio) (Result string, SubFolioID uint64, Error error) {
 	var SubFolioId uint64
 	var err error
 
@@ -1338,12 +1341,12 @@ func InsertSubFolio(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset, I
 	if DataInput.ExchangeRate == 0 {
 		DataInput.ExchangeRate = GetExchangeRateCurrency(DB, DataInput.CurrencyCode)
 	}
-	AllowZeroAmount := Dataset.Configuration[GlobalVar.ConfigurationCategory.Folio][GlobalVar.ConfigurationName.AllowZeroAmount].(string)
+	AllowZeroAmount := Dataset.Configuration[global_var.ConfigurationCategory.Folio][global_var.ConfigurationName.AllowZeroAmount].(string)
 	if ((DataInput.Quantity*DataInput.Amount) > 0 || ((DataInput.Quantity*DataInput.Amount) <= 0) && AllowZeroAmount != "0") && DataInput.CurrencyCode != "" && DataInput.ExchangeRate > 0 {
 
 		DataInput.DefaultCurrencyCode = GetDefaultCurrencyCode(DB)
 		if DataInput.CurrencyCode != DataInput.DefaultCurrencyCode {
-			DataInput.Amount = General.RoundToX3(DataInput.Amount * DataInput.ExchangeRate)
+			DataInput.Amount = general.RoundToX3(DataInput.Amount * DataInput.ExchangeRate)
 		}
 		DataInput.BelongsTo = DataInput.FolioNumber
 		//Cek auto routing
@@ -1357,7 +1360,7 @@ func InsertSubFolio(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset, I
 		}
 		var Tax, Service, TaxForeign, ServiceForeign float64
 		DataInput.Amount, Tax, Service = GetBasicTaxService(DB, DataInput.AccountCode, TaxServiceManual, DataInput.Amount)
-		DataInput.AmountForeign = General.RoundToX3(DataInput.Amount / DataInput.ExchangeRate)
+		DataInput.AmountForeign = general.RoundToX3(DataInput.Amount / DataInput.ExchangeRate)
 		DataInput.AmountForeign, TaxForeign, ServiceForeign = GetBasicTaxServiceForeign(Tax, Service, DataInput.AmountForeign, DataInput.ExchangeRate)
 		if DataInput.CorrectionBreakdown == 0 {
 			DataInput.CorrectionBreakdown = GetSubFolioCorrectionBreakdown(c, DB)
@@ -1372,7 +1375,7 @@ func InsertSubFolio(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset, I
 		//Begin Transaction
 		err = DB.Transaction(func(tx *gorm.DB) error {
 			//Jika Direct Bill atau Compliment atau AP Commission
-			if AccountSubGroup == GlobalVar.GlobalAccountSubGroup.AccountReceivable || AccountSubGroup == GlobalVar.GlobalAccountSubGroup.AccountPayable || AccountSubGroup == GlobalVar.GlobalAccountSubGroup.Compliment {
+			if AccountSubGroup == global_var.GlobalAccountSubGroup.AccountReceivable || AccountSubGroup == global_var.GlobalAccountSubGroup.AccountPayable || AccountSubGroup == global_var.GlobalAccountSubGroup.Compliment {
 				SubFolioId, err = InsertSubFolioX(c, Dataset, 0, DataInput, tx)
 				if err != nil {
 					return err
@@ -1434,11 +1437,11 @@ func UpdateGuestDepositTransferPairIDWithFolio(Db *gorm.DB, GuestDepositID, SubF
 }
 
 func UpdateGuestDepositTransferPairID(Db *gorm.DB, GuestDepositID1, GuestDepositID2 uint64, ValidUserCode string) error {
-	if err := Db.Table(DBVar.TableName.GuestDeposit).Where("id=?", GuestDepositID1).Updates(map[string]interface{}{"is_pair_with_folio": false, "transfer_pair_id": GuestDepositID2, "updated_by": ValidUserCode}).Error; err != nil {
+	if err := Db.Table(db_var.TableName.GuestDeposit).Where("id=?", GuestDepositID1).Updates(map[string]interface{}{"is_pair_with_folio": false, "transfer_pair_id": GuestDepositID2, "updated_by": ValidUserCode}).Error; err != nil {
 		return err
 	}
 
-	if err := Db.Table(DBVar.TableName.GuestDeposit).Where("id=?", GuestDepositID2).Updates(map[string]interface{}{"is_pair_with_folio": false, "transfer_pair_id": GuestDepositID1, "updated_by": ValidUserCode}).Error; err != nil {
+	if err := Db.Table(db_var.TableName.GuestDeposit).Where("id=?", GuestDepositID2).Updates(map[string]interface{}{"is_pair_with_folio": false, "transfer_pair_id": GuestDepositID1, "updated_by": ValidUserCode}).Error; err != nil {
 		return err
 	}
 
@@ -1446,7 +1449,7 @@ func UpdateGuestDepositTransferPairID(Db *gorm.DB, GuestDepositID1, GuestDeposit
 }
 
 func UpdateRoomStatus(tx *gorm.DB, ValidUserCode, RoomNumber, RoomStatusCode string) error {
-	if err := tx.Table(DBVar.TableName.CfgInitRoom).Where("number = ?", RoomNumber).Updates(&map[string]interface{}{
+	if err := tx.Table(db_var.TableName.CfgInitRoom).Where("number = ?", RoomNumber).Updates(&map[string]interface{}{
 		"status_code": RoomStatusCode,
 		"updated_by":  ValidUserCode}).Error; err != nil {
 		return err
@@ -1463,7 +1466,7 @@ func GetFolioStatus(DB *gorm.DB, Number uint64, IsFolio bool) string {
 	if IsFolio {
 		Condition = "number = ?"
 	}
-	DB.Table(DBVar.TableName.Folio).Select("status_code").Where(Condition, Number).Scan(&FolioStatus)
+	DB.Table(db_var.TableName.Folio).Select("status_code").Where(Condition, Number).Scan(&FolioStatus)
 
 	return FolioStatus.StatusCode
 }
@@ -1473,7 +1476,7 @@ func GetRoomStatus(DB *gorm.DB, Number string) (StatusCode string, BlockStatusCo
 		StatusCode      string
 		BlockStatusCode string
 	}
-	DB.Table(DBVar.TableName.CfgInitRoom).Where("number = ?", Number).Limit(1).Scan(&RoomStatus)
+	DB.Table(db_var.TableName.CfgInitRoom).Where("number = ?", Number).Limit(1).Scan(&RoomStatus)
 
 	return RoomStatus.StatusCode, RoomStatus.BlockStatusCode
 }
@@ -1482,20 +1485,20 @@ func GetRoomTypeCode(DB *gorm.DB, Number string) string {
 	var Room struct {
 		RoomTypeCode string
 	}
-	DB.Table(DBVar.TableName.CfgInitRoom).Where("number = ?", Number).Scan(&Room)
+	DB.Table(db_var.TableName.CfgInitRoom).Where("number = ?", Number).Scan(&Room)
 
 	return Room.RoomTypeCode
 }
 
 func GetBedTypeCode(DB *gorm.DB, Number string) string {
 	var BedTypeCode string
-	DB.Table(DBVar.TableName.CfgInitRoom).Select("bed_type_code").Where("number = ?", Number).Limit(1).Scan(&BedTypeCode)
+	DB.Table(db_var.TableName.CfgInitRoom).Select("bed_type_code").Where("number = ?", Number).Limit(1).Scan(&BedTypeCode)
 
 	return BedTypeCode
 }
 
 func GetReservationStatus(DB *gorm.DB, Number uint64) (StatusCode string) {
-	DB.Table(DBVar.TableName.Reservation).Select("status_code").Where("number = ? ", Number).Limit(1).Scan(&StatusCode)
+	DB.Table(db_var.TableName.Reservation).Select("status_code").Where("number = ? ", Number).Limit(1).Scan(&StatusCode)
 	return StatusCode
 }
 
@@ -1541,7 +1544,7 @@ func IsRoomAvailable(DB *gorm.DB, Dataset *global_var.TDataset, RoomTypeCode str
 }
 
 func GetJournalRefNumber(c *gin.Context, DB *gorm.DB, PrefixX string, PostingDate time.Time) string {
-	Prefix := PrefixX + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix := PrefixX + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastRefNumber+"_"+PrefixX)
 	// if err != nil {
 	var DataOutput uint64
@@ -1554,14 +1557,14 @@ func GetJournalRefNumber(c *gin.Context, DB *gorm.DB, PrefixX string, PostingDat
 			"ORDER BY MaxRefNumber DESC " +
 			"LIMIT 1;").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetJournalRefNumberTemp(c *gin.Context, DB *gorm.DB, PrefixX string, PostingDate time.Time) string {
-	Prefix := PrefixX + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix := PrefixX + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastRefNumber+"_"+PrefixX+"_TEMP")
 	// if err != nil {
 	var DataOutput uint64
@@ -1574,15 +1577,15 @@ func GetJournalRefNumberTemp(c *gin.Context, DB *gorm.DB, PrefixX string, Postin
 			"ORDER BY MaxRefNumber DESC " +
 			"LIMIT 1;").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetReceiveNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
 	var Prefix string
-	Prefix = GlobalVar.ConstProgramVariable.ReceiveNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix = global_var.ConstProgramVariable.ReceiveNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastReceiveNumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1594,15 +1597,15 @@ func GetReceiveNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string
 		"ORDER BY MaxReceiveNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetPaymentNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
 	var Prefix string
-	Prefix = GlobalVar.ConstProgramVariable.PaymentNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix = global_var.ConstProgramVariable.PaymentNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastPaymentNumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1614,20 +1617,20 @@ func GetPaymentNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string
 		"ORDER BY MaxPaymentNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetJournalAccountTypeCode(DB *gorm.DB, JournalAccountCode string) string {
 	var TypeCode string
-	DB.Table(DBVar.TableName.CfgInitAccount).Select("type_code").Where("code=?", JournalAccountCode).Limit(1).Scan(&TypeCode)
+	DB.Table(db_var.TableName.CfgInitAccount).Select("type_code").Where("code=?", JournalAccountCode).Limit(1).Scan(&TypeCode)
 	return TypeCode
 }
 
 func GetAPNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
 	var Prefix string
-	Prefix = GlobalVar.ConstProgramVariable.APNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix = global_var.ConstProgramVariable.APNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastAPNumber)
 	// if err != nil {
@@ -1640,15 +1643,15 @@ func GetAPNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
 		"ORDER BY MaxAPNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 
 }
 
 func GetARNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
 	var Prefix string
-	Prefix = GlobalVar.ConstProgramVariable.ARNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix = global_var.ConstProgramVariable.ARNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastARNumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1660,14 +1663,14 @@ func GetARNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
 		"ORDER BY MaxARNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
 
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetCostingNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
-	Prefix := GlobalVar.ConstProgramVariable.CostingNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix := global_var.ConstProgramVariable.CostingNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastCostingNumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1679,13 +1682,13 @@ func GetCostingNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string
 		"ORDER BY MaxCostingNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetDepreciationNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
-	Prefix := GlobalVar.ConstProgramVariable.DepreciationNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix := global_var.ConstProgramVariable.DepreciationNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastDepreciationNumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1697,13 +1700,13 @@ func GetDepreciationNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) s
 		"ORDER BY MaxDepreciationNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetSRNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
-	Prefix := GlobalVar.ConstProgramVariable.SRNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix := global_var.ConstProgramVariable.SRNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastSRNumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1715,12 +1718,12 @@ func GetSRNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
 		"ORDER BY MaxDepreciationNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 func GetProductionNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
-	Prefix := GlobalVar.ConstProgramVariable.ProductionNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix := global_var.ConstProgramVariable.ProductionNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastProductionNumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1732,13 +1735,13 @@ func GetProductionNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) str
 		"ORDER BY MaxDepreciationNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetReturnStockNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
-	Prefix := GlobalVar.ConstProgramVariable.ReturnStockPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix := global_var.ConstProgramVariable.ReturnStockPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastReturnStock)
 	// if err != nil {
 	var DataOutput uint64
@@ -1750,13 +1753,13 @@ func GetReturnStockNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) st
 		"ORDER BY MaxDepreciationNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetOpnameNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
-	Prefix := GlobalVar.ConstProgramVariable.OpnameNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix := global_var.ConstProgramVariable.OpnameNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastOpnameNumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1768,13 +1771,13 @@ func GetOpnameNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string 
 		"ORDER BY MaxDepreciationNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetFAPONumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
-	Prefix := GlobalVar.ConstProgramVariable.FAPONumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix := global_var.ConstProgramVariable.FAPONumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastFAPONumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1786,13 +1789,13 @@ func GetFAPONumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
 		"ORDER BY MaxDepreciationNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetFAReceiveNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
-	Prefix := GlobalVar.ConstProgramVariable.FAReceiveNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix := global_var.ConstProgramVariable.FAReceiveNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastFAReceiveNumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1804,13 +1807,13 @@ func GetFAReceiveNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) stri
 		"ORDER BY MaxDepreciationNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func GetFACode(c *gin.Context, DB *gorm.DB, ItemCode string, PostingDate time.Time) (SortNumber uint64, Code string) {
-	Prefix := General.FormatDatePrefix(PostingDate) + ItemCode
+	Prefix := general.FormatDatePrefix(PostingDate) + ItemCode
 	Result := Prefix + "1"
 
 	var DataOutput uint64
@@ -1828,13 +1831,13 @@ func GetFACode(c *gin.Context, DB *gorm.DB, ItemCode string, PostingDate time.Ti
 
 func GetFACondition(DB *gorm.DB, FACode string) string {
 	ConditionCode := ""
-	DB.Table(DBVar.TableName.FaList).Select("condition_code").Where("code=?", FACode).Limit(1).Scan(&ConditionCode)
+	DB.Table(db_var.TableName.FaList).Select("condition_code").Where("code=?", FACode).Limit(1).Scan(&ConditionCode)
 	return ConditionCode
 }
 
 func GetFAJournalAccount(DB *gorm.DB, ItemCode string) string {
 	var JournalAccountCode string
-	DB.Table(DBVar.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code").
+	DB.Table(db_var.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code").
 		Joins("LEFT OUTER JOIN fa_cfg_init_item_category ON (fa_cfg_init_item.category_code = fa_cfg_init_item_category.code)").
 		Where("fa_cfg_init_item.code=?", ItemCode).
 		Scan(&JournalAccountCode)
@@ -1843,7 +1846,7 @@ func GetFAJournalAccount(DB *gorm.DB, ItemCode string) string {
 
 func GetFAJournalAccountDepreciation(DB *gorm.DB, ItemCode string) string {
 	var JournalAccountCodeDepreciation string
-	DB.Table(DBVar.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code_depreciation").
+	DB.Table(db_var.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code_depreciation").
 		Joins("LEFT OUTER JOIN fa_cfg_init_item_category ON (fa_cfg_init_item.category_code = fa_cfg_init_item_category.code)").
 		Where("fa_cfg_init_item.code=?", ItemCode).
 		Scan(&JournalAccountCodeDepreciation)
@@ -1852,7 +1855,7 @@ func GetFAJournalAccountDepreciation(DB *gorm.DB, ItemCode string) string {
 
 func GetFACOGSAccount(DB *gorm.DB, ItemCode string) string {
 	var JournalAccountCodeCogs string
-	DB.Table(DBVar.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code_cogs").
+	DB.Table(db_var.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code_cogs").
 		Joins("LEFT OUTER JOIN fa_cfg_init_item_category ON (fa_cfg_init_item.category_code = fa_cfg_init_item_category.code)").
 		Where("fa_cfg_init_item.code=?", ItemCode).
 		Limit(1).
@@ -1862,7 +1865,7 @@ func GetFACOGSAccount(DB *gorm.DB, ItemCode string) string {
 
 func GetFAExpenseAccount(DB *gorm.DB, ItemCode string) string {
 	var JournalAccountCodeExpense string
-	DB.Table(DBVar.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code_expense").
+	DB.Table(db_var.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code_expense").
 		Joins("LEFT OUTER JOIN fa_cfg_init_item_category ON (fa_cfg_init_item.category_code = fa_cfg_init_item_category.code)").
 		Where("fa_cfg_init_item.code=?", ItemCode).
 		Limit(1).
@@ -1872,7 +1875,7 @@ func GetFAExpenseAccount(DB *gorm.DB, ItemCode string) string {
 
 func GetFASellAccount(DB *gorm.DB, ItemCode string) string {
 	var JournalAccountCodeSell string
-	DB.Table(DBVar.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code_sell").
+	DB.Table(db_var.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code_sell").
 		Joins("LEFT OUTER JOIN fa_cfg_init_item_category ON (fa_cfg_init_item.category_code = fa_cfg_init_item_category.code)").
 		Where("fa_cfg_init_item.code=?", ItemCode).
 		Limit(1).
@@ -1882,7 +1885,7 @@ func GetFASellAccount(DB *gorm.DB, ItemCode string) string {
 
 func GetFASpoilJournalAccount(DB *gorm.DB, ItemCode string) string {
 	var JournalAccountCodeSpoil string
-	DB.Table(DBVar.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code_spoil").
+	DB.Table(db_var.TableName.FaCfgInitItem).Select("fa_cfg_init_item_category.journal_account_code_spoil").
 		Joins("LEFT OUTER JOIN fa_cfg_init_item_category ON (fa_cfg_init_item.category_code = fa_cfg_init_item_category.code)").
 		Where("fa_cfg_init_item.code=?", ItemCode).
 		Limit(1).
@@ -1892,7 +1895,7 @@ func GetFASpoilJournalAccount(DB *gorm.DB, ItemCode string) string {
 
 func GetStockTransferNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) string {
 	var Prefix string
-	Prefix = GlobalVar.ConstProgramVariable.StockTransferNumberPrefix + General.FormatDatePrefix(PostingDate) + "-"
+	Prefix = global_var.ConstProgramVariable.StockTransferNumberPrefix + general.FormatDatePrefix(PostingDate) + "-"
 	// Number, err := cache.DataCache.GetString(c, c.GetString("UnitCode"), global_var.CacheKey.LastStockTransferNumber)
 	// if err != nil {
 	var DataOutput uint64
@@ -1904,10 +1907,10 @@ func GetStockTransferNumber(c *gin.Context, DB *gorm.DB, PostingDate time.Time) 
 		"ORDER BY MaxStockTransferNumber DESC " +
 		"LIMIT 1").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 
 	// }
-	// return fmt.Sprintf("%s%d", Prefix, General.StrToInt64(Number)+1)
+	// return fmt.Sprintf("%s%d", Prefix, general.StrToInt64(Number)+1)
 }
 
 func IsYearClosed(DB *gorm.DB, Year int) bool {
@@ -1959,14 +1962,14 @@ func GetAPRefundDepositOutStanding(DB *gorm.DB, Dataset *global_var.TDataset, Su
 			" WHERE sub_folio.account_code=?"+
 			" AND sub_folio.void='0' "+
 			"GROUP BY sub_folio.correction_breakdown) AS APNoShow"+
-			" WHERE id=?", GlobalVar.TransactionType.Debit, SubFolioId, RefNumber, Dataset.GlobalAccount.APRefundDeposit, SubFolioId).Scan(&DataOutput)
+			" WHERE id=?", global_var.TransactionType.Debit, SubFolioId, RefNumber, Dataset.GlobalAccount.APRefundDeposit, SubFolioId).Scan(&DataOutput)
 
 	return DataOutput
 }
 
 func GetARCityLedgerInvoiceOutStanding(DB *gorm.DB, InvoiceNumber string) (float64, error) {
 	var Amount float64
-	if err := DB.Table(DBVar.TableName.InvoiceItem).Select(
+	if err := DB.Table(db_var.TableName.InvoiceItem).Select(
 		"SUM(amount_charged - amount_paid) AS Amount",
 	).Where("invoice_number=?", InvoiceNumber).
 		Scan(&Amount).Error; err != nil {
@@ -1976,28 +1979,28 @@ func GetARCityLedgerInvoiceOutStanding(DB *gorm.DB, InvoiceNumber string) (float
 }
 func IsFolioClosed(DB *gorm.DB, FolioNumber uint64) bool {
 	var StatusCode string
-	DB.Table(DBVar.TableName.Folio).Select("status_code").Where("number = ? AND status_code=?", FolioNumber, GlobalVar.FolioStatus.Open).Find(StatusCode)
-	return StatusCode != GlobalVar.FolioStatus.Open
+	DB.Table(db_var.TableName.Folio).Select("status_code").Where("number = ? AND status_code=?", FolioNumber, global_var.FolioStatus.Open).Find(StatusCode)
+	return StatusCode != global_var.FolioStatus.Open
 }
 
 // func GetGlobalAccount(Account string) string {
-// 	return MasterData.GetConfiguration(GlobalVar.SystemCode.Hotel, GlobalVar.ConfigurationCategory.GlobalAccount, Account, false).(string)
+// 	return master_data.GetConfiguration(global_var.SystemCode.Hotel, global_var.ConfigurationCategory.GlobalAccount, Account, false).(string)
 // }
 
 // func GetGlobalSubDepartment(SubDepartment string) string {
-// 	return MasterData.GetConfiguration(GlobalVar.SystemCode.Hotel, GlobalVar.ConfigurationCategory.GlobalSubDepartment, SubDepartment, false).(string)
+// 	return master_data.GetConfiguration(global_var.SystemCode.Hotel, global_var.ConfigurationCategory.GlobalSubDepartment, SubDepartment, false).(string)
 // }
 
 // func GetGlobalDepartment(Department string) string {
-// 	return MasterData.GetConfiguration(GlobalVar.SystemCode.Hotel, GlobalVar.ConfigurationCategory.GlobalDepartment, Department, false).(string)
+// 	return master_data.GetConfiguration(global_var.SystemCode.Hotel, global_var.ConfigurationCategory.GlobalDepartment, Department, false).(string)
 // }
 // func GetGlobalJournalAccount(AccountName string) string {
-// 	return MasterData.GetConfiguration(GlobalVar.SystemCode.Hotel, GlobalVar.ConfigurationCategory.GlobalJournalAccount, AccountName, false).(string)
+// 	return master_data.GetConfiguration(global_var.SystemCode.Hotel, global_var.ConfigurationCategory.GlobalJournalAccount, AccountName, false).(string)
 // }
 
 func IsFolioHaveBreakfast(DB *gorm.DB, Dataset *global_var.TDataset, FolioNumber uint64) bool {
 	Number := 0
-	DB.Table(DBVar.TableName.Folio).Select("folio.number").
+	DB.Table(db_var.TableName.Folio).Select("folio.number").
 		Joins("LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)").
 		Joins("LEFT OUTER JOIN cfg_init_room_rate ON (guest_detail.room_rate_code = cfg_init_room_rate.code)").
 		Joins("LEFT OUTER JOIN cfg_init_room_rate_breakdown ON (guest_detail.room_rate_code = cfg_init_room_rate_breakdown.room_rate_code)").
@@ -2009,7 +2012,7 @@ func IsFolioHaveBreakfast(DB *gorm.DB, Dataset *global_var.TDataset, FolioNumber
 
 func IsReservationHaveBreakfast(DB *gorm.DB, Dataset *global_var.TDataset, ReservationNumber uint64) bool {
 	Number := 0
-	DB.Table(DBVar.TableName.Reservation).Select("reservation.number").
+	DB.Table(db_var.TableName.Reservation).Select("reservation.number").
 		Joins("LEFT OUTER JOIN guest_detail ON (reservation.guest_detail_id = guest_detail.id)").
 		Joins("LEFT OUTER JOIN cfg_init_room_rate ON (guest_detail.room_rate_code = cfg_init_room_rate.code)").
 		Joins("LEFT OUTER JOIN cfg_init_room_rate_breakdown ON (guest_detail.room_rate_code = cfg_init_room_rate_breakdown.room_rate_code)").
@@ -2023,8 +2026,8 @@ func GetRoomRateAmountXXXX(DB *gorm.DB, Dataset *global_var.TDataset, RoomRateCo
 	var Rate float64
 	var Pax uint
 
-	var DataOutput DBVar.Cfg_init_room_rate
-	DB.Table(DBVar.TableName.CfgInitRoomRate).Select(" weekday_rate1,"+
+	var DataOutput db_var.Cfg_init_room_rate
+	DB.Table(db_var.TableName.CfgInitRoomRate).Select(" weekday_rate1,"+
 		" weekday_rate2,"+
 		" weekday_rate3,"+
 		" weekday_rate4,"+
@@ -2051,11 +2054,11 @@ func GetRoomRateAmountXXXX(DB *gorm.DB, Dataset *global_var.TDataset, RoomRateCo
 	}
 
 	if !PostingDate.IsZero() {
-		IsWeekendX = General.IsWeekend(PostingDate, Dataset)
+		IsWeekendX = general.IsWeekend(PostingDate, Dataset)
 	}
 
 	if IsWeekendX {
-		if General.StrToBool(Dataset.Configuration[GlobalVar.ConfigurationCategory.General][GlobalVar.ConfigurationName.UseChildRate].(string)) {
+		if general.StrToBool(Dataset.Configuration[global_var.ConfigurationCategory.General][global_var.ConfigurationName.UseChildRate].(string)) {
 			if Adult == 1 {
 				Rate = DataOutput.WeekendRate1
 			} else if Adult == 2 {
@@ -2087,7 +2090,7 @@ func GetRoomRateAmountXXXX(DB *gorm.DB, Dataset *global_var.TDataset, RoomRateCo
 			}
 		}
 	} else {
-		if General.StrToBool(Dataset.Configuration[GlobalVar.ConfigurationCategory.General][GlobalVar.ConfigurationName.UseChildRate].(string)) {
+		if general.StrToBool(Dataset.Configuration[global_var.ConfigurationCategory.General][global_var.ConfigurationName.UseChildRate].(string)) {
 			if Adult == 1 {
 				Rate = DataOutput.WeekdayRate1
 			} else if Adult == 2 {
@@ -2135,14 +2138,14 @@ func GetRoomRateAmountXXXX(DB *gorm.DB, Dataset *global_var.TDataset, RoomRateCo
 func IsCanPostCharge(c *gin.Context, DB *gorm.DB, ChargeFrequencyCode string, ArrivalDate time.Time) bool {
 	var WeeklyCharged, MonthlyCharged bool
 	AuditDate := GetAuditDate(c, DB, false)
-	ArrivalDate = General.DateOf(ArrivalDate)
-	WeeklyCharged = General.DaysBetween(ArrivalDate, AuditDate)%7 == 0
-	MonthlyCharged = General.DaysBetween(ArrivalDate, AuditDate)%30 == 0
+	ArrivalDate = general.DateOf(ArrivalDate)
+	WeeklyCharged = general.DaysBetween(ArrivalDate, AuditDate)%7 == 0
+	MonthlyCharged = general.DaysBetween(ArrivalDate, AuditDate)%30 == 0
 
-	return ((ChargeFrequencyCode == GlobalVar.ChargeFrequency.OnceOnly && ArrivalDate == AuditDate) ||
-		(ChargeFrequencyCode == GlobalVar.ChargeFrequency.Daily) ||
-		(ChargeFrequencyCode == GlobalVar.ChargeFrequency.Weekly && WeeklyCharged) ||
-		(ChargeFrequencyCode == GlobalVar.ChargeFrequency.Monthly && MonthlyCharged))
+	return ((ChargeFrequencyCode == global_var.ChargeFrequency.OnceOnly && ArrivalDate == AuditDate) ||
+		(ChargeFrequencyCode == global_var.ChargeFrequency.Daily) ||
+		(ChargeFrequencyCode == global_var.ChargeFrequency.Weekly && WeeklyCharged) ||
+		(ChargeFrequencyCode == global_var.ChargeFrequency.Monthly && MonthlyCharged))
 
 }
 
@@ -2184,32 +2187,32 @@ func GetTotalBreakdownAmount(Quantity, BreakdownAmount, BreakdownAmountExtra flo
 func GetCommission(c *gin.Context, DB *gorm.DB, CommissionTypeCode string, CommissionValue, RoomRateAmount, RoomRateBasicAmount float64, ArrivalDate time.Time) float64 {
 	AuditDate := GetAuditDate(c, DB, false)
 	Value := 0.00
-	if CommissionTypeCode == GlobalVar.CommissionType.PercentFirstNightFullRate {
-		if General.DateOf(ArrivalDate).Equal(General.DateOf(AuditDate)) {
-			Value = General.RoundToX3(CommissionValue * RoomRateAmount / 100)
+	if CommissionTypeCode == global_var.CommissionType.PercentFirstNightFullRate {
+		if general.DateOf(ArrivalDate).Equal(general.DateOf(AuditDate)) {
+			Value = general.RoundToX3(CommissionValue * RoomRateAmount / 100)
 			return Value
 		}
 	}
 
-	if CommissionTypeCode == GlobalVar.CommissionType.PercentPerNightFullRate {
-		Value = General.RoundToX3(CommissionValue * RoomRateAmount / 100)
+	if CommissionTypeCode == global_var.CommissionType.PercentPerNightFullRate {
+		Value = general.RoundToX3(CommissionValue * RoomRateAmount / 100)
 		return Value
 	}
 
-	if CommissionTypeCode == GlobalVar.CommissionType.PercentFirstNightNettRate {
-		if General.DateOf(ArrivalDate).Equal(General.DateOf(AuditDate)) {
-			Value = General.RoundToX3(CommissionValue * RoomRateBasicAmount / 100)
+	if CommissionTypeCode == global_var.CommissionType.PercentFirstNightNettRate {
+		if general.DateOf(ArrivalDate).Equal(general.DateOf(AuditDate)) {
+			Value = general.RoundToX3(CommissionValue * RoomRateBasicAmount / 100)
 			return Value
 		}
 	}
 
-	if CommissionTypeCode == GlobalVar.CommissionType.PercentPerNightNettRate {
-		Value = General.RoundToX3(CommissionValue * RoomRateBasicAmount / 100)
+	if CommissionTypeCode == global_var.CommissionType.PercentPerNightNettRate {
+		Value = general.RoundToX3(CommissionValue * RoomRateBasicAmount / 100)
 		return Value
 	}
 
-	if CommissionTypeCode == GlobalVar.CommissionType.FixAmountPerNight {
-		Value = General.RoundToX3(CommissionValue)
+	if CommissionTypeCode == global_var.CommissionType.FixAmountPerNight {
+		Value = general.RoundToX3(CommissionValue)
 		return Value
 	}
 
@@ -2218,22 +2221,22 @@ func GetCommission(c *gin.Context, DB *gorm.DB, CommissionTypeCode string, Commi
 
 func GetCommissionPackage(c *gin.Context, DB *gorm.DB, CommissionTypeCode string, CommissionValue, PackageAmount float64, ArrivalDate time.Time) (value float64) {
 	AuditDate := GetAuditDate(c, DB, false)
-	if CommissionTypeCode == GlobalVar.CommissionType.PercentFirstNightFullRate {
-		if General.DateOf(ArrivalDate).Equal(General.DateOf(AuditDate)) {
-			value = General.RoundToX3(CommissionValue * PackageAmount / 100)
+	if CommissionTypeCode == global_var.CommissionType.PercentFirstNightFullRate {
+		if general.DateOf(ArrivalDate).Equal(general.DateOf(AuditDate)) {
+			value = general.RoundToX3(CommissionValue * PackageAmount / 100)
 		}
-	} else if CommissionTypeCode == GlobalVar.CommissionType.PercentPerNightFullRate {
-		value = General.RoundToX3(CommissionValue * PackageAmount / 100)
-	} else if CommissionTypeCode == GlobalVar.CommissionType.FixAmountFirstNight {
-		if General.DateOf(ArrivalDate).Equal(General.DateOf(AuditDate)) {
+	} else if CommissionTypeCode == global_var.CommissionType.PercentPerNightFullRate {
+		value = general.RoundToX3(CommissionValue * PackageAmount / 100)
+	} else if CommissionTypeCode == global_var.CommissionType.FixAmountFirstNight {
+		if general.DateOf(ArrivalDate).Equal(general.DateOf(AuditDate)) {
 			value = CommissionValue
 		}
-	} else if CommissionTypeCode == GlobalVar.CommissionType.FixAmountPerNight {
+	} else if CommissionTypeCode == global_var.CommissionType.FixAmountPerNight {
 		value = CommissionValue
 	}
 
-	if CommissionTypeCode == GlobalVar.CommissionType.FixAmountPerNight {
-		value = General.RoundToX3(CommissionValue)
+	if CommissionTypeCode == global_var.CommissionType.FixAmountPerNight {
+		value = general.RoundToX3(CommissionValue)
 		return value
 	}
 
@@ -2263,9 +2266,9 @@ func InsertSubFolio2(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset, 
 		ServiceForeign = Service
 		if CurrencyCode != CurrencyCodeDefault {
 
-			Basic = General.RoundToX3(BasicForeign * ExchangeRate)
-			Tax = General.RoundToX3(TaxForeign * ExchangeRate)
-			Service = General.RoundToX3(ServiceForeign * ExchangeRate)
+			Basic = general.RoundToX3(BasicForeign * ExchangeRate)
+			Tax = general.RoundToX3(TaxForeign * ExchangeRate)
+			Service = general.RoundToX3(ServiceForeign * ExchangeRate)
 		}
 
 		BelongsTo = FolioNumber
@@ -2286,7 +2289,7 @@ func InsertSubFolio2(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset, 
 		}
 		BreakDown2 = GetSubFolioBreakdown2(c, DB, BreakDown1)
 
-		var SubFolioData DBVar.Sub_folio
+		var SubFolioData db_var.Sub_folio
 		SubFolioData.FolioNumber = FolioNumber
 		SubFolioData.BelongsTo = BelongsTo
 		SubFolioData.GroupCode = GroupCode
@@ -2351,7 +2354,7 @@ func InsertSubFolio2(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset, 
 
 func InsertGuestInHouseBreakdown(DB *gorm.DB, PostingDate time.Time, FolioNumber uint64, OutletCode, ProductCode, SubDepartment, AccountCode, Remark, TaxNServiceCode,
 	ChargeFrequencyCode string, Quantity, Amount, ExtraPax float64, MaxPax int, PerPax, IncludeChild, PerPaxExtra uint8, UserID string) error {
-	var GuestInHouseBreakdown DBVar.Guest_in_house_breakdown
+	var GuestInHouseBreakdown db_var.Guest_in_house_breakdown
 	GuestInHouseBreakdown.AuditDate = PostingDate
 	GuestInHouseBreakdown.FolioNumber = FolioNumber
 	GuestInHouseBreakdown.OutletCode = OutletCode
@@ -2370,7 +2373,7 @@ func InsertGuestInHouseBreakdown(DB *gorm.DB, PostingDate time.Time, FolioNumber
 	GuestInHouseBreakdown.PerPaxExtra = PerPaxExtra
 	GuestInHouseBreakdown.CreatedBy = UserID
 
-	err := DB.Table(DBVar.TableName.GuestInHouseBreakdown).Create(&GuestInHouseBreakdown).Error
+	err := DB.Table(db_var.TableName.GuestInHouseBreakdown).Create(&GuestInHouseBreakdown).Error
 	if err != nil {
 		return err
 	}
@@ -2379,7 +2382,7 @@ func InsertGuestInHouseBreakdown(DB *gorm.DB, PostingDate time.Time, FolioNumber
 
 func IsInHousePosted(DB *gorm.DB, AuditDate time.Time, FolioNumber uint64) bool {
 	Id := 0
-	DB.Table(DBVar.TableName.GuestInHouse).Select("id").Where("audit_date = ? AND folio_number=?", AuditDate, strconv.FormatUint(FolioNumber, 10)).Limit(1).Scan(&Id)
+	DB.Table(db_var.TableName.GuestInHouse).Select("id").Where("audit_date = ? AND folio_number=?", AuditDate, strconv.FormatUint(FolioNumber, 10)).Limit(1).Scan(&Id)
 
 	return Id > 0
 }
@@ -2390,7 +2393,7 @@ func IsInHousePosted(DB *gorm.DB, AuditDate time.Time, FolioNumber uint64) bool 
 // 	ComplimentHu, Notes string, Adult, Child int, Rate, RateOriginal, Discount, CommissionValue float64,
 // 	DiscountPercent, IsAdditional, IsScheduledRate, IsBreakfast uint8, UserID string) error {
 
-// 	var GuestInHouseData DBVar.Guest_in_house
+// 	var GuestInHouseData db_var.Guest_in_house
 // 	GuestInHouseData.FolioNumber = FolioNumber
 // 	GuestInHouseData.AuditDate = AuditDate
 // 	GuestInHouseData.GroupCode = GroupCode
@@ -2432,7 +2435,7 @@ func IsInHousePosted(DB *gorm.DB, AuditDate time.Time, FolioNumber uint64) bool 
 // 	GuestInHouseData.IsAdditional = IsAdditional
 // 	GuestInHouseData.CreatedBy = UserID
 
-// 	err := DB.Table(DBVar.TableName.GuestInHouse).Create(&GuestInHouseData).Error
+// 	err := DB.Table(db_var.TableName.GuestInHouse).Create(&GuestInHouseData).Error
 
 // 	if err != nil {
 // 		return err
@@ -2447,11 +2450,11 @@ func PostingRoomChargeManual(ctx context.Context, c *gin.Context, DB *gorm.DB, D
 	defer span.End()
 
 	type DataOutputStruct struct {
-		Folio         DBVar.Folio              `gorm:"embedded"`
-		ContactPerson DBVar.Contact_person     `gorm:"embedded"`
-		GuestDetail   DBVar.Guest_detail       `gorm:"embedded"`
-		GuestGeneral  DBVar.Guest_general      `gorm:"embedded"`
-		RoomRate      DBVar.Cfg_init_room_rate `gorm:"embedded"`
+		Folio         db_var.Folio              `gorm:"embedded"`
+		ContactPerson db_var.Contact_person     `gorm:"embedded"`
+		GuestDetail   db_var.Guest_detail       `gorm:"embedded"`
+		GuestGeneral  db_var.Guest_general      `gorm:"embedded"`
+		RoomRate      db_var.Cfg_init_room_rate `gorm:"embedded"`
 		DateArrival   time.Time
 	}
 
@@ -2462,7 +2465,7 @@ func PostingRoomChargeManual(ctx context.Context, c *gin.Context, DB *gorm.DB, D
 	var IsBreakfast uint8
 	var CorrectionBreakdown, BreakDown1 uint64
 
-	if err := DB.Table(DBVar.TableName.Folio).Select(
+	if err := DB.Table(db_var.TableName.Folio).Select(
 		" folio.group_code,"+
 			" guest_detail.currency_code,"+
 			" guest_detail.exchange_rate,"+
@@ -2538,9 +2541,9 @@ func PostingRoomChargeManual(ctx context.Context, c *gin.Context, DB *gorm.DB, D
 		RoomChargeBasic, RoomChargeTax, RoomChargeService = GetBasicTaxService(DB, Dataset.GlobalAccount.RoomCharge, DataOutput.RoomRate.TaxAndServiceCode, RoomChargeB4Breakdown)
 		RoomChargeB4Breakdown = RoomChargeBasic + RoomChargeTax + RoomChargeService
 
-		var DataOutputGuestBreakdown []DBVar.Guest_breakdown
+		var DataOutputGuestBreakdown []db_var.Guest_breakdown
 		//Proses Query Breakdown
-		DB.Table(DBVar.TableName.GuestBreakdown).Select(
+		DB.Table(db_var.TableName.GuestBreakdown).Select(
 			" guest_breakdown.outlet_code,"+
 				" guest_breakdown.product_code,"+
 				" guest_breakdown.sub_department_code,"+
@@ -2603,8 +2606,8 @@ func PostingRoomChargeManual(ctx context.Context, c *gin.Context, DB *gorm.DB, D
 			err := DB.Transaction(func(tx *gorm.DB) error {
 				_, _, err := InsertSubFolio2(c, tx, Dataset, FolioNumber, SubFolioGroupCode, RoomNumber, Dataset.GlobalSubDepartment.FrontOffice,
 					Dataset.GlobalAccount.RoomCharge, Dataset.GlobalAccount.RoomCharge, "", "",
-					CurrencyCode, Remark, DocumentNumber, "", GlobalVar.TransactionType.Debit, "", "", CorrectionBreakdown,
-					BreakDown1, GlobalVar.SubFolioPostingType.Room, 0, RoomChargeBasic, RoomChargeTax, RoomChargeService,
+					CurrencyCode, Remark, DocumentNumber, "", global_var.TransactionType.Debit, "", "", CorrectionBreakdown,
+					BreakDown1, global_var.SubFolioPostingType.Room, 0, RoomChargeBasic, RoomChargeTax, RoomChargeService,
 					ExchangeRate, false, IsCanAutoTransferred, UserID)
 
 				if err != nil {
@@ -2670,7 +2673,7 @@ func PostingRoomChargeManual(ctx context.Context, c *gin.Context, DB *gorm.DB, D
 						} else {
 							BreakdownAmount = GetTotalBreakdownAmount(guestBreakdown.Quantity, guestBreakdown.Amount, guestBreakdown.ExtraPax, guestBreakdown.PerPax > 0, guestBreakdown.IncludeChild > 0, guestBreakdown.PerPaxExtra > 0, guestBreakdown.MaxPax, DataOutput.GuestDetail.Adult, *DataOutput.GuestDetail.Child) / ExchangeRate
 						}
-						SubFolioData := DBVar.Sub_folio{}
+						SubFolioData := db_var.Sub_folio{}
 						SubFolioData.FolioNumber = FolioNumber
 						SubFolioData.GroupCode = SubFolioGroupCode
 						SubFolioData.RoomNumber = RoomNumber
@@ -2679,11 +2682,11 @@ func PostingRoomChargeManual(ctx context.Context, c *gin.Context, DB *gorm.DB, D
 						SubFolioData.ProductCode = guestBreakdown.ProductCode
 						SubFolioData.CurrencyCode = CurrencyCode
 						SubFolioData.Remark = "Breakdown: " + guestBreakdown.Remark
-						SubFolioData.TypeCode = GlobalVar.TransactionType.Debit
+						SubFolioData.TypeCode = global_var.TransactionType.Debit
 						SubFolioData.CorrectionBreakdown = CorrectionBreakdown
 						SubFolioData.Breakdown1 = BreakDown1
 						SubFolioData.DirectBillCode = guestBreakdown.CompanyCode
-						SubFolioData.PostingType = GlobalVar.SubFolioPostingType.Room
+						SubFolioData.PostingType = global_var.SubFolioPostingType.Room
 						SubFolioData.ExtraChargeId = guestBreakdown.Id
 						SubFolioData.Quantity = 1
 						SubFolioData.Amount = BreakdownAmount
@@ -2708,7 +2711,7 @@ func PostingRoomChargeManual(ctx context.Context, c *gin.Context, DB *gorm.DB, D
 
 				//Posting Commission from Business Source
 				if Commission > 0 {
-					SubFolioData := DBVar.Sub_folio{}
+					SubFolioData := db_var.Sub_folio{}
 					SubFolioData.FolioNumber = FolioNumber
 					SubFolioData.GroupCode = SubFolioGroupCode
 					SubFolioData.RoomNumber = RoomNumber
@@ -2717,11 +2720,11 @@ func PostingRoomChargeManual(ctx context.Context, c *gin.Context, DB *gorm.DB, D
 					SubFolioData.ProductCode = Dataset.GlobalAccount.RoomCharge
 					SubFolioData.CurrencyCode = CurrencyCode
 					SubFolioData.Remark = "Breakdown Commission"
-					SubFolioData.TypeCode = GlobalVar.TransactionType.Debit
+					SubFolioData.TypeCode = global_var.TransactionType.Debit
 					SubFolioData.CorrectionBreakdown = CorrectionBreakdown
 					SubFolioData.Breakdown1 = BreakDown1
 					SubFolioData.DirectBillCode = BusinessSourceCode
-					SubFolioData.PostingType = GlobalVar.SubFolioPostingType.Room
+					SubFolioData.PostingType = global_var.SubFolioPostingType.Room
 					SubFolioData.Quantity = 1
 					SubFolioData.Amount = Commission
 					SubFolioData.ExchangeRate = ExchangeRate
@@ -2741,7 +2744,7 @@ func PostingRoomChargeManual(ctx context.Context, c *gin.Context, DB *gorm.DB, D
 }
 
 func UpdateSubFolioGroupByFolioNumber(DB *gorm.DB, FolioNumber uint64, SubFolioGroupCode, UserID string) error {
-	err := DB.Table(DBVar.TableName.SubFolio).
+	err := DB.Table(db_var.TableName.SubFolio).
 		Where("folio_number=? AND void='0'", FolioNumber).
 		Update("group_code", SubFolioGroupCode).Update("updated_by", UserID).Error
 
@@ -2749,14 +2752,14 @@ func UpdateSubFolioGroupByFolioNumber(DB *gorm.DB, FolioNumber uint64, SubFolioG
 }
 
 func UpdateSubFolioTransferPairID(DB *gorm.DB, SubFolioID1, SubFolioID2 uint64, UserID string) (err error) {
-	err = DB.Table(DBVar.TableName.SubFolio).
+	err = DB.Table(db_var.TableName.SubFolio).
 		Where("id=?", SubFolioID1).Updates(&map[string]interface{}{
 		"is_pair_with_deposit": 0,
 		"transfer_pair_id":     SubFolioID2,
 		"updated_by":           UserID,
 	}).Error
 
-	err = DB.Table(DBVar.TableName.SubFolio).
+	err = DB.Table(db_var.TableName.SubFolio).
 		Where("id=?", SubFolioID2).Updates(&map[string]interface{}{
 		"is_pair_with_deposit": 0,
 		"transfer_pair_id":     SubFolioID1,
@@ -2767,7 +2770,7 @@ func UpdateSubFolioTransferPairID(DB *gorm.DB, SubFolioID1, SubFolioID2 uint64, 
 }
 
 func MoveSubFolioByFolioNumber(DB *gorm.DB, FolioNumberFrom, FolioNumberTo uint64, SubFolioGroupCode, UserID string) error {
-	err := DB.Table(DBVar.TableName.SubFolio).
+	err := DB.Table(db_var.TableName.SubFolio).
 		Select("folio_number", "group_code", "updated_by").
 		Where("folio_number = ? AND void='0'", FolioNumberFrom).
 		Updates(map[string]interface{}{"folio_number": FolioNumberTo, "group_code": SubFolioGroupCode, "updated_by": UserID}).Error
@@ -2776,7 +2779,7 @@ func MoveSubFolioByFolioNumber(DB *gorm.DB, FolioNumberFrom, FolioNumberTo uint6
 }
 
 func MoveSubFolioByBreakdown(DB *gorm.DB, FolioNumber uint64, SubFolioGroupCode string, CorrectionBreakdown uint64, UserID string) error {
-	err := DB.Table(DBVar.TableName.SubFolio).
+	err := DB.Table(db_var.TableName.SubFolio).
 		Select("folio_number", "group_code", "updated_by").
 		Where("correction_breakdown = ? AND void='0'", CorrectionBreakdown).
 		Updates(map[string]interface{}{"folio_number": FolioNumber, "group_code": SubFolioGroupCode, "updated_by": UserID}).Error
@@ -2790,7 +2793,7 @@ func GetTransferBalanceRemark(DB *gorm.DB, FolioNumber uint64) string {
 	}
 
 	var DataOutput DataOutputStruct
-	DB.Table(DBVar.TableName.Folio).Select(
+	DB.Table(db_var.TableName.Folio).Select(
 		" guest_detail.room_number,"+" CONCAT(contact_person.title_code, contact_person.full_name) AS FullName ").
 		Joins("LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)").
 		Joins("LEFT OUTER JOIN contact_person ON (folio.contact_person_id1 = contact_person.id)").
@@ -2823,7 +2826,7 @@ func GetFolioReturns(DB *gorm.DB, FolioNumber string) ([]map[string]interface{},
 			" LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)" +
 			" LEFT OUTER JOIN const_folio_type ON (folio.type_code = const_folio_type.code)" +
 			" WHERE folio_routing.folio_transfer='" + FolioNumber + "'" +
-			" AND folio.status_code='" + GlobalVar.FolioStatus.Open + "' " +
+			" AND folio.status_code='" + global_var.FolioStatus.Open + "' " +
 			"GROUP BY folio_routing.folio_number" +
 			")UNION(" +
 			"SELECT" +
@@ -2840,7 +2843,7 @@ func GetFolioReturns(DB *gorm.DB, FolioNumber string) ([]map[string]interface{},
 			" LEFT OUTER JOIN const_folio_type ON (folio.type_code = const_folio_type.code)" +
 			" WHERE sub_folio.folio_number='" + FolioNumber + "'" +
 			" AND sub_folio.folio_number<>sub_folio.belongs_to" +
-			" AND folio.status_code='" + GlobalVar.FolioStatus.Open + "' " +
+			" AND folio.status_code='" + global_var.FolioStatus.Open + "' " +
 			"GROUP BY sub_folio.belongs_to)) AS FolioReturn " +
 			"GROUP BY number " +
 			"ORDER BY id_sort, room_number, number").Scan(&DataOutput).Error
@@ -2850,7 +2853,7 @@ func GetFolioReturns(DB *gorm.DB, FolioNumber string) ([]map[string]interface{},
 
 func GetInvoiceNumber(DB *gorm.DB, IssuedDate time.Time) string {
 	ServerID := GetServerID(DB)
-	Prefix := GlobalVar.ConstProgramVariable.InvoiceNumberPrefix + General.FormatDatePrefix(IssuedDate) + strconv.Itoa(ServerID) + "-"
+	Prefix := global_var.ConstProgramVariable.InvoiceNumberPrefix + general.FormatDatePrefix(IssuedDate) + strconv.Itoa(ServerID) + "-"
 	var DataOutput uint64
 	DB.Raw(
 		"SELECT" +
@@ -2861,11 +2864,11 @@ func GetInvoiceNumber(DB *gorm.DB, IssuedDate time.Time) string {
 			"ORDER BY MaxInvoiceNumber DESC " +
 			"LIMIT 1;").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 }
 func GetReceiptNumber(DB *gorm.DB, IssuedDate time.Time) string {
 	ServerID := GetServerID(DB)
-	Prefix := General.FormatDatePrefix(IssuedDate) + strconv.Itoa(ServerID) + "-"
+	Prefix := general.FormatDatePrefix(IssuedDate) + strconv.Itoa(ServerID) + "-"
 	var DataOutput uint64
 	DB.Raw(
 		"SELECT" +
@@ -2878,14 +2881,14 @@ func GetReceiptNumber(DB *gorm.DB, IssuedDate time.Time) string {
 	//fmt.Println(ServerID)
 	//fmt.Println(Prefix)
 	//fmt.Println(DataOutput)
-	//fmt.Println(Prefix + General.Uint64ToStr(DataOutput+1))
+	//fmt.Println(Prefix + general.Uint64ToStr(DataOutput+1))
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 }
 
 func GetPRNumber(DB *gorm.DB, IssuedDate time.Time) string {
 	ServerID := GetServerID(DB)
-	Prefix := GlobalVar.ConstProgramVariable.PRNumberPrefix + General.FormatDatePrefix(IssuedDate) + strconv.Itoa(ServerID) + "-"
+	Prefix := global_var.ConstProgramVariable.PRNumberPrefix + general.FormatDatePrefix(IssuedDate) + strconv.Itoa(ServerID) + "-"
 	var DataOutput uint64
 	DB.Raw(
 		"SELECT" +
@@ -2896,12 +2899,12 @@ func GetPRNumber(DB *gorm.DB, IssuedDate time.Time) string {
 			"ORDER BY MaxPRNumber DESC " +
 			"LIMIT 1;").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 }
 
 func GetPONumber(DB *gorm.DB, IssuedDate time.Time) string {
 	ServerID := GetServerID(DB)
-	Prefix := GlobalVar.ConstProgramVariable.PONumberPrefix + General.FormatDatePrefix(IssuedDate) + strconv.Itoa(ServerID) + "-"
+	Prefix := global_var.ConstProgramVariable.PONumberPrefix + general.FormatDatePrefix(IssuedDate) + strconv.Itoa(ServerID) + "-"
 	var DataOutput uint64
 	DB.Raw(
 		"SELECT" +
@@ -2912,12 +2915,12 @@ func GetPONumber(DB *gorm.DB, IssuedDate time.Time) string {
 			"ORDER BY MaxPONumber DESC " +
 			"LIMIT 1;").Scan(&DataOutput)
 
-	return Prefix + General.Uint64ToStr(DataOutput+1)
+	return Prefix + general.Uint64ToStr(DataOutput+1)
 }
 
 func GetJournalAccountCompanyAR(DB *gorm.DB, CompanyCode string) string {
 	var DataOutput string
-	DB.Table(DBVar.TableName.Company).Select("cfg_init_company_type.journal_account_code_ar").Joins("LEFT OUTER JOIN cfg_init_company_type ON (company.type_code = cfg_init_company_type.code)").
+	DB.Table(db_var.TableName.Company).Select("cfg_init_company_type.journal_account_code_ar").Joins("LEFT OUTER JOIN cfg_init_company_type ON (company.type_code = cfg_init_company_type.code)").
 		Where("company.code = ?", CompanyCode).Scan(&DataOutput)
 
 	return DataOutput
@@ -2926,47 +2929,47 @@ func GetJournalAccountCompanyAR(DB *gorm.DB, CompanyCode string) string {
 
 func GetJournalIDSort(DB *gorm.DB, PostingDate time.Time) int {
 	var IdSort int
-	DB.Table(DBVar.TableName.AccJournal).Select("id_sort").Where("date=?", PostingDate).Order("id_sort DESC").Limit(1).Scan(&IdSort)
+	DB.Table(db_var.TableName.AccJournal).Select("id_sort").Where("date=?", PostingDate).Order("id_sort DESC").Limit(1).Scan(&IdSort)
 
 	return IdSort + 1
 }
 
 func IsInvoiceHadPayment(DB *gorm.DB, InvoiceNumberX string) bool {
 	var InvoiceNumber string
-	DB.Table(DBVar.TableName.InvoicePayment).Select("invoice_number").Where("invoice_number=?", InvoiceNumber).Take(&InvoiceNumber)
+	DB.Table(db_var.TableName.InvoicePayment).Select("invoice_number").Where("invoice_number=?", InvoiceNumber).Take(&InvoiceNumber)
 	return InvoiceNumber != ""
 }
 
 func IsSubFolioIdHadInvoice(DB *gorm.DB, SubFolioId uint64) bool {
 	var SubFolioIdX uint64
-	DB.Table(DBVar.TableName.InvoiceItem).Select("sub_folio_id").Where("sub_folio_id=?", SubFolioId).Limit(1).Scan(&SubFolioIdX)
+	DB.Table(db_var.TableName.InvoiceItem).Select("sub_folio_id").Where("sub_folio_id=?", SubFolioId).Limit(1).Scan(&SubFolioIdX)
 
 	return SubFolioIdX > 0
 }
 
 func GetFolioType(DB *gorm.DB, FolioNumber uint64) string {
 	var Type string
-	DB.Table(DBVar.TableName.Folio).Select("type_code").Where("number=?", FolioNumber).Limit(1).Scan(&Type)
+	DB.Table(db_var.TableName.Folio).Select("type_code").Where("number=?", FolioNumber).Limit(1).Scan(&Type)
 
 	return Type
 }
 
 func GetFolioSystemCode(DB *gorm.DB, FolioNumber uint64) string {
 	var Code string
-	DB.Table(DBVar.TableName.Folio).Select("system_code").Where("number=?", FolioNumber).Limit(1).Scan(&Code)
+	DB.Table(db_var.TableName.Folio).Select("system_code").Where("number=?", FolioNumber).Limit(1).Scan(&Code)
 
 	return Code
 }
 func IsThereCardActiveFolio(DB *gorm.DB, FolioNumber uint64) bool {
-	return MasterData.GetFieldBool(DB, DBVar.TableName.LogKeylock, "id", "is_active = '1' AND folio_number", General.Uint64ToStr(FolioNumber), false)
+	return master_data.GetFieldBool(DB, db_var.TableName.LogKeylock, "id", "is_active = '1' AND folio_number", general.Uint64ToStr(FolioNumber), false)
 }
 
 func IsCanCreateInvoice(DB *gorm.DB, FolioNumber string) (DirectBillCode string, CanCreate bool) {
-	DB.Table(DBVar.TableName.SubFolio).Select("sub_folio.direct_bill_code").
+	DB.Table(db_var.TableName.SubFolio).Select("sub_folio.direct_bill_code").
 		Joins("LEFT OUTER JOIN cfg_init_account ON (sub_folio.account_code = cfg_init_account.code)").
 		Where("sub_folio.folio_number=?", FolioNumber).
 		Where("sub_folio.direct_bill_code<>''").
-		Where("cfg_init_account.sub_group_code=?", GlobalVar.GlobalAccountSubGroup.AccountReceivable).
+		Where("cfg_init_account.sub_group_code=?", global_var.GlobalAccountSubGroup.AccountReceivable).
 		Where("void='0'").
 		Group("sub_folio.correction_breakdown").
 		Limit(1).
@@ -2979,7 +2982,7 @@ func CheckFolioReceiveTransfer(DB *gorm.DB, FolioNumber uint64) []string {
 	var FolioTransferMessage []string
 	var FolioDetail []string
 
-	DB.Table(DBVar.TableName.FolioRouting).Select(" DISTINCT CONCAT(folio.number, '/Room: ', guest_detail.room_number, '/', contact_person.title_code, contact_person.full_name) AS FolioDetail").
+	DB.Table(db_var.TableName.FolioRouting).Select(" DISTINCT CONCAT(folio.number, '/Room: ', guest_detail.room_number, '/', contact_person.title_code, contact_person.full_name) AS FolioDetail").
 		Joins("LEFT OUTER JOIN folio ON (folio_routing.folio_number = folio.number)").
 		Joins("LEFT OUTER JOIN contact_person ON (folio.contact_person_id1 = contact_person.id)").
 		Joins("LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)").
@@ -2994,7 +2997,7 @@ func CheckFolioReceiveTransfer(DB *gorm.DB, FolioNumber uint64) []string {
 }
 
 func GetInvoiceTotalPayment(DB *gorm.DB, InvoiceNumber string) (TotalPayment float64) {
-	DB.Table(DBVar.TableName.InvoicePayment).Select("SUM(amount_foreign) AS TotalAmount").
+	DB.Table(db_var.TableName.InvoicePayment).Select("SUM(amount_foreign) AS TotalAmount").
 		Where("invoice_number=?", InvoiceNumber).
 		Group("invoice_number").Scan(&TotalPayment)
 
@@ -3004,7 +3007,7 @@ func GetInvoiceTotalPayment(DB *gorm.DB, InvoiceNumber string) (TotalPayment flo
 func IsPrepaidExpensePosted(DB *gorm.DB, PrepaidID, PrepaidPostedID uint64, PostingDate time.Time) bool {
 	var Id uint64
 	Year, Month, _ := PostingDate.Date()
-	Query := DB.Table(DBVar.TableName.AccPrepaidExpensePosted).Select("id").
+	Query := DB.Table(db_var.TableName.AccPrepaidExpensePosted).Select("id").
 		Where("prepaid_id=?", PrepaidID).
 		Where("MONTH(posting_date)=?", Month).
 		Where("YEAR(posting_date)=?", Year)
@@ -3020,7 +3023,7 @@ func IsPrepaidExpensePosted(DB *gorm.DB, PrepaidID, PrepaidPostedID uint64, Post
 func IsDifferedIncomePosted(DB *gorm.DB, DifferedID, DifferedPostedID uint64, PostingDate time.Time) bool {
 	var Id uint64
 	Year, Month, _ := PostingDate.Date()
-	Query := DB.Table(DBVar.TableName.AccDefferedIncomePosted).Select("id").
+	Query := DB.Table(db_var.TableName.AccDefferedIncomePosted).Select("id").
 		Where("deffered_id=?", DifferedID).
 		Where("MONTH(posting_date)=?", Month).
 		Where("YEAR(posting_date)=?", Year)
@@ -3035,13 +3038,13 @@ func IsDifferedIncomePosted(DB *gorm.DB, DifferedID, DifferedPostedID uint64, Po
 
 func GetJournalAccountCode(DB *gorm.DB, AccountCode string) string {
 	var JournalAccountCode string
-	DB.Table(DBVar.TableName.CfgInitAccount).Select("journal_account_code").Where("code=?", AccountCode).Limit(1).Scan(&JournalAccountCode)
+	DB.Table(db_var.TableName.CfgInitAccount).Select("journal_account_code").Where("code=?", AccountCode).Limit(1).Scan(&JournalAccountCode)
 
 	return JournalAccountCode
 }
 
 func GetJournalAccountCurrency(DB *gorm.DB, CurrencyCode string) (JournalAccountCode string) {
-	DB.Table(DBVar.TableName.CfgInitCurrency).Select("cfg_init_account.journal_account_code").
+	DB.Table(db_var.TableName.CfgInitCurrency).Select("cfg_init_account.journal_account_code").
 		Joins("LEFT OUTER JOIN cfg_init_account ON (cfg_init_currency.account_code = cfg_init_account.code)").
 		Where("cfg_init_currency.code=?", CurrencyCode).
 		Limit(1).
@@ -3051,7 +3054,7 @@ func GetJournalAccountCurrency(DB *gorm.DB, CurrencyCode string) (JournalAccount
 }
 
 func GetForeignCashBreakdown(DB *gorm.DB) (BreakdownId uint64) {
-	DB.Table(DBVar.TableName.AccForeignCash).Select("breakdown").
+	DB.Table(db_var.TableName.AccForeignCash).Select("breakdown").
 		Order("breakdown DESC").
 		Limit(1).
 		Scan(&BreakdownId)
@@ -3060,9 +3063,9 @@ func GetForeignCashBreakdown(DB *gorm.DB) (BreakdownId uint64) {
 }
 
 func GetJournalAccountCodeFromTransaction(DB *gorm.DB, IdTable, IdTransaction uint64) (AccountCode string) {
-	MainTableName := DBVar.TableName.SubFolio
+	MainTableName := db_var.TableName.SubFolio
 	if IdTable == 1 {
-		MainTableName = DBVar.TableName.GuestDeposit
+		MainTableName = db_var.TableName.GuestDeposit
 	}
 	DB.Table(MainTableName).Select("cfg_init_account.journal_account_code").
 		Joins("LEFT OUTER JOIN cfg_init_account ON ("+MainTableName+".account_code = cfg_init_account.code)").
@@ -3074,7 +3077,7 @@ func GetJournalAccountCodeFromTransaction(DB *gorm.DB, IdTable, IdTransaction ui
 }
 
 func GetJournalAccountListByGroup(DB *gorm.DB, SubDepartmentCode, GroupCode1, GroupCode2, GroupCode3 string) (DataOutput []map[string]interface{}) {
-	Query := DB.Table(DBVar.TableName.CfgInitJournalAccount).Select(
+	Query := DB.Table(db_var.TableName.CfgInitJournalAccount).Select(
 		" cfg_init_journal_account.code,"+
 			" cfg_init_journal_account.name").
 		Joins("LEFT OUTER JOIN cfg_init_journal_account_sub_group ON (cfg_init_journal_account.sub_group_code = cfg_init_journal_account_sub_group.code)").
@@ -3093,43 +3096,43 @@ func GetJournalAccountListByGroup(DB *gorm.DB, SubDepartmentCode, GroupCode1, Gr
 }
 
 func GetPurchaseRequestStatus(DB *gorm.DB, Id uint64) (Status string) {
-	DB.Table(DBVar.TableName.InvPurchaseRequest).Select("status_code").Where("id=?", Id).Limit(1).Scan(&Status)
+	DB.Table(db_var.TableName.InvPurchaseRequest).Select("status_code").Where("id=?", Id).Limit(1).Scan(&Status)
 	if Status == "" {
-		Status = GlobalVar.PurchaseRequestStatus.NotApproved
+		Status = global_var.PurchaseRequestStatus.NotApproved
 	}
 	return
 }
 
 func IsPurchaseRequestApproved1(DB *gorm.DB, Id uint64) (IsApprove bool) {
 	var Number string
-	DB.Table(DBVar.TableName.InvPurchaseRequest).Select("number").Where("id = ? AND is_user_approved1=1", Id).Limit(1).Scan(&Number)
+	DB.Table(db_var.TableName.InvPurchaseRequest).Select("number").Where("id = ? AND is_user_approved1=1", Id).Limit(1).Scan(&Number)
 	IsApprove = Number != ""
 	return
 }
 
 func IsPurchaseRequestApproved12(DB *gorm.DB, Id uint64) (IsApprove bool) {
 	var Number string
-	DB.Table(DBVar.TableName.InvPurchaseRequest).Select("number").Where("id = ? AND is_user_approved12=1", Id).Limit(1).Scan(&Number)
+	DB.Table(db_var.TableName.InvPurchaseRequest).Select("number").Where("id = ? AND is_user_approved12=1", Id).Limit(1).Scan(&Number)
 	IsApprove = Number != ""
 	return
 }
 
 func IsPurchaseRequestApproved2(DB *gorm.DB, Id uint64) (IsApprove bool) {
 	var Number string
-	DB.Table(DBVar.TableName.InvPurchaseRequest).Select("number").Where("id = ? AND is_user_approved2=1", Id).Limit(1).Scan(&Number)
+	DB.Table(db_var.TableName.InvPurchaseRequest).Select("number").Where("id = ? AND is_user_approved2=1", Id).Limit(1).Scan(&Number)
 	IsApprove = Number != ""
 	return
 }
 
 func IsPurchaseRequestApproved3(DB *gorm.DB, Id uint64) (IsApprove bool) {
 	var Number string
-	DB.Table(DBVar.TableName.InvPurchaseRequest).Select("number").Where("id = ? AND is_user_approved3=1", Id).Limit(1).Scan(&Number)
+	DB.Table(db_var.TableName.InvPurchaseRequest).Select("number").Where("id = ? AND is_user_approved3=1", Id).Limit(1).Scan(&Number)
 	IsApprove = Number != ""
 	return
 }
 func IsPurchaseRequestPriceApplied(DB *gorm.DB, Number string) (IsApplied bool) {
 	var PRNumber string
-	DB.Table(DBVar.TableName.InvPurchaseRequestDetail).Select("pr_number").Where("pr_number=? AND quantity_approved > 0", Number).Limit(1).Scan(&PRNumber)
+	DB.Table(db_var.TableName.InvPurchaseRequestDetail).Select("pr_number").Where("pr_number=? AND quantity_approved > 0", Number).Limit(1).Scan(&PRNumber)
 	IsApplied = PRNumber != ""
 	return
 }
@@ -3141,7 +3144,7 @@ func CanUserApprovedInventoryPR1(DB *gorm.DB, UserID, Password, SubDepartmentCod
 	// } else {
 	//   PasswordEncrypted = EncryptString(Password, VariableDLL.KeyOtherDLL)
 	// }
-	DB.Table(DBVar.TableName.AstUserSubDepartment).Select("user_code").Where("user_code=? AND sub_department_code=? AND is_can_inv_pr_approve1=1", UserID, SubDepartmentCode).Limit(1).Scan(&UserCode)
+	DB.Table(db_var.TableName.AstUserSubDepartment).Select("user_code").Where("user_code=? AND sub_department_code=? AND is_can_inv_pr_approve1=1", UserID, SubDepartmentCode).Limit(1).Scan(&UserCode)
 	// if IsUserPasswordValid(UserID, PasswordEncrypted) {
 	//TODO please Review validation
 	return UserCode != ""
@@ -3154,7 +3157,7 @@ func CanUserApprovedInventoryPR2(DB *gorm.DB, UserID, Password, SubDepartmentCod
 	// } else {
 	//   PasswordEncrypted = EncryptString(Password, VariableDLL.KeyOtherDLL)
 	// }
-	DB.Table(DBVar.TableName.AstUserSubDepartment).Select("user_code").Where("user_code=? AND sub_department_code=? AND is_can_inv_pr_approve2=1", UserID, SubDepartmentCode).Limit(1).Scan(&UserCode)
+	DB.Table(db_var.TableName.AstUserSubDepartment).Select("user_code").Where("user_code=? AND sub_department_code=? AND is_can_inv_pr_approve2=1", UserID, SubDepartmentCode).Limit(1).Scan(&UserCode)
 	// if IsUserPasswordValid(UserID, PasswordEncrypted) {
 	//TODO please Review validation
 	return UserCode != ""
@@ -3167,7 +3170,7 @@ func CanUserApprovedInventoryPR3(DB *gorm.DB, UserID, Password, SubDepartmentCod
 	// } else {
 	//   PasswordEncrypted = EncryptString(Password, VariableDLL.KeyOtherDLL)
 	// }
-	DB.Table(DBVar.TableName.AstUserSubDepartment).Select("user_code").Where("user_code=? AND sub_department_code=? AND is_can_inv_pr_approve3=1", UserID, SubDepartmentCode).Limit(1).Scan(&UserCode)
+	DB.Table(db_var.TableName.AstUserSubDepartment).Select("user_code").Where("user_code=? AND sub_department_code=? AND is_can_inv_pr_approve3=1", UserID, SubDepartmentCode).Limit(1).Scan(&UserCode)
 	// if IsUserPasswordValid(UserID, PasswordEncrypted) {
 	//TODO please Review validation
 	return UserCode != ""
@@ -3180,7 +3183,7 @@ func CanUserApprovedInventoryPR12(DB *gorm.DB, UserID, Password, SubDepartmentCo
 	// } else {
 	//   PasswordEncrypted = EncryptString(Password, VariableDLL.KeyOtherDLL)
 	// }
-	DB.Table(DBVar.TableName.AstUserSubDepartment).Select("user_code").Where("user_code=? AND sub_department_code=? AND is_can_inv_pr_approve12=1", UserID, SubDepartmentCode).Limit(1).Scan(&UserCode)
+	DB.Table(db_var.TableName.AstUserSubDepartment).Select("user_code").Where("user_code=? AND sub_department_code=? AND is_can_inv_pr_approve12=1", UserID, SubDepartmentCode).Limit(1).Scan(&UserCode)
 	// if IsUserPasswordValid(UserID, PasswordEncrypted) {
 	//TODO please Review validation
 	return UserCode != ""
@@ -3193,7 +3196,7 @@ func CanUserApplyPrice(DB *gorm.DB, UserID, Password, SubDepartmentCode string, 
 	// } else {
 	//   PasswordEncrypted = EncryptString(Password, VariableDLL.KeyOtherDLL)
 	// }
-	DB.Table(DBVar.TableName.AstUserSubDepartment).Select("user_code").Where("user_code=? AND sub_department_code=? AND is_can_inv_pr_assign_price=1", UserID, SubDepartmentCode).Limit(1).Scan(&UserCode)
+	DB.Table(db_var.TableName.AstUserSubDepartment).Select("user_code").Where("user_code=? AND sub_department_code=? AND is_can_inv_pr_assign_price=1", UserID, SubDepartmentCode).Limit(1).Scan(&UserCode)
 	// if IsUserPasswordValid(UserID, PasswordEncrypted) {
 	//TODO please Review validation
 	return UserCode != ""
@@ -3202,7 +3205,7 @@ func CanUserApplyPrice(DB *gorm.DB, UserID, Password, SubDepartmentCode string, 
 func GetMarketListCheaperPrice(DB *gorm.DB, ItemCode, UOMCode string) map[string]interface{} {
 	DataOutput2 := make(map[string]interface{})
 	var DataOutput map[string]interface{}
-	DB.Table(DBVar.TableName.InvCfgInitMarketList).Select(
+	DB.Table(db_var.TableName.InvCfgInitMarketList).Select(
 		" inv_cfg_init_market_list.company_code,"+
 			" IF(inv_cfg_init_market_list.uom_code=inv_cfg_init_item.uom_code,IFNULL(inv_cfg_init_market_list.price,0)*IFNULL(inv_cfg_init_item_uom1.quantity,1),"+"IF(IFNULL(inv_cfg_init_item_uom.quantity,0)=0,0,IFNULL(inv_cfg_init_market_list.price,0)/inv_cfg_init_item_uom.quantity*IFNULL(inv_cfg_init_item_uom1.quantity,0))) AS MarketPrice,"+
 			" IFNULL(company.name,'') AS name").
@@ -3224,7 +3227,7 @@ func GetMarketListCheaperPrice(DB *gorm.DB, ItemCode, UOMCode string) map[string
 	if DataOutput != nil {
 		DataOutput2["company_code"] = DataOutput["company_code"].(string)
 		DataOutput2["company_name"] = DataOutput["name"].(string)
-		DataOutput2["price"] = General.StrToFloat64(DataOutput["MarketPrice"].(string))
+		DataOutput2["price"] = general.StrToFloat64(DataOutput["MarketPrice"].(string))
 	}
 	return DataOutput2
 }
@@ -3232,7 +3235,7 @@ func GetMarketListCheaperPrice(DB *gorm.DB, ItemCode, UOMCode string) map[string
 func GetReceiveLastPrice(DB *gorm.DB, ItemCode, UOMCode, StockDate string) map[string]interface{} {
 	DataOutput2 := make(map[string]interface{})
 	var DataOutput map[string]interface{}
-	DB.Table(DBVar.TableName.InvReceivingDetail).Select(
+	DB.Table(db_var.TableName.InvReceivingDetail).Select(
 		" inv_receiving_detail.receive_uom_code,"+
 			" inv_receiving_detail.receive_price,"+
 			" inv_receiving_detail.basic_uom_code,"+
@@ -3260,7 +3263,7 @@ func GetReceiveLastPrice(DB *gorm.DB, ItemCode, UOMCode, StockDate string) map[s
 			DataOutput2["price"] = BasicPrice
 		} else {
 			DataOutput2["uom_code"] = UOMCode
-			DataOutput2["price"] = ConvertPriceFromBasic(DB, ItemCode, UOMCode, General.StrToFloat64(BasicPrice))
+			DataOutput2["price"] = ConvertPriceFromBasic(DB, ItemCode, UOMCode, general.StrToFloat64(BasicPrice))
 		}
 	}
 	return DataOutput2
@@ -3269,7 +3272,7 @@ func GetReceiveLastPrice(DB *gorm.DB, ItemCode, UOMCode, StockDate string) map[s
 func ConvertPriceFromBasic(DB *gorm.DB, ItemCode, UOMCode string, BasicPrice float64) (Price float64) {
 	Price = BasicPrice
 	//Ambil dari Receive
-	Quantity := MasterData.GetFieldFloatQuery(DB, "SELECT quantity FROM inv_cfg_init_item_uom"+
+	Quantity := master_data.GetFieldFloatQuery(DB, "SELECT quantity FROM inv_cfg_init_item_uom"+
 		" WHERE item_code=?"+
 		" AND uom_code=?", 0, ItemCode, UOMCode)
 	if Quantity > 0 {
@@ -3279,11 +3282,11 @@ func ConvertPriceFromBasic(DB *gorm.DB, ItemCode, UOMCode string, BasicPrice flo
 }
 
 func GetStockStoreUpdateStockTransfer(DB *gorm.DB, Dataset *global_var.TDataset, StoreCode, ItemCode, StockTransferNumber string, StockDate time.Time) (float64, error) {
-	StockDateStr := General.FormatDate1(StockDate)
+	StockDateStr := general.FormatDate1(StockDate)
 	StockInDate := GetStockInDate(DB, StoreCode, ItemCode, StockDate)
-	StockInDateStr := General.FormatDate1(StockInDate)
+	StockInDateStr := general.FormatDate1(StockInDate)
 	var Stock float64
-	if Dataset.ProgramConfiguration.CostingMethod == GlobalVar.InventoryCostingMethod.Average {
+	if Dataset.ProgramConfiguration.CostingMethod == global_var.InventoryCostingMethod.Average {
 		if err := DB.Raw(
 			"SELECT SUM(IFNULL(Stock.Quantity, 0)) FROM ((" +
 				"SELECT" +
@@ -3292,7 +3295,7 @@ func GetStockStoreUpdateStockTransfer(DB *gorm.DB, Dataset *global_var.TDataset,
 				" inv_receiving_detail" +
 				" LEFT OUTER JOIN inv_receiving ON (inv_receiving_detail.receive_number = inv_receiving.number)" +
 				" WHERE inv_receiving_detail.item_code='" + ItemCode + "' " +
-				" AND inv_receiving.date<='" + General.FormatDate1(StockDate) + "' " +
+				" AND inv_receiving.date<='" + general.FormatDate1(StockDate) + "' " +
 				"GROUP BY inv_receiving_detail.item_code" +
 				") UNION ALL (" +
 				"SELECT" +
@@ -3387,44 +3390,44 @@ func GetStockStore(DB *gorm.DB, Dataset *global_var.TDataset, StoreCode, ItemCod
 	var StockInDate, LastItemClosedDate time.Time
 	// TODO Optimize query
 	// Result = 0
-	StockDateStr = General.FormatDate1(StockDate)
+	StockDateStr = general.FormatDate1(StockDate)
 	CostingMethod := Dataset.ProgramConfiguration.CostingMethod
-	if CostingMethod == GlobalVar.InventoryCostingMethod.Average {
+	if CostingMethod == global_var.InventoryCostingMethod.Average {
 		StockInDate = GetStockInDate(DB, StoreCode, ItemCode, StockDate)
-		StockInDateStr = General.FormatDate1(StockInDate)
+		StockInDateStr = general.FormatDate1(StockInDate)
 
 		LastItemClosedDate = GetLastItemStoreClosedDate(DB, ItemCode)
-		LastItemClosedDateStr = General.FormatDate1(LastItemClosedDate)
-		IncDay1ItemClosedDateStr = General.FormatDate1(LastItemClosedDate.AddDate(0, 0, 1))
+		LastItemClosedDateStr = general.FormatDate1(LastItemClosedDate)
+		IncDay1ItemClosedDateStr = general.FormatDate1(LastItemClosedDate.AddDate(0, 0, 1))
 
-		Query1 := DB.Table(DBVar.TableName.InvReceivingDetail).
+		Query1 := DB.Table(db_var.TableName.InvReceivingDetail).
 			Select("SUM(IF(inv_receiving_detail.store_code=?, inv_receiving_detail.basic_quantity, 0)) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_receiving ON (inv_receiving_detail.receive_number = inv_receiving.number)").
 			Where("inv_receiving_detail.item_code=?", ItemCode).
 			Where("(inv_receiving.date BETWEEN ? AND ?)", IncDay1ItemClosedDateStr, StockDateStr).
 			Group("inv_receiving_detail.item_code")
-		Query2 := DB.Table(DBVar.TableName.InvStockTransferDetail).
+		Query2 := DB.Table(db_var.TableName.InvStockTransferDetail).
 			Select("SUM(inv_stock_transfer_detail.quantity) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_stock_transfer ON (inv_stock_transfer_detail.st_number = inv_stock_transfer.number)").
 			Where("inv_stock_transfer_detail.item_code=?", ItemCode).
 			Where("(inv_stock_transfer.date BETWEEN ? AND ?)", IncDay1ItemClosedDateStr, StockDateStr).
 			Where("inv_stock_transfer_detail.to_store_code=?", StoreCode).
 			Group("inv_stock_transfer_detail.item_code")
-		Query3 := DB.Table(DBVar.TableName.InvStockTransferDetail).
+		Query3 := DB.Table(db_var.TableName.InvStockTransferDetail).
 			Select("-SUM(inv_stock_transfer_detail.quantity) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_stock_transfer ON (inv_stock_transfer_detail.st_number = inv_stock_transfer.number)").
 			Where("inv_stock_transfer_detail.item_code=?", ItemCode).
 			Where("(inv_stock_transfer.date BETWEEN ? AND ?)", IncDay1ItemClosedDateStr, StockDateStr).
 			Where("inv_stock_transfer_detail.from_store_code=?", StoreCode).
 			Group("inv_stock_transfer_detail.item_code")
-		Query4 := DB.Table(DBVar.TableName.InvCostingDetail).
+		Query4 := DB.Table(db_var.TableName.InvCostingDetail).
 			Select("-SUM(inv_costing_detail.quantity) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_costing ON (inv_costing_detail.costing_number = inv_costing.number)").
 			Where("inv_costing_detail.item_code=?", ItemCode).
 			Where("inv_costing.date<=?", StockInDateStr).
 			Where("inv_costing_detail.store_code=?", StoreCode).
 			Group("inv_costing_detail.item_code")
-		Query5 := DB.Table(DBVar.TableName.InvCloseSummaryStore).
+		Query5 := DB.Table(db_var.TableName.InvCloseSummaryStore).
 			Select("inv_close_summary_store.quantity_all AS Quantity").
 			Where("inv_close_summary_store.date=?", LastItemClosedDateStr).
 			Where("inv_close_summary_store.store_code=?", StoreCode).
@@ -3463,7 +3466,7 @@ func GetStockStore(DB *gorm.DB, Dataset *global_var.TDataset, StoreCode, ItemCod
 			" AND inv_costing_detail.store_code=?"+
 			" GROUP BY inv_costing_detail.receive_id", StockDateStr, ItemCode, StoreCode)
 
-		if err := DB.Debug().Table(DBVar.TableName.InvReceivingDetail).
+		if err := DB.Debug().Table(db_var.TableName.InvReceivingDetail).
 			Select("(SUM(IF(inv_receiving_detail.store_code='"+StoreCode+"', inv_receiving_detail.basic_quantity, 0)) + SUM(IFNULL(StockTransfer.Quantity, 0)) - SUM(IFNULL(Costing.Quantity, 0))) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_receiving ON (inv_receiving_detail.receive_number = inv_receiving.number)").
 			Joins("LEFT OUTER JOIN (?) AS StockTransfer ON (inv_receiving_detail. id = StockTransfer.receive_id)", JoinQuery1).
@@ -3484,37 +3487,37 @@ func GetStockStoreUpdateCosting(DB *gorm.DB, Dataset *global_var.TDataset, Store
 	var StockInDate, LastItemClosedDate time.Time
 	// TODO Optimize query
 	// Result = 0
-	StockDateStr = General.FormatDate1(StockDate)
-	CostingMethod := Dataset.Configuration[GlobalVar.ConfigurationCategory.Inventory][GlobalVar.ConfigurationName.CostingMethod].(string)
-	if CostingMethod == GlobalVar.InventoryCostingMethod.Average {
+	StockDateStr = general.FormatDate1(StockDate)
+	CostingMethod := Dataset.Configuration[global_var.ConfigurationCategory.Inventory][global_var.ConfigurationName.CostingMethod].(string)
+	if CostingMethod == global_var.InventoryCostingMethod.Average {
 		StockInDate = GetStockInDate(DB, StoreCode, ItemCode, StockDate)
-		StockInDateStr = General.FormatDate1(StockInDate)
+		StockInDateStr = general.FormatDate1(StockInDate)
 
 		LastItemClosedDate = GetLastItemStoreClosedDate(DB, ItemCode)
-		LastItemClosedDateStr = General.FormatDate1(LastItemClosedDate)
-		IncDay1ItemClosedDateStr = General.FormatDate1(LastItemClosedDate.AddDate(0, 0, 1))
+		LastItemClosedDateStr = general.FormatDate1(LastItemClosedDate)
+		IncDay1ItemClosedDateStr = general.FormatDate1(LastItemClosedDate.AddDate(0, 0, 1))
 
-		Query1 := DB.Table(DBVar.TableName.InvReceivingDetail).
+		Query1 := DB.Table(db_var.TableName.InvReceivingDetail).
 			Select("SUM(IF(inv_receiving_detail.store_code=?, inv_receiving_detail.basic_quantity, 0)) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_receiving ON (inv_receiving_detail.receive_number = inv_receiving.number)").
 			Where("inv_receiving_detail.item_code=?", ItemCode).
 			Where("(inv_receiving.date BETWEEN ? AND ?)", IncDay1ItemClosedDateStr, StockDateStr).
 			Group("inv_receiving_detail.item_code")
-		Query2 := DB.Table(DBVar.TableName.InvStockTransferDetail).
+		Query2 := DB.Table(db_var.TableName.InvStockTransferDetail).
 			Select("SUM(inv_stock_transfer_detail.quantity) AS Quantity ").
 			Joins("LEFT OUTER JOIN inv_stock_transfer ON (inv_stock_transfer_detail.st_number = inv_stock_transfer.number)").
 			Where("inv_stock_transfer_detail.item_code=?", ItemCode).
 			Where("(inv_stock_transfer.date BETWEEN ? AND ?)", IncDay1ItemClosedDateStr, StockDateStr).
 			Where("inv_stock_transfer_detail.to_store_code=?").
 			Group("inv_stock_transfer_detail.item_code")
-		Query3 := DB.Table(DBVar.TableName.InvStockTransferDetail).
+		Query3 := DB.Table(db_var.TableName.InvStockTransferDetail).
 			Select("-SUM(inv_stock_transfer_detail.quantity) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_stock_transfer ON (inv_stock_transfer_detail.st_number = inv_stock_transfer.number)").
 			Where("inv_stock_transfer_detail.item_code=?", ItemCode).
 			Where("(inv_stock_transfer.date BETWEEN ? AND ?)", IncDay1ItemClosedDateStr, StockDateStr).
 			Where("inv_stock_transfer_detail.from_store_code=?", StoreCode).
 			Group("inv_stock_transfer_detail.item_code")
-		Query4 := DB.Table(DBVar.TableName.InvCostingDetail).
+		Query4 := DB.Table(db_var.TableName.InvCostingDetail).
 			Select("-SUM(inv_costing_detail.quantity) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_costing ON (inv_costing_detail.costing_number = inv_costing.number)").
 			Where("inv_costing_detail.item_code=?", ItemCode).
@@ -3522,7 +3525,7 @@ func GetStockStoreUpdateCosting(DB *gorm.DB, Dataset *global_var.TDataset, Store
 			Where("inv_costing_detail.store_code=?", StoreCode).
 			Where("inv_costing_detail.costing_number<>?", CostingNumber).
 			Group("inv_costing_detail.item_code")
-		Query5 := DB.Table(DBVar.TableName.InvCloseSummaryStore).
+		Query5 := DB.Table(db_var.TableName.InvCloseSummaryStore).
 			Select("inv_close_summary_store.quantity_all AS Quantity").
 			Where("inv_close_summary_store.date=?", LastItemClosedDateStr).
 			Where("inv_close_summary_store.store_code=?", StoreCode).
@@ -3585,7 +3588,7 @@ func GetStockStoreUpdateCosting(DB *gorm.DB, Dataset *global_var.TDataset, Store
 			" AND inv_costing_detail.item_code=? "+
 			"GROUP BY inv_costing_detail.receive_id", CostingNumber, ItemCode)
 
-		if err := DB.Table(DBVar.TableName.InvReceivingDetail).
+		if err := DB.Table(db_var.TableName.InvReceivingDetail).
 			Select("(SUM(IF(inv_receiving_detail.store_code='"+StoreCode+"', inv_receiving_detail.basic_quantity, 0)) + SUM(IFNULL(StockTransfer.Quantity, 0)) - SUM(IFNULL(Costing.Quantity, 0))) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_receiving ON (inv_receiving_detail.receive_number = inv_receiving.number)").
 			Joins("LEFT OUTER JOIN (?) AS StockTransfer ON (inv_receiving_detail. id = StockTransfer.receive_id)", JoinQuery1).
@@ -3603,12 +3606,12 @@ func GetStockStoreUpdateCosting(DB *gorm.DB, Dataset *global_var.TDataset, Store
 }
 
 func GetLastItemStoreClosedDate(DB *gorm.DB, ItemCode string) (CloseDate time.Time) {
-	DB.Table(DBVar.TableName.InvCloseSummaryStore).Select("date").Where("item_code=?", ItemCode).Limit(1).Scan(&CloseDate)
+	DB.Table(db_var.TableName.InvCloseSummaryStore).Select("date").Where("item_code=?", ItemCode).Limit(1).Scan(&CloseDate)
 	return
 }
 
 func GetLastInventoryClosedDate(DB *gorm.DB) (CloseDate time.Time) {
-	DB.Table(DBVar.TableName.InvCloseLog).Select("date").Limit(1).Scan(&CloseDate)
+	DB.Table(db_var.TableName.InvCloseLog).Select("date").Limit(1).Scan(&CloseDate)
 	return
 }
 
@@ -3619,9 +3622,9 @@ func GetStockInDate(DB *gorm.DB, StoreCode, ItemCode string, StockDate time.Time
 	ReceiveDate = StockDate
 	TransferInDate = StockDate
 	CostingDate = StockDate
-	StockDateStr = General.FormatDate1(StockDate)
+	StockDateStr = general.FormatDate1(StockDate)
 
-	DB.Table(DBVar.TableName.InvReceivingDetail).Select("inv_receiving.`date`").
+	DB.Table(db_var.TableName.InvReceivingDetail).Select("inv_receiving.`date`").
 		Joins("LEFT OUTER JOIN inv_receiving ON (inv_receiving_detail.receive_number = inv_receiving.number)").
 		Where("inv_receiving.date>?", StockDateStr).
 		Where("inv_receiving_detail.item_code=?", ItemCode).
@@ -3634,7 +3637,7 @@ func GetStockInDate(DB *gorm.DB, StoreCode, ItemCode string, StockDate time.Time
 		ReceiveDate = ReceiveDateQuery
 	}
 
-	DB.Table(DBVar.TableName.InvStockTransferDetail).Select("inv_stock_transfer.`date`").
+	DB.Table(db_var.TableName.InvStockTransferDetail).Select("inv_stock_transfer.`date`").
 		Joins("LEFT OUTER JOIN inv_stock_transfer ON (inv_stock_transfer_detail.st_number = inv_stock_transfer.number)").
 		Where("inv_stock_transfer.date>?", StockDateStr).
 		Where("inv_stock_transfer_detail.item_code=?", ItemCode).
@@ -3661,7 +3664,7 @@ func GetStockInDate(DB *gorm.DB, StoreCode, ItemCode string, StockDate time.Time
 		return TransferInDate
 	} else {
 
-		DB.Table(DBVar.TableName.InvCostingDetail).Select("inv_costing.`date`").
+		DB.Table(db_var.TableName.InvCostingDetail).Select("inv_costing.`date`").
 			Joins("LEFT OUTER JOIN inv_costing ON (inv_costing_detail.costing_number = inv_costing.number)").
 			Where("inv_costing.date>?", StockDateStr).
 			Where("inv_costing_detail.item_code=?", ItemCode).
@@ -3683,7 +3686,7 @@ func GetStockInDate(DB *gorm.DB, StoreCode, ItemCode string, StockDate time.Time
 }
 
 func GetInventoryJournalAccount(DB *gorm.DB, ItemCode string) (JournalAccountCode string) {
-	DB.Table(DBVar.TableName.InvCfgInitItem).Select("inv_cfg_init_item_category.journal_account_code").
+	DB.Table(db_var.TableName.InvCfgInitItem).Select("inv_cfg_init_item_category.journal_account_code").
 		Joins("LEFT OUTER JOIN inv_cfg_init_item_category ON (inv_cfg_init_item.category_code = inv_cfg_init_item_category.code)").
 		Where("inv_cfg_init_item.code=?", ItemCode).
 		Limit(1).
@@ -3693,7 +3696,7 @@ func GetInventoryJournalAccount(DB *gorm.DB, ItemCode string) (JournalAccountCod
 }
 
 func GetStoreID(DB *gorm.DB, Code string) (ID uint64) {
-	DB.Table(DBVar.TableName.InvCfgInitStore).Select("id").
+	DB.Table(db_var.TableName.InvCfgInitStore).Select("id").
 		Where("code=?", Code).
 		Limit(1).
 		Scan(&ID)
@@ -3702,12 +3705,12 @@ func GetStoreID(DB *gorm.DB, Code string) (ID uint64) {
 }
 
 func IsStockMinusStockTransfer(DB *gorm.DB, StoreCode, ItemCode, StockTransferNumber, CostingMethod string, StockDate time.Time) (IsMinus bool) {
-	Query1 := DB.Table(DBVar.TableName.InvCostingDetail).Distinct("inv_costing.`date").
+	Query1 := DB.Table(db_var.TableName.InvCostingDetail).Distinct("inv_costing.`date").
 		Joins("LEFT OUTER JOIN inv_costing ON (inv_costing_detail.costing_number = inv_costing.number)").
 		Where("inv_costing_detail.item_code=?", ItemCode).
 		Where("inv_costing_detail.store_code=?", StoreCode).
 		Where("inv_costing.date>=?", StockDate)
-	Query2 := DB.Table(DBVar.TableName.InvStockTransferDetail).Distinct("inv_stock_transfer.`date").
+	Query2 := DB.Table(db_var.TableName.InvStockTransferDetail).Distinct("inv_stock_transfer.`date").
 		Joins("LEFT OUTER JOIN inv_stock_transfer ON (inv_stock_transfer_detail.st_number = inv_stock_transfer.number)").
 		Where("inv_stock_transfer_detail.item_code=?", ItemCode).
 		Where("inv_stock_transfer_detail.from_store_code=?", StoreCode).
@@ -3732,19 +3735,19 @@ func GetStockStoreUpdateReceive(DB *gorm.DB, StoreCode, ItemCode, ReceiveNumber,
 	var StockDateStr, StockInDateStr string
 	var StockInDate time.Time
 	// TODO Optimize query
-	StockDateStr = General.FormatDate1(StockDate)
-	if CostingMethod == GlobalVar.InventoryCostingMethod.Average {
+	StockDateStr = general.FormatDate1(StockDate)
+	if CostingMethod == global_var.InventoryCostingMethod.Average {
 		StockInDate = GetStockInDate(DB, StoreCode, ItemCode, StockDate)
-		StockInDateStr = General.FormatDate1(StockInDate)
+		StockInDateStr = general.FormatDate1(StockInDate)
 
-		Query1 := DB.Table(DBVar.TableName.InvReceivingDetail).
+		Query1 := DB.Table(db_var.TableName.InvReceivingDetail).
 			Select("SUM(IF(inv_receiving_detail.store_code=?, inv_receiving_detail.basic_quantity, 0)) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_receiving ON (inv_receiving_detail.receive_number = inv_receiving.number)").
 			Where("inv_receiving_detail.item_code=?", ItemCode).
 			Where("(inv_receiving.date<=?", StockDateStr).
 			Where("inv_receiving_detail.receive_number<>?", ReceiveNumber).
 			Group("inv_receiving_detail.item_code")
-		Query2 := DB.Table(DBVar.TableName.InvStockTransferDetail).
+		Query2 := DB.Table(db_var.TableName.InvStockTransferDetail).
 			Select("SUM(inv_stock_transfer_detail.quantity) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_stock_transfer ON (inv_stock_transfer_detail.st_number = inv_stock_transfer.number)").
 			Where("inv_stock_transfer_detail.item_code=?", ItemCode).
@@ -3752,14 +3755,14 @@ func GetStockStoreUpdateReceive(DB *gorm.DB, StoreCode, ItemCode, ReceiveNumber,
 			Where("inv_stock_transfer_detail.to_store_code=?", StoreCode).
 			Where("inv_stock_transfer.number<>?", ReceiveNumber).
 			Group("inv_stock_transfer_detail.item_code")
-		Query3 := DB.Table(DBVar.TableName.InvStockTransferDetail).
+		Query3 := DB.Table(db_var.TableName.InvStockTransferDetail).
 			Select("-SUM(inv_stock_transfer_detail.quantity) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_stock_transfer ON (inv_stock_transfer_detail.st_number = inv_stock_transfer.number)").
 			Where("inv_stock_transfer_detail.item_code=?", ItemCode).
 			Where("inv_stock_transfer.date<=?", StockDateStr).
 			Where("inv_stock_transfer_detail.from_store_code=?", StoreCode).
 			Group("inv_stock_transfer_detail.item_code")
-		Query4 := DB.Table(DBVar.TableName.InvCostingDetail).
+		Query4 := DB.Table(db_var.TableName.InvCostingDetail).
 			Select("-SUM(inv_costing_detail.quantity) AS Quantity").
 			Joins("LEFT OUTER JOIN inv_costing ON (inv_costing_detail.costing_number = inv_costing.number)").
 			Where("inv_costing_detail.item_code=?", ItemCode).
@@ -3783,7 +3786,7 @@ func GetStockUsedOnDestination(DB *gorm.DB, StockTransferNumber, ItemCode string
 			Date                  time.Time
 		}
 		var DataOutput []DataOutputStruct
-		DetailTableName := DBVar.TableName.InvStockTransferDetail
+		DetailTableName := db_var.TableName.InvStockTransferDetail
 		DB.Table(DetailTableName).Select(
 			DetailTableName+".to_store_code,"+
 				DetailTableName+".item_code,"+
@@ -3807,8 +3810,8 @@ func GetStockUsedOnDestination(DB *gorm.DB, StockTransferNumber, ItemCode string
 func GetStockStoreDestination(DB *gorm.DB, StoreCode string, ReceiveID string, StockDate time.Time) (Stock float64) {
 	var StockDateStr string
 
-	StockDateStr = General.FormatDate1(StockDate)
-	DB.Table(DBVar.TableName.InvReceivingDetail).Select("(SUM(IF(inv_receiving_detail.store_code='"+StoreCode+"', inv_receiving_detail.basic_quantity, 0)) + SUM(IFNULL(StockTransfer.Quantity, 0)) - SUM(IFNULL(Costing.Quantity, 0))) AS Quantity").
+	StockDateStr = general.FormatDate1(StockDate)
+	DB.Table(db_var.TableName.InvReceivingDetail).Select("(SUM(IF(inv_receiving_detail.store_code='"+StoreCode+"', inv_receiving_detail.basic_quantity, 0)) + SUM(IFNULL(StockTransfer.Quantity, 0)) - SUM(IFNULL(Costing.Quantity, 0))) AS Quantity").
 		Joins("LEFT OUTER JOIN inv_receiving ON (inv_receiving_detail.receive_number = inv_receiving.number)").
 		Joins("LEFT OUTER JOIN ("+
 			"SELECT"+
@@ -3838,33 +3841,33 @@ func GetStockStoreDestination(DB *gorm.DB, StoreCode string, ReceiveID string, S
 }
 
 func IsReservationLocked(DB *gorm.DB, ReservationNumber interface{}) (IsLocked bool) {
-	IsLocked = MasterData.GetFieldString(DB, DBVar.TableName.Reservation, "is_lock", "number", ReservationNumber, "") == "1"
+	IsLocked = master_data.GetFieldString(DB, db_var.TableName.Reservation, "is_lock", "number", ReservationNumber, "") == "1"
 	return
 }
 
 func IsThereCardActiveReservation(DB *gorm.DB, ReservationNumber interface{}) (IsThereCardActive bool) {
-	IsThereCardActive = MasterData.GetFieldString(DB, DBVar.TableName.LogKeylock, "id", "is_active='1' AND reservation_number", ReservationNumber, "") != ""
+	IsThereCardActive = master_data.GetFieldString(DB, db_var.TableName.LogKeylock, "id", "is_active='1' AND reservation_number", ReservationNumber, "") != ""
 	return
 }
 
 func IsGroupAlreadyUsed(DB *gorm.DB, GroupCode string) bool {
-	IsUsedInReservation := MasterData.GetFieldBool(DB, DBVar.TableName.Reservation, "number", "group_code", GroupCode, false)
-	IsUsedInFolio := MasterData.GetFieldBool(DB, DBVar.TableName.Folio, "number", "group_code", GroupCode, false)
+	IsUsedInReservation := master_data.GetFieldBool(DB, db_var.TableName.Reservation, "number", "group_code", GroupCode, false)
+	IsUsedInFolio := master_data.GetFieldBool(DB, db_var.TableName.Folio, "number", "group_code", GroupCode, false)
 
 	return IsUsedInReservation || IsUsedInFolio
 
 }
 
 func IsRoomOccupiedNow(c *gin.Context, DB *gorm.DB, RoomNumber string) bool {
-	if MasterData.GetConfigurationBool(DB, GlobalVar.SystemCode.General, GlobalVar.ConfigurationCategory.General, GlobalVar.ConfigurationName.IsRoomByName, false) {
+	if master_data.GetConfigurationBool(DB, global_var.SystemCode.General, global_var.ConfigurationCategory.General, global_var.ConfigurationName.IsRoomByName, false) {
 		RoomNumber = GetRoomNumberFromConfigurationIsRoomName(c, DB, RoomNumber)
 	}
 
 	var Number uint64
-	DB.Table(DBVar.TableName.Folio).Select("folio.number").
+	DB.Table(db_var.TableName.Folio).Select("folio.number").
 		Joins("LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)").
 		Where("guest_detail.room_number=?", RoomNumber).
-		Where("folio.status_code=?", GlobalVar.FolioStatus.Open).
+		Where("folio.status_code=?", global_var.FolioStatus.Open).
 		Limit(1).
 		Scan(&Number)
 
@@ -3872,11 +3875,11 @@ func IsRoomOccupiedNow(c *gin.Context, DB *gorm.DB, RoomNumber string) bool {
 }
 
 func GetRoomBlockStatus(c *gin.Context, DB *gorm.DB, RoomNumber string) string {
-	if MasterData.GetConfigurationBool(DB, GlobalVar.SystemCode.General, GlobalVar.ConfigurationCategory.General, GlobalVar.ConfigurationName.IsRoomByName, false) {
+	if master_data.GetConfigurationBool(DB, global_var.SystemCode.General, global_var.ConfigurationCategory.General, global_var.ConfigurationName.IsRoomByName, false) {
 		RoomNumber = GetRoomNumberFromConfigurationIsRoomName(c, DB, RoomNumber)
 	}
 	var Status sql.NullString
-	DB.Table(DBVar.TableName.CfgInitRoom).Select("block_status_code").
+	DB.Table(db_var.TableName.CfgInitRoom).Select("block_status_code").
 		Where("number=?", RoomNumber).
 		Limit(1).
 		Scan(&Status)
@@ -3884,7 +3887,7 @@ func GetRoomBlockStatus(c *gin.Context, DB *gorm.DB, RoomNumber string) string {
 }
 
 func IsRoomBlockedNow(c *gin.Context, DB *gorm.DB, RoomNumber string) bool {
-	if MasterData.GetConfigurationBool(DB, GlobalVar.SystemCode.General, GlobalVar.ConfigurationCategory.General, GlobalVar.ConfigurationName.IsRoomByName, false) {
+	if master_data.GetConfigurationBool(DB, global_var.SystemCode.General, global_var.ConfigurationCategory.General, global_var.ConfigurationName.IsRoomByName, false) {
 		RoomNumber = GetRoomNumberFromConfigurationIsRoomName(c, DB, RoomNumber)
 	}
 
@@ -3893,7 +3896,7 @@ func IsRoomBlockedNow(c *gin.Context, DB *gorm.DB, RoomNumber string) bool {
 
 func IsCheckIn(DB *gorm.DB, ReservationNumber uint64) bool {
 	var Number uint64
-	DB.Table(DBVar.TableName.Folio).Select("reservation_number").
+	DB.Table(db_var.TableName.Folio).Select("reservation_number").
 		Where("reservation_number=?", ReservationNumber).
 		Limit(1).
 		Scan(&Number)
@@ -3902,20 +3905,20 @@ func IsCheckIn(DB *gorm.DB, ReservationNumber uint64) bool {
 }
 
 func IsRoomReady(c *gin.Context, DB *gorm.DB, RoomNumber string) bool {
-	if MasterData.GetConfigurationBool(DB, GlobalVar.SystemCode.General, GlobalVar.ConfigurationCategory.General, GlobalVar.ConfigurationName.IsRoomByName, false) {
+	if master_data.GetConfigurationBool(DB, global_var.SystemCode.General, global_var.ConfigurationCategory.General, global_var.ConfigurationName.IsRoomByName, false) {
 		RoomNumber = GetRoomNumberFromConfigurationIsRoomName(c, DB, RoomNumber)
 	}
 	var Status string
-	DB.Table(DBVar.TableName.CfgInitRoom).Select("status_code").
+	DB.Table(db_var.TableName.CfgInitRoom).Select("status_code").
 		Where("number=?", RoomNumber).
-		Where("status_code=?", GlobalVar.RoomStatus.Ready).
+		Where("status_code=?", global_var.RoomStatus.Ready).
 		Limit(1).
 		Scan(&Status)
 	return Status != ""
 }
 
 func GetMemberCodeFromGuestProfile(DB *gorm.DB, GuestProfileID uint64) (Code string) {
-	DB.Table(DBVar.TableName.Member).Select("code").
+	DB.Table(db_var.TableName.Member).Select("code").
 		Where("guest_profile_id=?", GuestProfileID).
 		Limit(1).
 		Scan(&Code)
@@ -3923,7 +3926,7 @@ func GetMemberCodeFromGuestProfile(DB *gorm.DB, GuestProfileID uint64) (Code str
 }
 
 func GetMemberIDFromGuestProfile(DB *gorm.DB, MemberCode string) (ID uint64) {
-	DB.Table(DBVar.TableName.Member).Select("guest_profile_id").
+	DB.Table(db_var.TableName.Member).Select("guest_profile_id").
 		Where("code=?", MemberCode).
 		Limit(1).
 		Scan(&ID)
@@ -3932,17 +3935,17 @@ func GetMemberIDFromGuestProfile(DB *gorm.DB, MemberCode string) (ID uint64) {
 
 func IsScheduledRate(ctx context.Context, DB *gorm.DB, FolioNumber uint64, ADate time.Time) bool {
 	var ID uint64
-	DB.WithContext(ctx).Table(DBVar.TableName.GuestScheduledRate).Select("id").
+	DB.WithContext(ctx).Table(db_var.TableName.GuestScheduledRate).Select("id").
 		Where("folio_number=?", FolioNumber).
-		Where("from_date<=?", General.FormatDate1(ADate)).
-		Where("to_date>=?", General.FormatDate1(ADate)).
+		Where("from_date<=?", general.FormatDate1(ADate)).
+		Where("to_date>=?", general.FormatDate1(ADate)).
 		Limit(1).
 		Scan(&ID)
 	return ID > 0
 }
 
 func GetFolioComplimentHU(DB *gorm.DB, FolioNumber uint64) (ComplimentHU string) {
-	DB.Table(DBVar.TableName.Folio).Select("compliment_hu").Where("number=?", FolioNumber).Take(&ComplimentHU)
+	DB.Table(db_var.TableName.Folio).Select("compliment_hu").Where("number=?", FolioNumber).Take(&ComplimentHU)
 	return
 }
 
@@ -3950,10 +3953,10 @@ func GetScheduledRateComplimentHU(ctx context.Context, DB *gorm.DB, FolioNumber 
 	ctx, span := global_var.Tracer.Start(ctx, "GetScheduledRateComplimentHU")
 	defer span.End()
 
-	DB.Table(DBVar.TableName.GuestScheduledRate).Select("compliment_hu").
+	DB.Table(db_var.TableName.GuestScheduledRate).Select("compliment_hu").
 		Where("folio_number=?", FolioNumber).
-		Where("from_date<=?", General.FormatDate1(PostingDate)).
-		Where("to_date>=?", General.FormatDate1(PostingDate)).
+		Where("from_date<=?", general.FormatDate1(PostingDate)).
+		Where("to_date>=?", general.FormatDate1(PostingDate)).
 		Limit(1).
 		Scan(&ComplimentHU)
 	return
@@ -3973,45 +3976,45 @@ func PostCharges(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset *glob
 }
 
 func IsVoucherComplimentStillActive(ctx context.Context, DB *gorm.DB, VoucherNumber string, ArrivalDate, AuditDate time.Time) bool {
-	Result := General.IncDay(General.DateOf(ArrivalDate), GetVoucherNights(ctx, DB, VoucherNumber)).Unix() > AuditDate.Unix()
+	Result := general.IncDay(general.DateOf(ArrivalDate), GetVoucherNights(ctx, DB, VoucherNumber)).Unix() > AuditDate.Unix()
 	return Result
 }
 
 func GetVoucherNights(ctx context.Context, DB *gorm.DB, VoucherNumber string) (Night int) {
-	DB.WithContext(ctx).Table(DBVar.TableName.Voucher).Select("nights").Where("number=?", VoucherNumber).Limit(1).Scan(&Night)
+	DB.WithContext(ctx).Table(db_var.TableName.Voucher).Select("nights").Where("number=?", VoucherNumber).Limit(1).Scan(&Night)
 	return
 }
 
 func GetVoucherType(ctx context.Context, DB *gorm.DB, VoucherNumber string) (Type string) {
-	DB.WithContext(ctx).Table(DBVar.TableName.Voucher).Select("type_code").Where("number=?", VoucherNumber).Limit(1).Scan(&Type)
+	DB.WithContext(ctx).Table(db_var.TableName.Voucher).Select("type_code").Where("number=?", VoucherNumber).Limit(1).Scan(&Type)
 	return
 }
 
 func GetScheduledRoomRateCode(DB *gorm.DB, FolioNumber uint64, PostingDate time.Time) (RoomRateCode string) {
-	DB.Table(DBVar.TableName.GuestScheduledRate).Select("room_rate_code").
+	DB.Table(db_var.TableName.GuestScheduledRate).Select("room_rate_code").
 		Where("folio_number=?", FolioNumber).
-		Where("from_date<=?", General.FormatDate1(PostingDate)).
-		Where("to_date>=?", General.FormatDate1(PostingDate)).
+		Where("from_date<=?", general.FormatDate1(PostingDate)).
+		Where("to_date>=?", general.FormatDate1(PostingDate)).
 		Limit(1).Scan(&RoomRateCode)
 	return
 }
 
 func GetRoomRateTaxAndServiceCode(DB *gorm.DB, RoomRateCode string) (Code string) {
-	DB.Table(DBVar.TableName.CfgInitRoomRate).Select("tax_and_service_code").Where("code=?", RoomRateCode).Limit(1).Scan(&Code)
+	DB.Table(db_var.TableName.CfgInitRoomRate).Select("tax_and_service_code").Where("code=?", RoomRateCode).Limit(1).Scan(&Code)
 	return
 }
 
 func GetScheduledRate(DB *gorm.DB, FolioNumber uint64, PostingDate time.Time) (RoomRate float64) {
-	DB.Debug().Table(DBVar.TableName.GuestScheduledRate).Select("rate").
+	DB.Debug().Table(db_var.TableName.GuestScheduledRate).Select("rate").
 		Where("folio_number=?", FolioNumber).
-		Where("from_date<=?", General.FormatDate1(PostingDate)).
-		Where("to_date>=?", General.FormatDate1(PostingDate)).
+		Where("from_date<=?", general.FormatDate1(PostingDate)).
+		Where("to_date>=?", general.FormatDate1(PostingDate)).
 		Limit(1).Scan(&RoomRate)
 	return
 }
 
 func GetVoucherPrice(DB *gorm.DB, VoucherNumber string) (Price float64) {
-	DB.Table(DBVar.TableName.Voucher).Select("price").Where("number=?", VoucherNumber).Limit(1).Scan(&Price)
+	DB.Table(db_var.TableName.Voucher).Select("price").Where("number=?", VoucherNumber).Limit(1).Scan(&Price)
 	return
 }
 
@@ -4035,15 +4038,15 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 
 	//Proses Posting Room Charge and Breakdown
 	type FolioStruct struct {
-		Folio         DBVar.Folio              `gorm:"embedded"`
-		ContactPerson DBVar.Contact_person     `gorm:"embedded"`
-		GuestGeneral  DBVar.Guest_general      `gorm:"embedded"`
-		GuestDetail   DBVar.Guest_detail       `gorm:"embedded"`
-		RoomRate      DBVar.Cfg_init_room_rate `gorm:"embedded"`
+		Folio         db_var.Folio              `gorm:"embedded"`
+		ContactPerson db_var.Contact_person     `gorm:"embedded"`
+		GuestGeneral  db_var.Guest_general      `gorm:"embedded"`
+		GuestDetail   db_var.Guest_detail       `gorm:"embedded"`
+		RoomRate      db_var.Cfg_init_room_rate `gorm:"embedded"`
 		DateArrival   time.Time
 	}
 	var DataOutput FolioStruct
-	err = DB.Table(DBVar.TableName.Folio).Select(
+	err = DB.Table(db_var.TableName.Folio).Select(
 		" folio.group_code,"+
 			" guest_detail.currency_code,"+
 			" guest_detail.exchange_rate,"+
@@ -4101,8 +4104,8 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 	var ScheduledRateData db_var.Guest_scheduled_rate
 	if err := DB.Table(db_var.TableName.GuestScheduledRate).
 		Where("folio_number=?", FolioNumber).
-		Where("from_date<=?", General.FormatDate1(PostingDate)).
-		Where("to_date>=?", General.FormatDate1(PostingDate)).
+		Where("from_date<=?", general.FormatDate1(PostingDate)).
+		Where("to_date>=?", general.FormatDate1(PostingDate)).
 		Limit(1).
 		Scan(&ScheduledRateData).Error; err != nil {
 		return 0, err
@@ -4113,8 +4116,8 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 	IsBreakfastX = IsFolioHaveBreakfast(DB, Dataset, FolioNumber)
 	IsVoucherActiveX = IsVoucherComplimentStillActive(ctx, DB, DataOutput.Folio.VoucherNumber, DataOutput.DateArrival, PostingDate)
 	VoucherTypeCode = GetVoucherType(ctx, DB, DataOutput.Folio.VoucherNumber)
-	if IsVoucherActiveX && (VoucherTypeCode == GlobalVar.VoucherType.Compliment) {
-		ComplimentHU = GlobalVar.RoomStatus.Compliment
+	if IsVoucherActiveX && (VoucherTypeCode == global_var.VoucherType.Compliment) {
+		ComplimentHU = global_var.RoomStatus.Compliment
 	} else {
 		ComplimentHU = DataOutput.Folio.ComplimentHu
 		if ScheduledRateData.Id > 0 {
@@ -4147,26 +4150,26 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 				RoomChargeB4Breakdown = *ScheduledRateData.Rate / ExchangeRate
 				RoomRateAmount = RoomChargeB4Breakdown
 
-				RoomRateAmountOriginal = GetRoomRateAmount(ctx, DB, Dataset, DataOutput.GuestDetail.RoomRateCode, General.FormatDate1(PostingDate), DataOutput.GuestDetail.Adult, *DataOutput.GuestDetail.Child, false)
+				RoomRateAmountOriginal = GetRoomRateAmount(ctx, DB, Dataset, DataOutput.GuestDetail.RoomRateCode, general.FormatDate1(PostingDate), DataOutput.GuestDetail.Adult, *DataOutput.GuestDetail.Child, false)
 				ComplimentHU = ScheduledRateData.ComplimentHu
 				Discount = 0
 			} else {
 				RoomRateCode = DataOutput.GuestDetail.RoomRateCode
 				RoomRateTaxServiceCode = DataOutput.RoomRate.TaxAndServiceCode
-				if General.IsWeekend(PostingDate, Dataset) {
+				if general.IsWeekend(PostingDate, Dataset) {
 					RoomChargeB4Breakdown = *DataOutput.GuestDetail.WeekendRate
 				} else {
 					RoomChargeB4Breakdown = *DataOutput.GuestDetail.WeekdayRate
 				}
 				RoomRateAmount = RoomChargeB4Breakdown
-				RoomRateAmountOriginal = GetRoomRateAmount(ctx, DB, Dataset, DataOutput.GuestDetail.RoomRateCode, General.FormatDate1(PostingDate), DataOutput.GuestDetail.Adult, *DataOutput.GuestDetail.Child, false)
+				RoomRateAmountOriginal = GetRoomRateAmount(ctx, DB, Dataset, DataOutput.GuestDetail.RoomRateCode, general.FormatDate1(PostingDate), DataOutput.GuestDetail.Adult, *DataOutput.GuestDetail.Child, false)
 				ComplimentHU = DataOutput.Folio.ComplimentHu
 
-				if (IsVoucherActiveX) && (VoucherTypeCode != GlobalVar.VoucherType.Compliment) {
+				if (IsVoucherActiveX) && (VoucherTypeCode != global_var.VoucherType.Compliment) {
 					Discount = GetVoucherPrice(DB, DataOutput.Folio.VoucherNumber)
 				} else {
 					if *DataOutput.GuestDetail.DiscountPercent > 0 {
-						Discount = General.RoundTo(RoomChargeB4Breakdown * *DataOutput.GuestDetail.Discount / 100)
+						Discount = general.RoundTo(RoomChargeB4Breakdown * *DataOutput.GuestDetail.Discount / 100)
 					} else {
 						Discount = *DataOutput.GuestDetail.Discount
 					}
@@ -4184,7 +4187,7 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 					//Post Room Charge
 					CorrectionBreakdown = GetSubFolioCorrectionBreakdown(c, DB)
 					BreakDown1 = GetSubFolioBreakdown1(c, DB)
-					_, _, err = InsertSubFolio2(c, DB, Dataset, FolioNumber, SubFolioGroupCode, RoomNumber, SDFrontOffice, GARoomCharge, GARoomCharge, "", "", CurrencyCode, "Auto Room Charge", "", "", GlobalVar.TransactionType.Debit, "", "", CorrectionBreakdown, BreakDown1, GlobalVar.SubFolioPostingType.Room, 0, 0, 0, 0, ExchangeRate, AllowZeroAmount, true, UserID)
+					_, _, err = InsertSubFolio2(c, DB, Dataset, FolioNumber, SubFolioGroupCode, RoomNumber, SDFrontOffice, GARoomCharge, GARoomCharge, "", "", CurrencyCode, "Auto Room Charge", "", "", global_var.TransactionType.Debit, "", "", CorrectionBreakdown, BreakDown1, global_var.SubFolioPostingType.Room, 0, 0, 0, 0, ExchangeRate, AllowZeroAmount, true, UserID)
 					if err != nil {
 						return
 					}
@@ -4196,7 +4199,7 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 					}
 					err = InsertGuestInHouse(DB, PostingDate, FolioNumber, DataOutput.Folio.GroupCode, DataOutput.GuestDetail.RoomTypeCode, DataOutput.GuestDetail.BedTypeCode, *DataOutput.GuestDetail.RoomNumber, DataOutput.GuestDetail.RoomRateCode, *DataOutput.GuestDetail.BusinessSourceCode, *DataOutput.GuestDetail.CommissionTypeCode, DataOutput.GuestDetail.PaymentTypeCode, *DataOutput.GuestDetail.MarketCode,
 						*DataOutput.ContactPerson.TitleCode, *DataOutput.ContactPerson.FullName, *DataOutput.ContactPerson.Street, *DataOutput.ContactPerson.City, *DataOutput.ContactPerson.CityCode, *DataOutput.ContactPerson.CountryCode, *DataOutput.ContactPerson.StateCode, *DataOutput.ContactPerson.PostalCode, *DataOutput.ContactPerson.Phone1, *DataOutput.ContactPerson.Phone2, *DataOutput.ContactPerson.Fax, *DataOutput.ContactPerson.Email,
-						*DataOutput.ContactPerson.Website, *DataOutput.ContactPerson.CompanyCode, *DataOutput.ContactPerson.GuestTypeCode, *DataOutput.GuestGeneral.SalesCode, DataOutput.Folio.ComplimentHu, *DataOutput.GuestGeneral.Notes, DataOutput.GuestDetail.Adult, *DataOutput.GuestDetail.Child, 0, 0, 0, *DataOutput.GuestDetail.CommissionValue, *DataOutput.GuestDetail.DiscountPercent, 0, General.BoolToUint8(IsScheduledRateX), General.BoolToUint8(IsBreakfastX), *DataOutput.GuestDetail.BookingSourceCode,
+						*DataOutput.ContactPerson.Website, *DataOutput.ContactPerson.CompanyCode, *DataOutput.ContactPerson.GuestTypeCode, *DataOutput.GuestGeneral.SalesCode, DataOutput.Folio.ComplimentHu, *DataOutput.GuestGeneral.Notes, DataOutput.GuestDetail.Adult, *DataOutput.GuestDetail.Child, 0, 0, 0, *DataOutput.GuestDetail.CommissionValue, *DataOutput.GuestDetail.DiscountPercent, 0, general.BoolToUint8(IsScheduledRateX), general.BoolToUint8(IsBreakfastX), *DataOutput.GuestDetail.BookingSourceCode,
 						*DataOutput.GuestGeneral.PurposeOfCode, *DataOutput.ContactPerson.CustomLookupFieldCode01, *DataOutput.ContactPerson.CustomLookupFieldCode02, 0, "", *DataOutput.ContactPerson.NationalityCode, UserID)
 					if err != nil {
 						return
@@ -4209,9 +4212,9 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 				RoomChargeBasic, RoomChargeTax, RoomChargeService = GetBasicTaxService(DB, GARoomCharge, RoomRateTaxServiceCode, RoomChargeB4Breakdown)
 				RoomChargeB4Breakdown = RoomChargeBasic + RoomChargeTax + RoomChargeService
 				//Proses Query Breakdown
-				Breakdown := []DBVar.Cfg_init_room_rate_breakdown{}
+				Breakdown := []db_var.Cfg_init_room_rate_breakdown{}
 				if IsScheduledRateX {
-					err = DB.Table(DBVar.TableName.CfgInitRoomRateBreakdown).Select(
+					err = DB.Table(db_var.TableName.CfgInitRoomRateBreakdown).Select(
 						" cfg_init_room_rate_breakdown.outlet_code,"+
 							" cfg_init_room_rate_breakdown.product_code,"+
 							" cfg_init_room_rate_breakdown.sub_department_code,"+
@@ -4237,7 +4240,7 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 						return
 					}
 				} else {
-					err = DB.Table(DBVar.TableName.GuestBreakdown).Select(
+					err = DB.Table(db_var.TableName.GuestBreakdown).Select(
 						" guest_breakdown.outlet_code,"+
 							" guest_breakdown.product_code,"+
 							" guest_breakdown.sub_department_code,"+
@@ -4295,7 +4298,7 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 					//Post Room Charge
 					CorrectionBreakdown = GetSubFolioCorrectionBreakdown(c, DB)
 					BreakDown1 = GetSubFolioBreakdown1(c, DB)
-					_, _, err = InsertSubFolio2(c, DB, Dataset, FolioNumber, SubFolioGroupCode, RoomNumber, SDFrontOffice, GARoomCharge, GARoomCharge, "", "", CurrencyCode, "Auto Room Charge", "", "", GlobalVar.TransactionType.Debit, "", "", CorrectionBreakdown, BreakDown1, GlobalVar.SubFolioPostingType.Room, 0, RoomChargeBasic, RoomChargeTax, RoomChargeService, ExchangeRate, AllowZeroAmount, true, UserID)
+					_, _, err = InsertSubFolio2(c, DB, Dataset, FolioNumber, SubFolioGroupCode, RoomNumber, SDFrontOffice, GARoomCharge, GARoomCharge, "", "", CurrencyCode, "Auto Room Charge", "", "", global_var.TransactionType.Debit, "", "", CorrectionBreakdown, BreakDown1, global_var.SubFolioPostingType.Room, 0, RoomChargeBasic, RoomChargeTax, RoomChargeService, ExchangeRate, AllowZeroAmount, true, UserID)
 					if err != nil {
 						return
 					}
@@ -4304,7 +4307,7 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 					}
 					err = InsertGuestInHouse(DB, PostingDate, FolioNumber, DataOutput.Folio.GroupCode, DataOutput.GuestDetail.RoomTypeCode, DataOutput.GuestDetail.BedTypeCode, *DataOutput.GuestDetail.RoomNumber, RoomRateCode, *DataOutput.GuestDetail.BusinessSourceCode, *DataOutput.GuestDetail.CommissionTypeCode, DataOutput.GuestDetail.PaymentTypeCode, *DataOutput.GuestDetail.MarketCode,
 						*DataOutput.ContactPerson.TitleCode, *DataOutput.ContactPerson.FullName, *DataOutput.ContactPerson.Street, *DataOutput.ContactPerson.City, *DataOutput.ContactPerson.CityCode, *DataOutput.ContactPerson.CountryCode, *DataOutput.ContactPerson.StateCode, *DataOutput.ContactPerson.PostalCode, *DataOutput.ContactPerson.Phone1, *DataOutput.ContactPerson.Phone2, *DataOutput.ContactPerson.Fax, *DataOutput.ContactPerson.Email,
-						*DataOutput.ContactPerson.Website, *DataOutput.ContactPerson.CompanyCode, *DataOutput.ContactPerson.GuestTypeCode, *DataOutput.GuestGeneral.SalesCode, ComplimentHU, *DataOutput.GuestGeneral.Notes, DataOutput.GuestDetail.Adult, *DataOutput.GuestDetail.Child, RoomRateAmountOriginal, RoomRateAmount, *DataOutput.GuestDetail.Discount, *DataOutput.GuestDetail.CommissionValue, *DataOutput.GuestDetail.DiscountPercent, 0, General.BoolToUint8(IsScheduledRateX), General.BoolToUint8(IsBreakfastX), *DataOutput.GuestDetail.BookingSourceCode,
+						*DataOutput.ContactPerson.Website, *DataOutput.ContactPerson.CompanyCode, *DataOutput.ContactPerson.GuestTypeCode, *DataOutput.GuestGeneral.SalesCode, ComplimentHU, *DataOutput.GuestGeneral.Notes, DataOutput.GuestDetail.Adult, *DataOutput.GuestDetail.Child, RoomRateAmountOriginal, RoomRateAmount, *DataOutput.GuestDetail.Discount, *DataOutput.GuestDetail.CommissionValue, *DataOutput.GuestDetail.DiscountPercent, 0, general.BoolToUint8(IsScheduledRateX), general.BoolToUint8(IsBreakfastX), *DataOutput.GuestDetail.BookingSourceCode,
 						*DataOutput.GuestGeneral.PurposeOfCode, *DataOutput.ContactPerson.CustomLookupFieldCode01, *DataOutput.ContactPerson.CustomLookupFieldCode02, 0, "", *DataOutput.ContactPerson.NationalityCode, UserID)
 					if err != nil {
 						return
@@ -4318,7 +4321,7 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 							} else {
 								BreakdownAmount = GetTotalBreakdownAmount(breakdown.Quantity, breakdown.Amount, breakdown.ExtraPax, breakdown.PerPax > 0, breakdown.IncludeChild > 0, breakdown.PerPaxExtra > 0, breakdown.MaxPax, DataOutput.GuestDetail.Adult, *DataOutput.GuestDetail.Child) / ExchangeRate
 							}
-							_, _, err = InsertSubFolio(c, DB, Dataset, true, GARoomCharge, breakdown.TaxAndServiceCode, DBVar.Sub_folio{
+							_, _, err = InsertSubFolio(c, DB, Dataset, true, GARoomCharge, breakdown.TaxAndServiceCode, db_var.Sub_folio{
 								FolioNumber:         FolioNumber,
 								RoomNumber:          RoomNumber,
 								SubDepartmentCode:   breakdown.SubDepartmentCode,
@@ -4326,8 +4329,8 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 								ProductCode:         breakdown.ProductCode,
 								GroupCode:           SubFolioGroupCode,
 								Remark:              "Breakdown: " + breakdown.Remark,
-								TypeCode:            GlobalVar.TransactionType.Debit,
-								PostingType:         GlobalVar.SubFolioPostingType.Room,
+								TypeCode:            global_var.TransactionType.Debit,
+								PostingType:         global_var.SubFolioPostingType.Room,
 								Quantity:            1,
 								CurrencyCode:        CurrencyCode,
 								CorrectionBreakdown: CorrectionBreakdown,
@@ -4350,15 +4353,15 @@ func PostingRoomCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Dataset
 					//Posting Commission from Business Source
 					if Commission > 0 {
 						GAAPCommission := Dataset.GlobalAccount.APCommission
-						_, _, err = InsertSubFolio(c, DB, Dataset, true, GARoomCharge, "", DBVar.Sub_folio{
+						_, _, err = InsertSubFolio(c, DB, Dataset, true, GARoomCharge, "", db_var.Sub_folio{
 							FolioNumber:         FolioNumber,
 							RoomNumber:          RoomNumber,
 							SubDepartmentCode:   SDFrontOffice,
 							AccountCode:         GAAPCommission,
 							GroupCode:           SubFolioGroupCode,
 							Remark:              "Breakdown Commission",
-							TypeCode:            GlobalVar.TransactionType.Debit,
-							PostingType:         GlobalVar.SubFolioPostingType.Room,
+							TypeCode:            global_var.TransactionType.Debit,
+							PostingType:         global_var.SubFolioPostingType.Room,
 							Quantity:            1,
 							CurrencyCode:        CurrencyCode,
 							CorrectionBreakdown: CorrectionBreakdown,
@@ -4400,12 +4403,12 @@ func PostingExtraCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Datase
 
 	//Proses Posting Extra Charge
 	type ExtraChargeStruct struct {
-		ExtraCharge DBVar.Guest_extra_charge `gorm:"embedded"`
-		GuestDetail DBVar.Guest_detail       `gorm:"embedded"`
+		ExtraCharge db_var.Guest_extra_charge `gorm:"embedded"`
+		GuestDetail db_var.Guest_detail       `gorm:"embedded"`
 		DateArrival time.Time
 	}
 	var DataOutput []ExtraChargeStruct
-	Query := DB.WithContext(ctx).Table(DBVar.TableName.GuestExtraCharge).Select(
+	Query := DB.WithContext(ctx).Table(db_var.TableName.GuestExtraCharge).Select(
 		" guest_extra_charge.*,"+
 			" guest_detail.currency_code,"+
 			" guest_detail.exchange_rate,"+
@@ -4438,8 +4441,8 @@ func PostingExtraCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Datase
 			AmountBasic, AmountTax, AmountService = GetBasicTaxService(DB, extraCharge.ExtraCharge.AccountCode, *extraCharge.ExtraCharge.TaxAndServiceCode, AmountB4Breakdown)
 			AmountB4Breakdown = AmountBasic + AmountTax + AmountService
 			//Proses Query Breakdown
-			var GuestExtraChargeBreakdown []DBVar.Guest_extra_charge_breakdown
-			DB.WithContext(ctx).Table(DBVar.TableName.GuestExtraChargeBreakdown).Where("guest_extra_charge_id=?", extraCharge.ExtraCharge.Id).Scan(&GuestExtraChargeBreakdown)
+			var GuestExtraChargeBreakdown []db_var.Guest_extra_charge_breakdown
+			DB.WithContext(ctx).Table(db_var.TableName.GuestExtraChargeBreakdown).Where("guest_extra_charge_id=?", extraCharge.ExtraCharge.Id).Scan(&GuestExtraChargeBreakdown)
 
 			//Calculate Total Breakdown
 			TotalBreakdown = 0
@@ -4470,8 +4473,8 @@ func PostingExtraCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Datase
 				CorrectionBreakdown = GetSubFolioCorrectionBreakdown(c, DB)
 				BreakDown1 = GetSubFolioBreakdown1(c, DB)
 				_, _, err = InsertSubFolio2(c, DB, Dataset, FolioNumber, SubFolioGroupCode, RoomNumber, extraCharge.ExtraCharge.SubDepartmentCode, extraCharge.ExtraCharge.AccountCode,
-					AccountCodeMaster, *extraCharge.ExtraCharge.ProductCode, *extraCharge.ExtraCharge.PackageCode, "", "Extra Charge", "", "", GlobalVar.TransactionType.Debit,
-					"", "", CorrectionBreakdown, BreakDown1, GlobalVar.SubFolioPostingType.ExtraCharge, extraCharge.ExtraCharge.Id, AmountBasic, AmountTax, AmountService, 0, false, true, UserID)
+					AccountCodeMaster, *extraCharge.ExtraCharge.ProductCode, *extraCharge.ExtraCharge.PackageCode, "", "Extra Charge", "", "", global_var.TransactionType.Debit,
+					"", "", CorrectionBreakdown, BreakDown1, global_var.SubFolioPostingType.ExtraCharge, extraCharge.ExtraCharge.Id, AmountBasic, AmountTax, AmountService, 0, false, true, UserID)
 				if err != nil {
 					return
 				}
@@ -4483,7 +4486,7 @@ func PostingExtraCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Datase
 						} else {
 							BreakdownAmount = GetTotalBreakdownAmount(breakdown.Quantity, breakdown.Amount, *breakdown.ExtraPax, *breakdown.PerPax > 0, *breakdown.IncludeChild > 0, *breakdown.PerPaxExtra > 0, breakdown.MaxPax, Adult, Child)
 						}
-						_, _, err = InsertSubFolio(c, DB, Dataset, true, AccountCodeMaster, *breakdown.TaxAndServiceCode, DBVar.Sub_folio{
+						_, _, err = InsertSubFolio(c, DB, Dataset, true, AccountCodeMaster, *breakdown.TaxAndServiceCode, db_var.Sub_folio{
 							FolioNumber:         FolioNumber,
 							RoomNumber:          RoomNumber,
 							SubDepartmentCode:   breakdown.SubDepartmentCode,
@@ -4492,8 +4495,8 @@ func PostingExtraCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Datase
 							ProductCode:         *breakdown.ProductCode,
 							GroupCode:           SubFolioGroupCode,
 							Remark:              "Extra Charge Breakdown",
-							TypeCode:            GlobalVar.TransactionType.Debit,
-							PostingType:         GlobalVar.SubFolioPostingType.ExtraCharge,
+							TypeCode:            global_var.TransactionType.Debit,
+							PostingType:         global_var.SubFolioPostingType.ExtraCharge,
 							Quantity:            1,
 							CurrencyCode:        CurrencyCode,
 							CorrectionBreakdown: CorrectionBreakdown,
@@ -4518,7 +4521,7 @@ func PostingExtraCharge(ctx context.Context, c *gin.Context, DB *gorm.DB, Datase
 }
 
 func GetGuestDepositBreakdownAmountForeign(DB *gorm.DB, CorrectionBreakdown int64) (Amount float64) {
-	DB.Table(DBVar.TableName.GuestDeposit).Select("SUM(IF(type_code='"+GlobalVar.TransactionType.Debit+"', amount_foreign, -amount_foreign)) AS TotalAmount").
+	DB.Table(db_var.TableName.GuestDeposit).Select("SUM(IF(type_code='"+global_var.TransactionType.Debit+"', amount_foreign, -amount_foreign)) AS TotalAmount").
 		Where("correction_breakdown=?", CorrectionBreakdown).
 		Where("void=0").
 		Group("correction_breakdown").
@@ -4529,7 +4532,7 @@ func GetGuestDepositBreakdownAmountForeign(DB *gorm.DB, CorrectionBreakdown int6
 }
 
 func GetSubFolioBreakdownAmountForeign(DB *gorm.DB, CorrectionBreakdown int64) (Amount float64) {
-	DB.Table(DBVar.TableName.SubFolio).Select("SUM(IF(type_code='"+GlobalVar.TransactionType.Debit+"',(quantity * amount_foreign),-(quantity * amount_foreign))) AS TotalAmount ").
+	DB.Table(db_var.TableName.SubFolio).Select("SUM(IF(type_code='"+global_var.TransactionType.Debit+"',(quantity * amount_foreign),-(quantity * amount_foreign))) AS TotalAmount ").
 		Where("correction_breakdown=?", CorrectionBreakdown).
 		Where("void=0").
 		Group("correction_breakdown").
@@ -4540,7 +4543,7 @@ func GetSubFolioBreakdownAmountForeign(DB *gorm.DB, CorrectionBreakdown int64) (
 }
 
 func GetSubFolioBreakdown1AmountForeign(DB *gorm.DB, Breakdown1 int64) (Amount float64) {
-	DB.Table(DBVar.TableName.SubFolio).Select("SUM(IF(type_code='"+GlobalVar.TransactionType.Debit+"',(quantity * amount_foreign),-(quantity * amount_foreign))) AS TotalAmount").
+	DB.Table(db_var.TableName.SubFolio).Select("SUM(IF(type_code='"+global_var.TransactionType.Debit+"',(quantity * amount_foreign),-(quantity * amount_foreign))) AS TotalAmount").
 		Where("breakdown1=?", Breakdown1).
 		Where("void=0").
 		Group("breakdown1").
@@ -4551,7 +4554,7 @@ func GetSubFolioBreakdown1AmountForeign(DB *gorm.DB, Breakdown1 int64) (Amount f
 }
 
 func GetSubFolioBreakdownAmountForeign2(DB *gorm.DB, CorrectionBreakdown, Breakdown2 int64) (Amount float64) {
-	DB.Table(DBVar.TableName.SubFolio).Select("SUM(IF(type_code='"+GlobalVar.TransactionType.Debit+"',(quantity * amount_foreign),-(quantity * amount_foreign))) AS TotalAmount").
+	DB.Table(db_var.TableName.SubFolio).Select("SUM(IF(type_code='"+global_var.TransactionType.Debit+"',(quantity * amount_foreign),-(quantity * amount_foreign))) AS TotalAmount").
 		Where("correction_breakdown=?", CorrectionBreakdown).
 		Where("breakdown2=?", Breakdown2).
 		Where("void=0").
@@ -4563,7 +4566,7 @@ func GetSubFolioBreakdownAmountForeign2(DB *gorm.DB, CorrectionBreakdown, Breakd
 }
 
 func GetSubFolioBreakdown1AmountForeign2(DB *gorm.DB, Breakdown1, Breakdown2 int64) (Amount float64) {
-	DB.Table(DBVar.TableName.SubFolio).Select("SUM(IF(type_code='"+GlobalVar.TransactionType.Debit+"',(quantity * amount_foreign),-(quantity * amount_foreign))) AS TotalAmount").
+	DB.Table(db_var.TableName.SubFolio).Select("SUM(IF(type_code='"+global_var.TransactionType.Debit+"',(quantity * amount_foreign),-(quantity * amount_foreign))) AS TotalAmount").
 		Where("breakdown1=?", Breakdown1).
 		Where("breakdown2=?", Breakdown2).
 		Where("void=0").
@@ -4575,7 +4578,7 @@ func GetSubFolioBreakdown1AmountForeign2(DB *gorm.DB, Breakdown1, Breakdown2 int
 }
 
 func GetCheckQuantityByCorrectionBreakdown(DB *gorm.DB, CorrectionBreakdown int64) (Amount float64) {
-	DB.Table(DBVar.TableName.SubFolio).Select("IF(cfg_init_account_sub_group.group_code='"+GlobalVar.GlobalAccountGroup.Charge+"', IF(sub_folio.type_code='"+GlobalVar.TransactionType.Debit+"', sub_folio.quantity, -sub_folio.quantity), IF(sub_folio.type_code='"+GlobalVar.TransactionType.Credit+"', sub_folio.quantity, -sub_folio.quantity)) AS TotalQuantity ").
+	DB.Table(db_var.TableName.SubFolio).Select("IF(cfg_init_account_sub_group.group_code='"+global_var.GlobalAccountGroup.Charge+"', IF(sub_folio.type_code='"+global_var.TransactionType.Debit+"', sub_folio.quantity, -sub_folio.quantity), IF(sub_folio.type_code='"+global_var.TransactionType.Credit+"', sub_folio.quantity, -sub_folio.quantity)) AS TotalQuantity ").
 		Joins("LEFT OUTER JOIN cfg_init_account ON (sub_folio.account_code = cfg_init_account.code)").
 		Joins("LEFT OUTER JOIN cfg_init_account_sub_group ON (cfg_init_account.sub_group_code = cfg_init_account_sub_group.code)").
 		Where("sub_folio.correction_breakdown=?", CorrectionBreakdown).
@@ -4589,7 +4592,7 @@ func GetCheckQuantityByCorrectionBreakdown(DB *gorm.DB, CorrectionBreakdown int6
 
 func IsSubFolioFromPOS(DB *gorm.DB, SubFolioID, TransferPairID int64) bool {
 	Result := 0
-	DB.Table(DBVar.TableName.PosCheckTransaction).Select("id").
+	DB.Table(db_var.TableName.PosCheckTransaction).Select("id").
 		Where("(sub_folio_id=? OR sub_folio_id=?) AND sub_folio_id<>0", SubFolioID, TransferPairID).
 		Scan(&Result)
 
@@ -4598,7 +4601,7 @@ func IsSubFolioFromPOS(DB *gorm.DB, SubFolioID, TransferPairID int64) bool {
 
 func GetAccountGroupCode(DB *gorm.DB, AccountCode string) string {
 	Result := ""
-	DB.Table(DBVar.TableName.CfgInitAccount).Select("group_code").
+	DB.Table(db_var.TableName.CfgInitAccount).Select("group_code").
 		Joins("JOIN cfg_init_account_sub_group ON (cfg_init_account.sub_group_code = cfg_init_account_sub_group.code)").
 		Where("cfg_init_account.code=?", AccountCode).
 		Scan(&Result)
@@ -4611,22 +4614,22 @@ func IsCanVoidOrCorrect(DB *gorm.DB, Dataset *global_var.TDataset, Mode byte, Tr
 	AccountSubGroupCode = GetAccountSubGroupCode(DB, AccountCode)
 	GAAPRefundDeposit := Dataset.GlobalAccount.APRefundDeposit
 	if AccountCode == GAAPRefundDeposit {
-		Result = !MasterData.GetFieldBool(DB, DBVar.TableName.AccApRefundDepositPaymentDetail, "id", "sub_folio_id", TransactionID, false)
-	} else if AccountSubGroupCode == GlobalVar.GlobalAccountSubGroup.AccountPayable {
-		Result = !MasterData.GetFieldBool(DB, DBVar.TableName.AccApCommissionPaymentDetail, "id", "sub_folio_id", TransactionID, false)
-	} else if (AccountSubGroupCode == GlobalVar.GlobalAccountSubGroup.CreditDebitCard) || (AccountSubGroupCode == GlobalVar.GlobalAccountSubGroup.BankTransfer) {
+		Result = !master_data.GetFieldBool(DB, db_var.TableName.AccApRefundDepositPaymentDetail, "id", "sub_folio_id", TransactionID, false)
+	} else if AccountSubGroupCode == global_var.GlobalAccountSubGroup.AccountPayable {
+		Result = !master_data.GetFieldBool(DB, db_var.TableName.AccApCommissionPaymentDetail, "id", "sub_folio_id", TransactionID, false)
+	} else if (AccountSubGroupCode == global_var.GlobalAccountSubGroup.CreditDebitCard) || (AccountSubGroupCode == global_var.GlobalAccountSubGroup.BankTransfer) {
 		if Mode == 0 {
-			Result = !MasterData.GetFieldBool(DB, DBVar.TableName.AccCreditCardReconDetail, "id", "guest_deposit_id", TransactionID, false)
+			Result = !master_data.GetFieldBool(DB, db_var.TableName.AccCreditCardReconDetail, "id", "guest_deposit_id", TransactionID, false)
 		} else {
-			Result = !MasterData.GetFieldBool(DB, DBVar.TableName.AccCreditCardReconDetail, "id", "sub_folio_id", TransactionID, false)
+			Result = !master_data.GetFieldBool(DB, db_var.TableName.AccCreditCardReconDetail, "id", "sub_folio_id", TransactionID, false)
 		}
-	} else if AccountSubGroupCode == GlobalVar.GlobalAccountSubGroup.AccountReceivable {
-		Result = !MasterData.GetFieldBool(DB, DBVar.TableName.InvoiceItem, "id", "sub_folio_id", TransactionID, false)
-	} else if AccountSubGroupCode == GlobalVar.GlobalAccountSubGroup.Payment {
+	} else if AccountSubGroupCode == global_var.GlobalAccountSubGroup.AccountReceivable {
+		Result = !master_data.GetFieldBool(DB, db_var.TableName.InvoiceItem, "id", "sub_folio_id", TransactionID, false)
+	} else if AccountSubGroupCode == global_var.GlobalAccountSubGroup.Payment {
 		if Mode == 0 {
-			Result = !MasterData.GetFieldBool(DB, DBVar.TableName.AccForeignCash, "id", "id_transaction", General.Uint64ToStr(TransactionID)+"' AND id_change=0 AND stock<>amount_foreign AND id_table='"+strconv.Itoa(GlobalVar.ForeignCashTableID.GuestDeposit), false)
+			Result = !master_data.GetFieldBool(DB, db_var.TableName.AccForeignCash, "id", "id_transaction", general.Uint64ToStr(TransactionID)+"' AND id_change=0 AND stock<>amount_foreign AND id_table='"+strconv.Itoa(global_var.ForeignCashTableID.GuestDeposit), false)
 		} else {
-			Result = !MasterData.GetFieldBool(DB, DBVar.TableName.InvoiceItem, "id", "sub_folio_id", General.Uint64ToStr(TransactionID)+"' AND id_change=0 AND stock<>amount_foreign AND id_table='"+strconv.Itoa(GlobalVar.ForeignCashTableID.SubFolio), false)
+			Result = !master_data.GetFieldBool(DB, db_var.TableName.InvoiceItem, "id", "sub_folio_id", general.Uint64ToStr(TransactionID)+"' AND id_change=0 AND stock<>amount_foreign AND id_table='"+strconv.Itoa(global_var.ForeignCashTableID.SubFolio), false)
 		}
 	} else {
 		Result = true
@@ -4635,9 +4638,9 @@ func IsCanVoidOrCorrect(DB *gorm.DB, Dataset *global_var.TDataset, Mode byte, Tr
 }
 
 func GetCountAutoPosting(ctx context.Context, DB *gorm.DB, FolioNumber uint64, AccountCode, PostingType string, PostingDate time.Time) (Count int) {
-	Query := DB.WithContext(ctx).Table(DBVar.TableName.SubFolio).Select("account_code, is_correction").
+	Query := DB.WithContext(ctx).Table(db_var.TableName.SubFolio).Select("account_code, is_correction").
 		Where("belongs_to=?", FolioNumber).
-		Where("audit_date=? AND void=0", General.FormatDate1(PostingDate))
+		Where("audit_date=? AND void=0", general.FormatDate1(PostingDate))
 	if PostingType != "" {
 		Query.Where("posting_type", PostingType)
 	}
@@ -4651,9 +4654,9 @@ func IsAlreadyAutoPosting(ctx context.Context, DB *gorm.DB, FolioNumber uint64, 
 }
 
 func GetBreakdownAutoPosting(DB *gorm.DB, FolioNumber uint64, AccountCode, PostingType string, PostingDate time.Time) (CorrectionBreakdown uint64) {
-	Query := DB.Table(DBVar.TableName.SubFolio).Select("account_code, correction_breakdown").
+	Query := DB.Table(db_var.TableName.SubFolio).Select("account_code, correction_breakdown").
 		Where("belongs_to=?", FolioNumber).
-		Where("audit_date_unixx=UNIX_TIMESTAMP(?) AND void=0", General.FormatDate2("2006-01-02 00:00:00", PostingDate)).
+		Where("audit_date_unixx=UNIX_TIMESTAMP(?) AND void=0", general.FormatDate2("2006-01-02 00:00:00", PostingDate)).
 		Where("posting_type", PostingType).
 		Group("correction_breakdown")
 	DB.Table("(?) AS ExtraCharge", Query).Select("correction_breakdown").Where("account_code=?", AccountCode).Limit(1).Scan(&CorrectionBreakdown)
@@ -4663,8 +4666,8 @@ func GetBreakdownAutoPosting(DB *gorm.DB, FolioNumber uint64, AccountCode, Posti
 }
 
 func IsCanCancelCheckInFolio(DB *gorm.DB, Dataset *global_var.TDataset, FolioNumber uint64) bool {
-	var DataOutput []DBVar.Sub_folio
-	DB.Table(DBVar.TableName.SubFolio).Select("account_code, id").Where("folio_number=? AND void=0", FolioNumber).Scan(&DataOutput)
+	var DataOutput []db_var.Sub_folio
+	DB.Table(db_var.TableName.SubFolio).Select("account_code, id").Where("folio_number=? AND void=0", FolioNumber).Scan(&DataOutput)
 	Result := true
 	for _, data := range DataOutput {
 		if !IsCanVoidOrCorrect(DB, Dataset, 1, data.Id, data.AccountCode) {
@@ -4679,7 +4682,7 @@ func IsCanCancelCheckInFolio(DB *gorm.DB, Dataset *global_var.TDataset, FolioNum
 func CheckFolioHaveTransactionFromOtherFolio(DB *gorm.DB, FolioNumber uint64) (string, error) {
 	var FolioHaveTransactionMessage string
 	var FolioDetail []string
-	err := DB.Table(DBVar.TableName.SubFolio).Select("CONCAT(sub_folio.belongs_to, '/Room: ', guest_detail.room_number, '/', contact_person.title_code, contact_person.full_name) AS FolioDetail").
+	err := DB.Table(db_var.TableName.SubFolio).Select("CONCAT(sub_folio.belongs_to, '/Room: ', guest_detail.room_number, '/', contact_person.title_code, contact_person.full_name) AS FolioDetail").
 		Joins("LEFT OUTER JOIN folio ON (sub_folio.belongs_to = folio.number)").
 		Joins("LEFT OUTER JOIN contact_person ON (folio.contact_person_id1 = contact_person.id)").
 		Joins("LEFT OUTER JOIN guest_detail ON (folio.guest_detail_id = guest_detail.id)").
@@ -4700,7 +4703,7 @@ func CheckFolioHaveTransactionFromOtherFolio(DB *gorm.DB, FolioNumber uint64) (s
 }
 
 func GetInvoiceNumberFromFolio(DB *gorm.DB, FolioNumber uint64) (InvoiceNumber string) {
-	DB.Table(DBVar.TableName.InvoiceItem).Select("invoice_number").Where("folio_number=?", FolioNumber).Limit(1).Scan(&InvoiceNumber)
+	DB.Table(db_var.TableName.InvoiceItem).Select("invoice_number").Where("folio_number=?", FolioNumber).Limit(1).Scan(&InvoiceNumber)
 	return
 }
 
@@ -4710,18 +4713,18 @@ func GetCompanyDetailListP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		MasterData.SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
+		master_data.SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
-	DB.Table(DBVar.TableName.Company).Select("company.*").
+	DB.Table(db_var.TableName.Company).Select("company.*").
 		Joins("LEFT JOIN cfg_init_company_type ON company.type_code=cfg_init_company_type.code").
 		// Where("company.is_direct_bill = '1'").
 		Order("company.name").
 		Find(&DataOutputCompany)
 
-	MasterData.SendResponse(GlobalVar.ResponseCode.Successfully, "", DataOutputCompany, c)
+	master_data.SendResponse(global_var.ResponseCode.Successfully, "", DataOutputCompany, c)
 }
 
 func GetARCompaniesP(c *gin.Context) {
@@ -4730,18 +4733,18 @@ func GetARCompaniesP(c *gin.Context) {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
-		MasterData.SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
+		master_data.SendResponse(global_var.ResponseCode.DatabaseError, "pConfig", nil, c)
 		return
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
-	DB.Table(DBVar.TableName.Company).Select("company.*").
+	DB.Table(db_var.TableName.Company).Select("company.*").
 		Joins("LEFT JOIN cfg_init_company_type ON company.type_code=cfg_init_company_type.code").
 		Where("company.is_direct_bill = '1'").
 		Order("company.name").
 		Find(&DataOutputCompany)
 
-	MasterData.SendResponse(GlobalVar.ResponseCode.Successfully, "", DataOutputCompany, c)
+	master_data.SendResponse(global_var.ResponseCode.Successfully, "", DataOutputCompany, c)
 }
 
 func IsDayendCloseRunning(c *gin.Context) (bool, error) {
@@ -4780,7 +4783,7 @@ func GetDayendCloseStatus(c *gin.Context) (DayendCloseStatus, error) {
 }
 
 func GetAPAROutstanding(DB *gorm.DB, APARNumber string) (Outstanding float64, err error) {
-	if err := DB.Table(DBVar.TableName.AccApAr).Select("SUM(IFNULL(amount,0) - IFNULL(amount_paid,0)) AS Outstanding").
+	if err := DB.Table(db_var.TableName.AccApAr).Select("SUM(IFNULL(amount,0) - IFNULL(amount_paid,0)) AS Outstanding").
 		Where("number=?", APARNumber).Limit(1).Scan(&Outstanding).Error; err != nil {
 		return 0, err
 	}
@@ -4792,20 +4795,20 @@ func GetAPCommissionOutStanding(DB *gorm.DB, Dataset *global_var.TDataset, SubFo
 	GAAPRefundDeposit := Dataset.GlobalAccount.APRefundDeposit
 	GACreditCardAdm := Dataset.GlobalAccount.CreditCardAdm
 	if err := DB.Table("(?) AS APNoShow",
-		DB.Table(DBVar.TableName.SubFolio).Select(
+		DB.Table(db_var.TableName.SubFolio).Select(
 			" sub_folio.id,"+
-				" (SUM(IF(sub_folio.type_code='"+GlobalVar.TransactionType.Debit+"', sub_folio.quantity*sub_folio.amount, -(sub_folio.quantity*sub_folio.amount))) - IFNULL(Payment.TotalPaid,0)) AS Amount ").
+				" (SUM(IF(sub_folio.type_code='"+global_var.TransactionType.Debit+"', sub_folio.quantity*sub_folio.amount, -(sub_folio.quantity*sub_folio.amount))) - IFNULL(Payment.TotalPaid,0)) AS Amount ").
 			Joins(" LEFT OUTER JOIN ("+
 				"SELECT"+
 				" sub_folio_id,"+
 				" SUM(amount) AS TotalPaid "+
 				"FROM"+
 				"  acc_ap_commission_payment_detail"+
-				" WHERE sub_folio_id="+General.Uint64ToStr(SubFolioID)+
+				" WHERE sub_folio_id="+general.Uint64ToStr(SubFolioID)+
 				" AND ref_number<>'"+RefNumber+"' "+
 				"GROUP BY sub_folio_id) AS Payment ON (sub_folio.id = Payment.sub_folio_id) ").
 			Joins(" LEFT OUTER JOIN cfg_init_account ON (sub_folio.account_code = cfg_init_account.code)").
-			Where("cfg_init_account.sub_group_code=?", GlobalVar.GlobalAccountSubGroup.AccountPayable).
+			Where("cfg_init_account.sub_group_code=?", global_var.GlobalAccountSubGroup.AccountPayable).
 			Where("sub_folio.account_code<>?", GAAPRefundDeposit).
 			Where("sub_folio.account_code<>?", GACreditCardAdm).
 			Where("sub_folio.void='0'").
@@ -4823,16 +4826,16 @@ func GetTimeSegmentCode() string {
 	Hour := now.UTC().Hour()
 
 	if Hour > 5 && Hour < 12 {
-		return GlobalVar.TimeSegment.Breakfast
+		return global_var.TimeSegment.Breakfast
 	} else if Hour > 12 && Hour < 17 {
-		return GlobalVar.TimeSegment.Lunch
+		return global_var.TimeSegment.Lunch
 	}
-	return GlobalVar.TimeSegment.Dinner
+	return global_var.TimeSegment.Dinner
 }
 
 func GetFirstMarketCodePOS(DB *gorm.DB) (string, error) {
 	code := ""
-	if err := DB.Table(DBVar.TableName.PosCfgInitMarket).Select("code").Order("id_sort").Limit(1).Scan(&code).Error; err != nil {
+	if err := DB.Table(db_var.TableName.PosCfgInitMarket).Select("code").Order("id_sort").Limit(1).Scan(&code).Error; err != nil {
 		return "", err
 	}
 	return code, nil
@@ -4840,7 +4843,7 @@ func GetFirstMarketCodePOS(DB *gorm.DB) (string, error) {
 
 func GetJournalAccountPayable(c *gin.Context, DB *gorm.DB) ([]map[string]interface{}, error) {
 	var DataOutput []map[string]interface{}
-	if err := DB.Table(DBVar.TableName.CfgInitJournalAccount).Select(
+	if err := DB.Table(db_var.TableName.CfgInitJournalAccount).Select(
 		"cfg_init_journal_account.code",
 		"cfg_init_journal_account.name",
 		"cfg_init_journal_account_sub_group.name AS SubGroupName").
@@ -4855,7 +4858,7 @@ func GetJournalAccountPayable(c *gin.Context, DB *gorm.DB) ([]map[string]interfa
 
 func GetJournalAccountIncome(c *gin.Context, DB *gorm.DB) ([]map[string]interface{}, error) {
 	var DataOutput []map[string]interface{}
-	if err := DB.Table(DBVar.TableName.CfgInitJournalAccount).Select(
+	if err := DB.Table(db_var.TableName.CfgInitJournalAccount).Select(
 		"cfg_init_journal_account.code",
 		"cfg_init_journal_account.name",
 		"cfg_init_journal_account_sub_group.name AS SubGroupName").
@@ -4871,7 +4874,7 @@ func GetJournalAccountIncome(c *gin.Context, DB *gorm.DB) ([]map[string]interfac
 
 func GetJournalAccountExpense(c *gin.Context, DB *gorm.DB) ([]map[string]interface{}, error) {
 	var DataOutput []map[string]interface{}
-	if err := DB.Table(DBVar.TableName.CfgInitJournalAccount).Select(
+	if err := DB.Table(db_var.TableName.CfgInitJournalAccount).Select(
 		"cfg_init_journal_account.code",
 		"cfg_init_journal_account.name",
 		"cfg_init_journal_account_sub_group.name AS SubGroupName").
@@ -4888,7 +4891,7 @@ func GetJournalAccountExpense(c *gin.Context, DB *gorm.DB) ([]map[string]interfa
 
 func GetJournalAccountCosting(c *gin.Context, DB *gorm.DB) ([]map[string]interface{}, error) {
 	var DataOutput []map[string]interface{}
-	if err := DB.Table(DBVar.TableName.CfgInitJournalAccount).Select(
+	if err := DB.Table(db_var.TableName.CfgInitJournalAccount).Select(
 		"cfg_init_journal_account.code",
 		"cfg_init_journal_account.name",
 		"cfg_init_journal_account_sub_group.name AS SubGroupName").
@@ -4905,7 +4908,7 @@ func GetJournalAccountCosting(c *gin.Context, DB *gorm.DB) ([]map[string]interfa
 
 func GetBankAccountReceive(c *gin.Context, DB *gorm.DB) ([]map[string]interface{}, error) {
 	var DataOutput []map[string]interface{}
-	if err := DB.Table(DBVar.TableName.AccCfgInitBankAccount).Select(
+	if err := DB.Table(db_var.TableName.AccCfgInitBankAccount).Select(
 		"code", "name", "journal_account_code", "type_code", "bank_account_number").
 		Where("for_receive=1").
 		Order("journal_account_code").Scan(&DataOutput).Error; err != nil {
@@ -4917,7 +4920,7 @@ func GetBankAccountReceive(c *gin.Context, DB *gorm.DB) ([]map[string]interface{
 
 func GetBankAccountPayment(c *gin.Context, DB *gorm.DB) ([]map[string]interface{}, error) {
 	var DataOutput []map[string]interface{}
-	if err := DB.Table(DBVar.TableName.AccCfgInitBankAccount).Select(
+	if err := DB.Table(db_var.TableName.AccCfgInitBankAccount).Select(
 		"code", "name", "journal_account_code", "type_code", "bank_account_number").
 		Where("for_payment=1").
 		Order("journal_account_code").Scan(&DataOutput).Error; err != nil {
@@ -4929,7 +4932,7 @@ func GetBankAccountPayment(c *gin.Context, DB *gorm.DB) ([]map[string]interface{
 
 func GetCompany(c *gin.Context, DB *gorm.DB) ([]map[string]interface{}, error) {
 	var DataOutput []map[string]interface{}
-	if err := DB.Table(DBVar.TableName.Company).Select(
+	if err := DB.Table(db_var.TableName.Company).Select(
 		"code", "name").
 		Order("name").Scan(&DataOutput).Error; err != nil {
 		return DataOutput, err
@@ -4939,7 +4942,7 @@ func GetCompany(c *gin.Context, DB *gorm.DB) ([]map[string]interface{}, error) {
 }
 
 func IsAPPaid(c *gin.Context, DB *gorm.DB, Number string) (IsPaid uint8, err error) {
-	if err := DB.Table(DBVar.TableName.AccApAr).
+	if err := DB.Table(db_var.TableName.AccApAr).
 		Select("is_paid").Where("number=?", Number).
 		Limit(1).
 		Scan(&IsPaid).Error; err != nil {
@@ -4954,25 +4957,25 @@ func GetReceiveIDLastPrice(DB *gorm.DB, ReceiveID uint64, Quantity float64) floa
 		BasicQuantity, Quantity, TotalPrice float64
 	}
 	var DataOutput Struct
-	DB.Table(DBVar.TableName.InvReceivingDetail).Select("basic_quantity, quantity, total_price").Where("id=?", ReceiveID).Limit(1).Scan(&DataOutput)
+	DB.Table(db_var.TableName.InvReceivingDetail).Select("basic_quantity, quantity, total_price").Where("id=?", ReceiveID).Limit(1).Scan(&DataOutput)
 	if Quantity == DataOutput.Quantity {
 		if DataOutput.BasicQuantity > DataOutput.Quantity {
-			return General.RoundToX3(DataOutput.TotalPrice - ((DataOutput.TotalPrice / DataOutput.BasicQuantity) * (DataOutput.BasicQuantity - DataOutput.Quantity)))
+			return general.RoundToX3(DataOutput.TotalPrice - ((DataOutput.TotalPrice / DataOutput.BasicQuantity) * (DataOutput.BasicQuantity - DataOutput.Quantity)))
 		} else {
-			return General.RoundToX3(DataOutput.TotalPrice)
+			return general.RoundToX3(DataOutput.TotalPrice)
 		}
 	} else {
-		return General.RoundToX3((DataOutput.TotalPrice / DataOutput.BasicQuantity)) * Quantity
+		return general.RoundToX3((DataOutput.TotalPrice / DataOutput.BasicQuantity)) * Quantity
 	}
 }
 
 func IsFAReceiveUsed(DB *gorm.DB, ReceiveNumber string) (bool, error) {
 	var Number string
-	if err := DB.Table(DBVar.TableName.FaRevaluation).Select("number").Joins("LEFT OUTER JOIN fa_list ON (fa_revaluation.fa_code = fa_list.code)").Where("fa_list.receive_number=?", ReceiveNumber).Limit(1).Scan(&Number).Error; err != nil {
+	if err := DB.Table(db_var.TableName.FaRevaluation).Select("number").Joins("LEFT OUTER JOIN fa_list ON (fa_revaluation.fa_code = fa_list.code)").Where("fa_list.receive_number=?", ReceiveNumber).Limit(1).Scan(&Number).Error; err != nil {
 		return false, err
 	}
 	var Code string
-	if err := DB.Table(DBVar.TableName.FaList).Select("code").Where("receive_number=?", ReceiveNumber).Where("condition_code<>?", global_var.FAItemCondition.Good).Limit(1).Scan(&Code).Error; err != nil {
+	if err := DB.Table(db_var.TableName.FaList).Select("code").Where("receive_number=?", ReceiveNumber).Where("condition_code<>?", global_var.FAItemCondition.Good).Limit(1).Scan(&Code).Error; err != nil {
 		return false, err
 	}
 	return Number != "" || Code != "", nil
@@ -4990,7 +4993,7 @@ func IsStockMinusReceive(DB *gorm.DB, Dataset *global_var.TDataset, StoreCode, I
 			" LEFT OUTER JOIN inv_costing ON (inv_costing_detail.costing_number = inv_costing.number)"+
 			" WHERE inv_costing_detail.item_code=? "+
 			" AND inv_costing_detail.store_code=? "+
-			" AND inv_costing.date>='"+General.FormatDate1(StockDate)+"'"+
+			" AND inv_costing.date>='"+general.FormatDate1(StockDate)+"'"+
 			") UNION ALL ("+
 			"SELECT DISTINCT"+
 			" inv_stock_transfer.`date` "+
@@ -4999,7 +5002,7 @@ func IsStockMinusReceive(DB *gorm.DB, Dataset *global_var.TDataset, StoreCode, I
 			" LEFT OUTER JOIN inv_stock_transfer ON (inv_stock_transfer_detail.st_number = inv_stock_transfer.number)"+
 			" WHERE inv_stock_transfer_detail.item_code=? "+
 			" AND inv_stock_transfer_detail.from_store_code=? "+
-			" AND inv_stock_transfer.`date` >= '"+General.FormatDate1(StockDate)+"')) AS Stock "+
+			" AND inv_stock_transfer.`date` >= '"+general.FormatDate1(StockDate)+"')) AS Stock "+
 			"ORDER BY Stock.`date`", ItemCode, StoreCode, ItemCode, StoreCode).Scan(&Date)
 
 	for _, date := range Date {
@@ -5012,21 +5015,21 @@ func IsStockMinusReceive(DB *gorm.DB, Dataset *global_var.TDataset, StoreCode, I
 
 func IsReceiveIDUsedInStockTransfer(DB *gorm.DB, ReceiveIDx int64) bool {
 	var ReceiveID uint64
-	DB.Table(DBVar.TableName.InvStockTransferDetail).Select("receive_id").Where("receive_id IN (?)", ReceiveIDx).Limit(1).Scan(&ReceiveID)
+	DB.Table(db_var.TableName.InvStockTransferDetail).Select("receive_id").Where("receive_id IN (?)", ReceiveIDx).Limit(1).Scan(&ReceiveID)
 
 	return ReceiveID > 0
 }
 
 func IsReceiveIDUsedInCosting(DB *gorm.DB, ReceiveIDx int64) bool {
 	var ReceiveID uint64
-	DB.Table(DBVar.TableName.InvCostingDetail).Select("receive_id").Where("receive_id IN (?)", ReceiveIDx).Limit(1).Scan(&ReceiveID)
+	DB.Table(db_var.TableName.InvCostingDetail).Select("receive_id").Where("receive_id IN (?)", ReceiveIDx).Limit(1).Scan(&ReceiveID)
 
 	return ReceiveID > 0
 }
 
 func IsFAPurchaseOrderUsedInReceive(DB *gorm.DB, PONumberx string) bool {
 	var PONumber uint64
-	DB.Table(DBVar.TableName.FaReceive).Select("po_number").Where("po_number IN (?)", PONumberx).Limit(1).Scan(&PONumber)
+	DB.Table(db_var.TableName.FaReceive).Select("po_number").Where("po_number IN (?)", PONumberx).Limit(1).Scan(&PONumber)
 
 	return PONumber > 0
 }
@@ -5093,7 +5096,7 @@ func GetInventoryItemGroup(DB *gorm.DB, ItemCode string) string {
 
 func IsJournalAlreadyImported(DB *gorm.DB, AuditDate time.Time) (bool, error) {
 	var Id uint64
-	if err := DB.Table("acc_import_journal_log").Select("id").Where("audit_date=?", General.FormatDate1(AuditDate)).Limit(1).Scan(&Id).Error; err != nil {
+	if err := DB.Table("acc_import_journal_log").Select("id").Where("audit_date=?", general.FormatDate1(AuditDate)).Limit(1).Scan(&Id).Error; err != nil {
 		return true, err
 	}
 	return Id > 0, nil
@@ -5101,7 +5104,7 @@ func IsJournalAlreadyImported(DB *gorm.DB, AuditDate time.Time) (bool, error) {
 
 func IsMonthClosed(DB *gorm.DB, Month, Year int) (bool, error) {
 	var Id uint64
-	if err := DB.Table(DBVar.TableName.AccCloseMonth).Select("id").
+	if err := DB.Table(db_var.TableName.AccCloseMonth).Select("id").
 		Where("month=?", Month).Where("year=?", Year).Limit(1).Scan(&Id).Error; err != nil {
 		return true, err
 	}
@@ -5110,7 +5113,7 @@ func IsMonthClosed(DB *gorm.DB, Month, Year int) (bool, error) {
 
 func IsPurchaseOrderClosed(DB *gorm.DB, PONumberX string) (bool, error) {
 	var PONumber string
-	if err := DB.Table(DBVar.TableName.InvPurchaseOrderDetail).Select("po_number").Where("po_number=?", PONumberX).
+	if err := DB.Table(db_var.TableName.InvPurchaseOrderDetail).Select("po_number").Where("po_number=?", PONumberX).
 		Where("quantity_not_received>0").
 		Limit(1).
 		Scan(&PONumber).Error; err != nil {
@@ -5120,18 +5123,18 @@ func IsPurchaseOrderClosed(DB *gorm.DB, PONumberX string) (bool, error) {
 }
 
 func GetItemBasicUOMCode(DB *gorm.DB, ItemCode string) (string, error) {
-	var DataOutput DBVar.Inv_cfg_init_item
-	if err := DB.Table(DBVar.TableName.InvCfgInitItem).Select("uom_code").Where("code=?", ItemCode).Limit(1).Scan(&DataOutput).Error; err != nil {
+	var DataOutput db_var.Inv_cfg_init_item
+	if err := DB.Table(db_var.TableName.InvCfgInitItem).Select("uom_code").Where("code=?", ItemCode).Limit(1).Scan(&DataOutput).Error; err != nil {
 		return "", err
 	}
 
 	return DataOutput.UomCode, nil
 }
 
-func GetItemMultiUOM(DB *gorm.DB, ItemCode, UomCode string) (DBVar.Inv_cfg_init_item_uom, error) {
-	var DataOutput DBVar.Inv_cfg_init_item_uom
-	if err := DB.Table(DBVar.TableName.InvCfgInitItemUom).Where("item_code=?", ItemCode).Where("item_code=?", ItemCode).Limit(1).Scan(&DataOutput).Error; err != nil {
-		return DBVar.Inv_cfg_init_item_uom{}, err
+func GetItemMultiUOM(DB *gorm.DB, ItemCode, UomCode string) (db_var.Inv_cfg_init_item_uom, error) {
+	var DataOutput db_var.Inv_cfg_init_item_uom
+	if err := DB.Table(db_var.TableName.InvCfgInitItemUom).Where("item_code=?", ItemCode).Where("item_code=?", ItemCode).Limit(1).Scan(&DataOutput).Error; err != nil {
+		return db_var.Inv_cfg_init_item_uom{}, err
 	}
 
 	return DataOutput, nil
@@ -5149,16 +5152,16 @@ func IsAPARHadPayment(DB *gorm.DB, APARNumber string) bool {
 
 func CheckDateRangeScheduledRate(DB *gorm.DB, FolioReservationNumber, ID uint64, FromDate, ToDate, ArrivalDate, DepartureDate time.Time, IsReservation bool) (bool, error) {
 	ConditionNumber := "folio_number"
-	TableName := DBVar.TableName.GuestScheduledRate
+	TableName := db_var.TableName.GuestScheduledRate
 	if IsReservation {
 		ConditionNumber = "reservation_number"
-		TableName = DBVar.TableName.ReservationScheduledRate
+		TableName = db_var.TableName.ReservationScheduledRate
 	}
 
 	query := DB.Table(TableName).Select("id").
 		Where(ConditionNumber, FolioReservationNumber).
-		Where(DB.Where("from_date<=?", General.FormatDate1(FromDate)).Where("to_date", General.FormatDate1(FromDate)).
-			Or("from_date<=?", General.FormatDate1(ToDate)).Where("to_date>=?", General.FormatDate1(ToDate)))
+		Where(DB.Where("from_date<=?", general.FormatDate1(FromDate)).Where("to_date", general.FormatDate1(FromDate)).
+			Or("from_date<=?", general.FormatDate1(ToDate)).Where("to_date>=?", general.FormatDate1(ToDate)))
 
 	if ID > 0 {
 		query.Where("id<>?", ID)
@@ -5172,7 +5175,7 @@ func CheckDateRangeScheduledRate(DB *gorm.DB, FolioReservationNumber, ID uint64,
 }
 
 func GetRoomRateWeekdayRate1(DB *gorm.DB, RoomRateCode string) (WeekdayRate1 float64, err error) {
-	if err := DB.Table(DBVar.TableName.CfgInitRoomRate).Select("weekday_rate1").Where("code", RoomRateCode).Limit(1).Scan(&WeekdayRate1).Error; err != nil {
+	if err := DB.Table(db_var.TableName.CfgInitRoomRate).Select("weekday_rate1").Where("code", RoomRateCode).Limit(1).Scan(&WeekdayRate1).Error; err != nil {
 		return 0, err
 	}
 
@@ -5220,17 +5223,17 @@ func GenerateVoucher(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset,
 		}
 
 		var count int64
-		if err := DB.Model(&DBVar.Voucher{}).Where("number = ?", voucherNumber).Count(&count).Error; err != nil {
+		if err := DB.Model(&db_var.Voucher{}).Where("number = ?", voucherNumber).Count(&count).Error; err != nil {
 			return "", err
 		}
 		if count == 0 {
-			if err := DB.Create(&DBVar.Voucher{
+			if err := DB.Create(&db_var.Voucher{
 				Number:            voucherNumber,
 				Code:              code,
 				TitleCode:         TitleCode,
 				FullName:          FullName,
 				Street:            Street,
-				MemberTypeCode:    GlobalVar.MemberType.Room,
+				MemberTypeCode:    global_var.MemberType.Room,
 				TypeCode:          TypeCode,
 				CompanyCode:       CompanyCode,
 				ReasonCode:        ReasonCode,
@@ -5241,10 +5244,10 @@ func GenerateVoucher(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset,
 				SetUpRequired:     SetUpRequired,
 				Description:       Description,
 				Point:             Point,
-				StatusCodeApprove: GlobalVar.VoucherStatusApprove.Unapprove,
+				StatusCodeApprove: global_var.VoucherStatusApprove.Unapprove,
 				StatusCodeSold:    "",
 				IsRoomChargeOnly:  1,
-				StatusCode:        GlobalVar.VoucherStatus.Active,
+				StatusCode:        global_var.VoucherStatus.Active,
 				Price:             Price,
 				Nights:            Nights,
 				RoomTypeCode:      RoomTypeCode,
@@ -5262,7 +5265,7 @@ func GenerateVoucher(c *gin.Context, DB *gorm.DB, Dataset *global_var.TDataset,
 
 func IsVoucherDateCanSoldRedeemCompliment(DB *gorm.DB, VoucherNumber string, AuditDate time.Time) (bool, error) {
 	var ExpireDate time.Time
-	if err := DB.Table(DBVar.TableName.Voucher).Select("expire_date").Where("number=?", VoucherNumber).Limit(1).Scan(&ExpireDate).Error; err != nil {
+	if err := DB.Table(db_var.TableName.Voucher).Select("expire_date").Where("number=?", VoucherNumber).Limit(1).Scan(&ExpireDate).Error; err != nil {
 		return false, err
 	}
 
@@ -5272,7 +5275,7 @@ func IsVoucherDateCanSoldRedeemCompliment(DB *gorm.DB, VoucherNumber string, Aud
 
 func GetTotalMemberPointRedeem(DB *gorm.DB, MemberCode, MemberTypeCode string) (float64, error) {
 	var TotalPoint float64
-	if err := DB.Table(DBVar.TableName.MemberPoint).Select("IFNULL(SUM(point),0) AS TotalPoint").
+	if err := DB.Table(db_var.TableName.MemberPoint).Select("IFNULL(SUM(point),0) AS TotalPoint").
 		Where("member_code", MemberCode).
 		Where("member_type_code", MemberTypeCode).
 		Where("is_redeemed = 1 AND is_expired=0").
@@ -5284,7 +5287,7 @@ func GetTotalMemberPointRedeem(DB *gorm.DB, MemberCode, MemberTypeCode string) (
 
 func GetTotalMemberPointRedeemActual(DB *gorm.DB, MemberCode, MemberTypeCode string) (float64, error) {
 	var TotalPoint float64
-	if err := DB.Table(DBVar.TableName.MemberPointRedeem).Select("IFNULL(SUM(point),0) AS TotalPoint").
+	if err := DB.Table(db_var.TableName.MemberPointRedeem).Select("IFNULL(SUM(point),0) AS TotalPoint").
 		Where("member_code", MemberCode).
 		Where("member_type_code", MemberTypeCode).
 		Scan(&TotalPoint).Error; err != nil {
@@ -5294,13 +5297,13 @@ func GetTotalMemberPointRedeemActual(DB *gorm.DB, MemberCode, MemberTypeCode str
 }
 
 func SetAuditDate(c *gin.Context, DB *gorm.DB, Date time.Time, UserID string) error {
-	if err := DB.Table(DBVar.TableName.AuditLog).Create(map[string]interface{}{
+	if err := DB.Table(db_var.TableName.AuditLog).Create(map[string]interface{}{
 		"audit_date": Date,
 		"created_by": UserID}).Error; err != nil {
 		return err
 	}
 	newAuditDate := GetAuditDate(c, DB, true)
-	websocket.SendMessage(c.GetString("UnitCode"), GlobalVar.WSMessageType.Client, nil, GlobalVar.WSDataType.AuditDateChanged, newAuditDate, UserID)
+	websocket.SendMessage(c.GetString("UnitCode"), global_var.WSMessageType.Client, nil, global_var.WSDataType.AuditDateChanged, newAuditDate, UserID)
 	return nil
 }
 

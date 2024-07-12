@@ -1,10 +1,10 @@
 package global_var
 
 import (
-	"chs_cloud_general/config"
 	"sync"
 	"time"
 
+	"github.com/cakramediadata2022/chs_cloud_general/config"
 	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"go.opentelemetry.io/otel"
 	"gorm.io/gorm"
