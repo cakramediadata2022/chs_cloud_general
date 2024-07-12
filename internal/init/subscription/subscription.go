@@ -3,7 +3,7 @@ package subscription
 import (
 	"time"
 
-	"github.com/cakramediadata2022/chs_cloud_general/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/global_var"
 )
 
 type SubscriptionStruct struct {

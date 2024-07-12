@@ -8,10 +8,10 @@ import (
 	"sync"
 
 	"github.com/cakramediadata2022/chs_cloud_general/config"
-	"github.com/cakramediadata2022/chs_cloud_general/general"
-	"github.com/cakramediadata2022/chs_cloud_general/global_var"
 	"github.com/cakramediadata2022/chs_cloud_general/internal/init/dataset"
 	"github.com/cakramediadata2022/chs_cloud_general/internal/utils/cache"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/general"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/global_var"
 	"github.com/gin-gonic/gin"
 	"github.com/uptrace/opentelemetry-go-extra/otelgorm"
 	"github.com/uptrace/opentelemetry-go-extra/otelzap"

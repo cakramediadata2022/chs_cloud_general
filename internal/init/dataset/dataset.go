@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cakramediadata2022/chs_cloud_general/db_var"
-	"github.com/cakramediadata2022/chs_cloud_general/general"
-	"github.com/cakramediadata2022/chs_cloud_general/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/db_var"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/general"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/global_var"
 	"gorm.io/gorm"
 )
 
