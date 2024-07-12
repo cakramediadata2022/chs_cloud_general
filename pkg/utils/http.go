@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/global_var"
 	"github.com/cakramediadata2022/chs_cloud_general/pkg/httpErrors"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"

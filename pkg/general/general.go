@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/global_var"
 	"github.com/go-playground/validator/v10"
 
 	"github.com/gin-gonic/gin"
@@ -69,7 +69,7 @@ func DecryptString(Key []byte, Text string) (string, error) {
 
 func generateIV(iv []byte, salt string) []byte {
 	ivString := string(iv[:])
-	fmt.Println("iv", ivString)
+	// fmt.Println("iv", ivString)
 	var newIV string
 	if salt != "" {
 		ivLen := len(ivString)
@@ -77,14 +77,14 @@ func generateIV(iv []byte, salt string) []byte {
 		if saltLen > ivLen {
 			newIV = salt[0:ivLen]
 		} else {
-			keyR := ivString[0:saltLen]
+			// keyR := ivString[0:saltLen]
 			newIV = salt + ivString[saltLen:]
-			fmt.Println("r", keyR)
+			// fmt.Println("r", keyR)
 		}
 	} else {
 		newIV = ivString
 	}
-	fmt.Println("ne", newIV)
+	// fmt.Println("ne", newIV)
 	IV := []byte(newIV)
 	return IV
 }
@@ -154,6 +154,11 @@ func ReplaceTime(ADate time.Time, ATime time.Time) time.Time {
 	return Result
 }
 
+func ReplaceTimeLocation(ADate time.Time, ATime time.Time, Loc *time.Location) time.Time {
+	Result := time.Date(ADate.Year(), ADate.Month(), ADate.Day(), ATime.Hour(), ATime.Minute(), ATime.Second(), 0, Loc)
+	return Result
+}
+
 func StrTimeToDateTime(timeString string) (time.Time, error) {
 	// Get the current date
 	currentDate := time.Now().Format("2006-01-02")
@@ -185,6 +190,15 @@ func IncDay(ADate time.Time, Count int) time.Time {
 
 func StrToDate(ADateStr string) time.Time {
 	Date, err := time.ParseInLocation("2006-01-02", ADateStr, time.UTC)
+	if err != nil {
+		return time.Time{}
+	} else {
+		return Date
+	}
+}
+
+func StrToDateTime(ADateStr string) time.Time {
+	Date, err := time.ParseInLocation("2006-01-02 15:04:05", ADateStr, time.UTC)
 	if err != nil {
 		return time.Time{}
 	} else {
@@ -242,6 +256,12 @@ func FormatDate1(ADate time.Time) string {
 	//yyyy-dd-mm
 	ADate = DateOf(ADate)
 	Result := ADate.Format("2006-01-02")
+	return Result
+}
+
+func FormatTime1(ADate time.Time) string {
+	//yyyy-dd-mm
+	Result := ADate.Format("15:04:05")
 	return Result
 }
 
@@ -390,6 +410,7 @@ func ByteToUint64(bytes []byte) uint64 {
 	return Uint64
 }
 
+// TODO Review result
 func RoundTo(AFloat float64) float64 {
 	return math.Trunc(AFloat)
 }
@@ -689,5 +710,37 @@ func GenerateValidateErrorMsg(c *gin.Context, err error) interface{} {
 		}
 		return out
 	}
+	return err
+}
+
+func IntToStr(i int64) string {
+	return strconv.FormatInt(i, 64)
+}
+
+func PtrToStr(s *string) string {
+	if s != nil {
+		return *s
+	}
 	return ""
+}
+
+func PtrToUint8(s *uint8) uint8 {
+	if s != nil {
+		return *s
+	}
+	return 0
+}
+
+func PtrToInt(s *int) int {
+	if s != nil {
+		return *s
+	}
+	return 0
+}
+
+func PtrToFloat64(s *float64) float64 {
+	if s != nil {
+		return *s
+	}
+	return 0
 }

@@ -2,10 +2,11 @@ package dataset
 
 import (
 	"fmt"
+	"time"
 
-	"github.com/cakramediadata2022/chs_cloud_general/internal/db_var"
-	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
-	"github.com/cakramediadata2022/chs_cloud_general/pkg/general"
+	"github.com/cakramediadata2022/chs_cloud_general/db_var"
+	"github.com/cakramediadata2022/chs_cloud_general/general"
+	"github.com/cakramediadata2022/chs_cloud_general/global_var"
 	"gorm.io/gorm"
 )
 
@@ -255,6 +256,46 @@ func GenerateDataset(DB *gorm.DB) *global_var.TDataset {
 				configuration[configurationX.Category][configurationX.Name] = configurationX.Value
 				continue
 			}
+
+			// Banquet
+			if configurationX.Category == global_var.ConfigurationCategory.BanquetConfiguration {
+				if configuration[configurationX.Category] == nil {
+					configuration[configurationX.Category] = make(map[string]interface{})
+				}
+				configuration[configurationX.Category][configurationX.Name] = configurationX.Value
+				continue
+			}
+			if configurationX.Category == global_var.ConfigurationCategory.BanquetView {
+				if configuration[configurationX.Category] == nil {
+					configuration[configurationX.Category] = make(map[string]interface{})
+				}
+				configuration[configurationX.Category][configurationX.Name] = configurationX.Value
+				continue
+			}
+
+			if configurationX.Category == global_var.ConfigurationCategory.HeaderReservationRemark {
+				if configuration[configurationX.Category] == nil {
+					configuration[configurationX.Category] = make(map[string]interface{})
+				}
+				configuration[configurationX.Category][configurationX.Name] = configurationX.Value
+				continue
+			}
+
+			if configurationX.Category == global_var.ConfigurationCategory.TADAMemberService {
+				if configuration[configurationX.Category] == nil {
+					configuration[configurationX.Category] = make(map[string]interface{})
+				}
+				configuration[configurationX.Category][configurationX.Name] = configurationX.Value
+				continue
+			}
+
+			if configurationX.Category == global_var.ConfigurationCategory.ReportTemplate {
+				if configuration[configurationX.Category] == nil {
+					configuration[configurationX.Category] = make(map[string]interface{})
+				}
+				configuration[configurationX.Category][configurationX.Name] = configurationX.Value
+				continue
+			}
 		}
 		programConfiguration := global_var.TProgramConfiguration{
 			AutoImportJournal:       general.StrToBool(configuration[global_var.ConfigurationCategory.DayendClosed][global_var.ConfigurationName.AutoImportJournal].(string)),
@@ -275,10 +316,12 @@ func GenerateDataset(DB *gorm.DB) *global_var.TDataset {
 			UseChildRate:                       general.StrToBool(configuration[global_var.ConfigurationCategory.General][global_var.ConfigurationName.UseChildRate].(string)),
 			IsRoomByName:                       general.StrToBool(configuration[global_var.ConfigurationCategory.General][global_var.ConfigurationName.IsRoomByName].(string)),
 			PostDiscount:                       general.StrToBool(configuration[global_var.ConfigurationCategory.Reservation][global_var.ConfigurationName.PostDiscount].(string)),
-			IsCompanyPRApplyPriceMoreThanOne:   general.StrToBool(configuration[global_var.ConfigurationCategoryCAMS.PurchaseRequestApp][global_var.ConfigurationName.IsCompanyPRApplyPriceMoreThanOne].(string)),
+			IsCompanyPRApplyPriceMoreThanOne:   InterfaceToBool(configuration[global_var.ConfigurationCategoryCAMS.PurchaseRequestApp][global_var.ConfigurationName.IsCompanyPRApplyPriceMoreThanOne]),
 			ReceiveStockAPTwoDigitDecimal:      general.StrToBool(configuration[global_var.ConfigurationCategory.Inventory][global_var.ConfigurationName.ReceiveStockAPTwoDigitDecimal].(string)),
 			CostingMethod:                      configuration[global_var.ConfigurationCategory.Inventory][global_var.ConfigurationName.CostingMethod].(string),
 			CompanyTypeExpedition:              configuration[global_var.ConfigurationCategory.Other][global_var.ConfigurationName.CompanyTypeExpedition].(string),
+			AutoGenerateCompanyCode:            InterfaceToBool(configuration[global_var.ConfigurationCategory.Reservation][global_var.ConfigurationName.AutoGenerateCompanyCode]),
+			CompanyCodeDigit:                   int(general.StrToUint8(InterfaceToString(configuration[global_var.ConfigurationCategory.Reservation][global_var.ConfigurationName.CompanyCodeDigit]))),
 			CompanyTypeSupplier:                configuration[global_var.ConfigurationCategory.Other][global_var.ConfigurationName.CompanyTypeSupplier].(string),
 			CompanyTypeTravelAgent:             configuration[global_var.ConfigurationCategory.Other][global_var.ConfigurationName.CompanyTypeTravelAgent].(string),
 			CheckOutLimit:                      configuration[global_var.ConfigurationCategory.Reservation][global_var.ConfigurationName.CheckOutLimit].(string),
@@ -287,18 +330,74 @@ func GenerateDataset(DB *gorm.DB) *global_var.TDataset {
 			ProformaInvoiceDetail: configuration[global_var.ConfigurationCategory.OtherForm][global_var.ConfigurationName.ProformaInvoiceDetail].(string),
 			FolioFooter:           configuration[global_var.ConfigurationCategory.Folio][global_var.ConfigurationName.FolioFooter].(string),
 			DefaultFolio:          configuration[global_var.ConfigurationCategory.Folio][global_var.ConfigurationName.DefaultFolio].(string),
+			//Banquet
+			BanquetOutletCode:           InterfaceToString(configuration[global_var.ConfigurationCategory.BanquetConfiguration][global_var.ConfigurationName.BCOutletCode]),
+			BanquetViewReservationColor: InterfaceToString(configuration[global_var.ConfigurationCategory.BanquetView][global_var.ConfigurationName.ReservationColor]),
+			BanquetViewInHouseColor:     InterfaceToString(configuration[global_var.ConfigurationCategory.BanquetView][global_var.ConfigurationName.InHouseColor]),
+			//Asset
+			LockTransactionDateInventory: InterfaceToDate(configuration[global_var.ConfigurationCategory.Inventory][global_var.ConfigurationName.LockTransactionDateInventory]),
+
+			//Report
+			RTTrialBalance: InterfaceToString(configuration[global_var.ConfigurationCategory.ReportTemplate][global_var.ConfigurationName.RTTrialBalance]),
+			BankName1:      InterfaceToString(configuration[global_var.ConfigurationCategory.CompanyBankAccount][global_var.ConfigurationName.BankName1]),
+			BankAccount1:   InterfaceToString(configuration[global_var.ConfigurationCategory.CompanyBankAccount][global_var.ConfigurationName.BankAccount1]),
+			HolderName1:    InterfaceToString(configuration[global_var.ConfigurationCategory.CompanyBankAccount][global_var.ConfigurationName.HolderName1]),
+			BankName2:      InterfaceToString(configuration[global_var.ConfigurationCategory.CompanyBankAccount][global_var.ConfigurationName.BankName2]),
+			BankAccount2:   InterfaceToString(configuration[global_var.ConfigurationCategory.CompanyBankAccount][global_var.ConfigurationName.BankAccount2]),
+			HolderName2:    InterfaceToString(configuration[global_var.ConfigurationCategory.CompanyBankAccount][global_var.ConfigurationName.HolderName2]),
+			// BanquetViewReservationColor: configuration[global_var.ConfigurationCategory.BanquetView][global_var.ConfigurationName.ReservationColor].(string),
+			// BanquetViewInHouseColor: configuration[global_var.ConfigurationCategory.BanquetView][global_var.ConfigurationName.InHouseColor].(string),
+			// BookingSchedulePaymentColor: configuration[global_var.ConfigurationCategory.BanquetView][global_var.ConfigurationName.SchedulePaymentColor].(string),
+
+			//POS
+			AutoCostingCostRecipeonCloseTransaction: InterfaceToBool(configuration[global_var.ConfigurationCategory.Accounting][global_var.ConfigurationNamePOS.AutoCostingCostRecipeonCloseTransaction]),
 
 			//ChanneManager
-			CCMSSMReservationAsAllotment:  general.StrToBool(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMReservationAsAllotment].(string)),
-			CCMSSMSynchronizeReservation:  general.StrToBool(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMSynchronizeReservation].(string)),
-			CCMSSMSynchronizeAvailability: general.StrToBool(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMSynchronizeAvailability].(string)),
-			CCMSSMSynchronizeRate:         general.StrToBool(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMSynchronizeRate].(string)),
-			CCMSVendor:                    configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSVendor].(string),
-			CCMSSMUser:                    configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMUser].(string),
-			CCMSSMPassword:                configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMPassword].(string),
-			CCMSSMRequestorID:             configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMRequestorID].(string),
-			CCMSSMHotelCode:               configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMHotelCode].(string),
-			CCMSSMWSDL:                    configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMWSDL].(string),
+			CCMSSMReservationAsAllotment:           general.StrToBool(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMReservationAsAllotment].(string)),
+			CCMSSMSynchronizeReservation:           general.StrToBool(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMSynchronizeReservation].(string)),
+			CCMSSMSynchronizeAvailability:          general.StrToBool(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMSynchronizeAvailability].(string)),
+			CCMSSMSynchronizeAvailabilityByBedType: InterfaceToBool(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMSynchronizeAvailabilityByBedType]),
+			CCMSSMSynchronizeRate:                  general.StrToBool(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMSynchronizeRate].(string)),
+			CCMSVendor:                             configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSVendor].(string),
+			CCMSSMUser:                             configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMUser].(string),
+			CCMSSMPassword:                         configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMPassword].(string),
+			CCMSSMRequestorID:                      configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMRequestorID].(string),
+			CCMSSMHotelCode:                        configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMHotelCode].(string),
+			CCMSSMWSDL:                             configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSSMWSDL].(string),
+			CMGlobalPercentAvailability:            InterfaceToInt(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSGlobalPercentAvailability]),
+			CMGlobalMinRoomLeft:                    InterfaceToInt(configuration[global_var.ConfigurationCategory.ServiceCCMS][global_var.ConfigurationName.CCMSGlobalMinRoomLeft]),
+
+			SD01: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD01].(string),
+			SD02: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD02].(string),
+			SD03: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD03].(string),
+			SD04: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD04].(string),
+			SD05: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD05].(string),
+			SD06: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD06].(string),
+			SD07: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD07].(string),
+			SD08: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD08].(string),
+			SD09: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD09].(string),
+			SD10: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD10].(string),
+			SD11: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD11].(string),
+			SD12: configuration[global_var.ConfigurationCategory.SubDepartment][global_var.ConfigurationName.SD12].(string),
+			//TADA MEMBER
+			TADAUsername:      InterfaceToString(configuration[global_var.ConfigurationCategory.TADAMemberService][global_var.ConfigurationName.TADAUsername]),
+			TADAPassword:      DecryptConfig(InterfaceToString(configuration[global_var.ConfigurationCategory.TADAMemberService][global_var.ConfigurationName.TADAPassword])),
+			TADAMerchantID:    InterfaceToString(configuration[global_var.ConfigurationCategory.TADAMemberService][global_var.ConfigurationName.TADAMerchantID]),
+			TADAProgramID:     InterfaceToString(configuration[global_var.ConfigurationCategory.TADAMemberService][global_var.ConfigurationName.TADAProgramID]),
+			TADATerminalID:    InterfaceToString(configuration[global_var.ConfigurationCategory.TADAMemberService][global_var.ConfigurationName.TADATerminalID]),
+			TADAWalletIDTopUp: InterfaceToString(configuration[global_var.ConfigurationCategory.TADAMemberService][global_var.ConfigurationName.TADAWalletIDTopUp]),
+			TADAWalletIDPoint: InterfaceToString(configuration[global_var.ConfigurationCategory.TADAMemberService][global_var.ConfigurationName.TADAWalletIDPoint]),
+			TADACompanyCode:   InterfaceToString(configuration[global_var.ConfigurationCategory.TADAMemberService][global_var.ConfigurationName.TADACompanyCode]),
+			TADAAccountCode:   InterfaceToString(configuration[global_var.ConfigurationCategory.TADAMemberService][global_var.ConfigurationName.TADAAccountCode]),
+			TADAEnable:        InterfaceToBool(configuration[global_var.ConfigurationCategory.TADAMemberService][global_var.ConfigurationName.TADAEnable]),
+		}
+
+		if configuration[global_var.ConfigurationCategory.BanquetConfiguration][global_var.ConfigurationName.BCOutletCode] != nil {
+			programConfiguration.BanquetOutletCode = configuration[global_var.ConfigurationCategory.BanquetConfiguration][global_var.ConfigurationName.BCOutletCode].(string)
+		}
+
+		reportTemplate := global_var.TReportTemplate{
+			DailyHotelCompetitor: InterfaceToString(configuration[global_var.ConfigurationCategory.ReportTemplate][global_var.ConfigurationName.DailyHotelCompetitor]),
 		}
 
 		globalAccount := global_var.TGlobalAccount{
@@ -321,6 +420,29 @@ func GenerateDataset(DB *gorm.DB) *global_var.TDataset {
 			ExtraBed:                          configuration[global_var.ConfigurationCategory.GlobalAccount][global_var.ConfigurationName.AccountExtraBed].(string),
 			VoucherCompliment:                 configuration[global_var.ConfigurationCategory.GlobalAccount][global_var.ConfigurationName.AccountVoucherCompliment].(string),
 			Voucher:                           configuration[global_var.ConfigurationCategory.GlobalAccount][global_var.ConfigurationName.AccountVoucher].(string),
+		}
+
+		headerReservationRemark := global_var.THeaderReservationRemark{
+			Header1:          InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.Header1]),
+			Header2:          InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.Header2]),
+			Header3:          InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.Header3]),
+			Header4:          InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.Header4]),
+			Header5:          InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.Header5]),
+			Header6:          InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.Header6]),
+			Header7:          InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.Header7]),
+			Header8:          InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.Header8]),
+			Header9:          InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.Header9]),
+			Header10:         InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.Header10]),
+			HeaderTemplate1:  InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.HeaderTemplate1]),
+			HeaderTemplate2:  InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.HeaderTemplate2]),
+			HeaderTemplate3:  InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.HeaderTemplate3]),
+			HeaderTemplate4:  InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.HeaderTemplate4]),
+			HeaderTemplate5:  InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.HeaderTemplate5]),
+			HeaderTemplate6:  InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.HeaderTemplate6]),
+			HeaderTemplate7:  InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.HeaderTemplate7]),
+			HeaderTemplate8:  InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.HeaderTemplate8]),
+			HeaderTemplate9:  InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.HeaderTemplate9]),
+			HeaderTemplate10: InterfaceToString(configuration[global_var.ConfigurationCategory.HeaderReservationRemark][global_var.ConfigurationName.HeaderTemplate10]),
 		}
 
 		globalSubDepartment := global_var.TGlobalSubDepartment{
@@ -402,8 +524,10 @@ func GenerateDataset(DB *gorm.DB) *global_var.TDataset {
 		Dataset = &global_var.TDataset{
 			GlobalAccount:                 globalAccount,
 			SpecialProduct:                specialProduct,
+			ReportTemplate:                reportTemplate,
 			Configuration:                 configuration,
 			ProgramConfiguration:          programConfiguration,
+			HeaderReservationRemark:       headerReservationRemark,
 			GlobalSubDepartment:           globalSubDepartment,
 			GlobalDepartment:              globalDepartment,
 			GlobalJournalAccount:          globalJournalAccount,
@@ -413,4 +537,59 @@ func GenerateDataset(DB *gorm.DB) *global_var.TDataset {
 	}
 	fmt.Println("dataset generated")
 	return Dataset
+}
+func InterfaceToDate(input interface{}) time.Time {
+	switch v := input.(type) {
+	case time.Time:
+		// If the input is already a time.Time, return it directly
+		return v
+	case string:
+		// Try to parse the string using common layouts
+		layouts := []string{
+			time.RFC3339,
+			"2006-01-02T15:04:05Z07:00",
+			"2006-01-02 15:04:05",
+			"2006-01-02",
+		}
+		var t time.Time
+		var err error
+		for _, layout := range layouts {
+			t, err = time.Parse(layout, v)
+			if err == nil {
+				return t
+			}
+		}
+		return time.Time{}
+	default:
+		return time.Time{}
+	}
+}
+
+func InterfaceToString(Value interface{}) string {
+	if Value != nil {
+		return Value.(string)
+	}
+	return ""
+}
+
+func InterfaceToBool(Value interface{}) bool {
+	if Value != nil {
+		return general.StrToBool(Value.(string))
+	}
+	return false
+}
+
+func InterfaceToInt(Value interface{}) int {
+	if Value != nil {
+		return general.StrToInt(Value.(string))
+	}
+	return 0
+}
+
+func DecryptConfig(V string) string {
+	if V == "" {
+		return ""
+	}
+	R, _ := general.OpensslDecrypt(V, "")
+	return R
 }

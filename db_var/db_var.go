@@ -9,12 +9,12 @@ import (
 type TTableName struct {
 	AccApAr, AccApArPayment, AccApArPaymentDetail, AccApCommissionPayment, AccApCommissionPaymentDetail, AccApRefundDepositPayment, AccApRefundDepositPaymentDetail,
 	AccCashSaleRecon, AccCfgInitBankAccount, AccCloseMonth, AccCloseYear, AccConstBankAccountType, AccConstJournalGroup, AccConstJournalType, AccConstUnit,
-	AccCreditCardRecon, AccCreditCardReconDetail, AccDefferedIncome, AccDefferedIncomePosted, AccForeignCash, AccImportJournalLog, AccJournal,
+	AccCreditCardRecon, AccCreditCardReconDetail, AccDefferedIncome, AccDefferedIncomePosted, AccForeignCash, AccImportJournalLog, AccJournal, CmLog,
 	AccJournalDetail, AccPrepaidExpense, AccPrepaidExpensePosted, AccReport, AccReportDefaultField, AccReportGroupField, AccReportGroupingField,
 	AccReportOrderField, AccReportTemplate, AccReportTemplateField, AccUserGroup, AstCfgInitShippingAddress, AstConstPurchaseRequestStatus,
 	AstConstStoreRequisitionStatus, AstReport, AstReportDefaultField, AstReportGroupField, AstReportGroupingField, AstReportOrderField, AstReportTemplate,
 	AstReportTemplateField, AstUserGroup, AstUserSubDepartment, AuditLog, BanBooking, BanCfgInitSeatingPlan, BanCfgInitTheme, BanCfgInitVenue,
-	BanCfgInitVenueCombine, BanCfgInitVenueCombineDetail, BanCfgInitVenueGroup, BanConstBookingStatus, BanConstReservationStatus, BanConstReservationType,
+	BanCfgInitVenueCombine, BanCfgInitLayout, BanCfgInitVenueCombineDetail, BanCfgInitVenueGroup, BanConstBookingStatus, BanConstReservationStatus, BanConstReservationType,
 	BanConstVenueLocation, BanReport, BanReportDefaultField, BanReportGroupField, BanReportGroupingField, BanReportOrderField, BanReportTemplate,
 	BanReportTemplateField, BanReservation, BanReservationCharge, BanReservationRemark, BanUserGroup, BreakfastListTemp, BudgetExpense, BudgetFb,
 	BudgetIncome, BudgetStatistic, CashCount, CfgInitAccount, CfgInitAccountSubGroup, CfgInitBedType, CfgInitBookingSource, CfgInitCardBank,
@@ -62,7 +62,7 @@ type TTableName struct {
 	SalCfgInitTaskAction, SalCfgInitTaskRepeat, SalCfgInitTaskTag, SalCfgInitTemplate, SalConstProposalStatus, SalConstResource, SalConstStatus,
 	SalConstTaskPriority, SalConstTaskStatus, SalContact, SalNotes, SalProposal, SalSendReminder, SalTask, SmsEvent, SmsOutbox, SmsSchedule, SubFolio,
 	SubFolioGroup, SubFolioGrouping, SubFolioTax, TempSubFolioBreakdown1, TempSubFolioCorrectionBreakdown, TransactionList, TransactionListTax, User,
-	UserGroup, UserGroupAccess, Voucher, WorkingShift, GeneralUserGroup, ReportUserGroup, ToolsUserGroup, ConstUserAccessLevel, CfgInitTimezone, CmUpdateAvailability, CmUpdateRate string
+	UserGroup, UserGroupAccess, Voucher, WorkingShift, GeneralUserGroup, ReportUserGroup, ToolsUserGroup, ConstUserAccessLevel, CfgInitTimezone, CmUpdateAvailability, CmUpdateRate, BanBookingSchedulePayment string
 }
 
 var TableNameArray = []string{"acc_ap_ar",
@@ -682,7 +682,7 @@ type Acc_close_month struct {
 }
 
 type Acc_close_year struct {
-	Year      int       `json:"year" binding:"required"`
+	Year      uint64    `json:"year" binding:"required"`
 	CloseTime time.Time `json:"close_time" binding:"required"`
 	CreatedAt time.Time `json:"created_at"`
 	CreatedBy string    `json:"created_by"`
@@ -1153,15 +1153,15 @@ type Audit_log struct {
 }
 
 type Ban_booking struct {
-	Number             uint64    `json:"number" binding:"required"`
+	Number             uint64    `json:"number" gorm:"primaryKey"`
 	CheckNumber        string    `json:"check_number"`
-	IsContinueEvent    string    `json:"is_continue_event"`
+	IsContinueEvent    uint8     `json:"is_continue_event"`
 	ContactPersonId    uint64    `json:"contact_person_id"`
 	GuestDetailId      uint64    `json:"guest_detail_id"`
 	GuestProfileId     uint64    `json:"guest_profile_id"`
-	CurrencyCode       string    `json:"currency_code" binding:"required"`
-	ExchangeRate       float64   `json:"exchange_rate" binding:"required"`
-	IsConstantCurrency uint8     `json:"is_constant_currency" binding:"required"`
+	CurrencyCode       string    `json:"currency_code" `
+	ExchangeRate       float64   `json:"exchange_rate" `
+	IsConstantCurrency uint8     `json:"is_constant_currency" `
 	ReservationBy      string    `json:"reservation_by"`
 	ThemeCode          string    `json:"theme_code"`
 	SeatingPlanCode    string    `json:"seating_plan_code"`
@@ -1173,7 +1173,7 @@ type Ban_booking struct {
 	Notes              string    `json:"notes"`
 	EstimateRevenue    float64   `json:"estimate_revenue"`
 	BeoNote            string    `json:"beo_note" binding:"required"`
-	ShowNotes          uint8     `json:"show_notes" binding:"required"`
+	ShowNotes          uint8     `json:"show_notes"`
 	AuditDate          time.Time `json:"audit_date"`
 	CancelAuditDate    time.Time `json:"cancel_audit_date"`
 	CancelDate         time.Time `json:"cancel_date"`
@@ -1181,13 +1181,11 @@ type Ban_booking struct {
 	CancelReason       string    `json:"cancel_reason"`
 	StatusCode         string    `json:"status_code"`
 	ReservationType    string    `json:"reservation_type" binding:"required"`
-	IsLock             string    `json:"is_lock"`
-	IsPublic           string    `json:"is_public"`
-	FirstInsert        time.Time `json:"first_insert" binding:"required"`
-	InsertBy           string    `json:"insert_by" binding:"required"`
+	IsLock             uint8     `json:"is_lock"`
+	IsPublic           uint8     `json:"is_public"`
 	ChangeStatusDate   time.Time `json:"change_status_date"`
 	ChangeStatusBy     string    `json:"change_status_by"`
-	FolioTransfer      uint64    `json:"folio_transfer" binding:"required"`
+	FolioTransfer      uint64    `json:"folio_transfer"`
 	CreatedAt          time.Time `json:"created_at"`
 	CreatedBy          string    `json:"created_by"`
 	UpdatedAt          time.Time `json:"updated_at"`
@@ -1379,10 +1377,10 @@ type Ban_report_template_field struct {
 }
 
 type Ban_reservation struct {
-	Number             uint64    `json:"number" binding:"required"`
+	Number             uint64    `json:"number" binding:"required" gorm:"primaryKey"`
 	Booking            uint64    `json:"booking" binding:"required"`
 	CheckNumber        string    `json:"check_number"`
-	IsContinueEvent    string    `json:"is_continue_event"`
+	IsContinueEvent    uint8     `json:"is_continue_event"`
 	ContactPersonId    uint64    `json:"contact_person_id"`
 	GuestDetailId      uint64    `json:"guest_detail_id"`
 	GuestProfileId     uint64    `json:"guest_profile_id"`
@@ -1408,10 +1406,8 @@ type Ban_reservation struct {
 	CancelReason       string    `json:"cancel_reason"`
 	StatusCode         string    `json:"status_code"`
 	ReservationType    string    `json:"reservation_type" binding:"required"`
-	IsLock             string    `json:"is_lock"`
-	IsPublic           string    `json:"is_public"`
-	FirstInsert        time.Time `json:"first_insert" binding:"required"`
-	InsertBy           string    `json:"insert_by" binding:"required"`
+	IsLock             uint8     `json:"is_lock"`
+	IsPublic           uint8     `json:"is_public"`
 	ChangeStatusDate   time.Time `json:"change_status_date"`
 	ChangeStatusBy     string    `json:"change_status_by"`
 	FolioTransfer      uint64    `json:"folio_transfer" binding:"required"`
@@ -1447,14 +1443,15 @@ type Ban_reservation_charge struct {
 	TypeCode          string    `json:"type_code"`
 	AuditDate         time.Time `json:"audit_date"`
 	PostingDate       time.Time `json:"posting_date"`
-	Void              string    `json:"void"`
+	Void              uint8     `json:"void"`
 	VoidDate          time.Time `json:"void_date" binding:"required"`
 	VoidBy            string    `json:"void_by" binding:"required"`
 	VoidReason        string    `json:"void_reason" binding:"required"`
+	LayoutID          uint64    `json:"layout_id" binding:"required"`
 	InputOf           string    `json:"input_of"`
 	SubFolioId        uint64    `json:"sub_folio_id"`
-	IsPosting         string    `json:"is_posting"`
-	IsBeo             string    `json:"is_beo"`
+	IsPosting         uint8     `json:"is_posting"`
+	IsBeo             uint8     `json:"is_beo"`
 	CreatedAt         time.Time `json:"created_at"`
 	CreatedBy         string    `json:"created_by"`
 	UpdatedAt         time.Time `json:"updated_at"`
@@ -1494,7 +1491,7 @@ type Breakfast_list_temp struct {
 	GuestName  string `json:"guest_name" binding:"required"`
 	RoomNumber string `json:"room_number" binding:"required"`
 	GroupName  string `json:"group_name" binding:"required"`
-	IdSort     int    `json:"id_sort" binding:"required"`
+	IdSort     int    `json:"id_sort"`
 }
 
 type Budget_expense struct {
@@ -1624,13 +1621,14 @@ type Cfg_init_account struct {
 	Name               string    `json:"name" binding:"required"`
 	TypeCode           string    `json:"type_code" binding:"required"`
 	SubGroupCode       string    `json:"sub_group_code" binding:"required"`
-	SubDepartmentCode  string    `json:"sub_department_code" binding:"required"`
+	SubDepartmentCode  string    `json:"sub_department_code"`
 	JournalAccountCode string    `json:"journal_account_code" binding:"required"`
 	TaxAndServiceCode  string    `json:"tax_and_service_code" binding:"required"`
 	ItemGroupCode      string    `json:"item_group_code"`
 	SubFolioGroupCode  string    `json:"sub_folio_group_code" binding:"required"`
 	IsPayment          uint8     `json:"is_payment"`
 	IsRefund           uint8     `json:"is_refund"`
+	IsRoomCharge       uint8     `json:"is_room_charge"`
 	IdSort             int       `json:"id_sort"`
 	CreatedAt          time.Time `json:"created_at"`
 	CreatedBy          string    `json:"created_by"`
@@ -1675,7 +1673,7 @@ type Cfg_init_booking_source struct {
 type Cfg_init_card_bank struct {
 	Code      string    `json:"code" binding:"required"`
 	Name      string    `json:"name" binding:"required"`
-	IdSort    int       `json:"id_sort" binding:"required"`
+	IdSort    int       `json:"id_sort"`
 	CreatedAt time.Time `json:"created_at"`
 	CreatedBy string    `json:"created_by"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -1686,7 +1684,7 @@ type Cfg_init_card_bank struct {
 type Cfg_init_card_type struct {
 	Code      string    `json:"code" binding:"required"`
 	Name      string    `json:"name" binding:"required"`
-	IdSort    int       `json:"id_sort" binding:"required"`
+	IdSort    int       `json:"id_sort"`
 	CreatedAt time.Time `json:"created_at"`
 	CreatedBy string    `json:"created_by"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -1781,7 +1779,7 @@ type Cfg_init_currency struct {
 type Cfg_init_currency_nominal struct {
 	CurrencySign string    `json:"currency_sign" binding:"required"`
 	Nominal      float64   `json:"nominal" binding:"required"`
-	IdSort       int       `json:"id_sort" binding:"required"`
+	IdSort       int       `json:"id_sort"`
 	CreatedAt    time.Time `json:"created_at"`
 	CreatedBy    string    `json:"created_by"`
 	UpdatedAt    time.Time `json:"updated_at"`
@@ -1925,7 +1923,7 @@ type Cfg_init_guest_type struct {
 	Code      string    `json:"code" binding:"required"`
 	Name      string    `json:"name" binding:"required"`
 	Color     string    `json:"color" binding:"required"`
-	IdSort    int       `json:"id_sort" binding:"required"`
+	IdSort    int       `json:"id_sort"`
 	CreatedAt time.Time `json:"created_at"`
 	CreatedBy string    `json:"created_by"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -1969,10 +1967,10 @@ type Cfg_init_journal_account struct {
 	Code              string    `json:"code" binding:"required"`
 	Name              string    `json:"name" binding:"required"`
 	SubGroupCode      string    `json:"sub_group_code" binding:"required"`
-	SubDepartmentCode string    `json:"sub_department_code" binding:"required"`
+	SubDepartmentCode string    `json:"sub_department_code"`
 	TypeCode          string    `json:"type_code" binding:"required"`
-	ItemGroupCode     string    `json:"item_group_code" binding:"required"`
-	CategoryCode      string    `json:"category_code" binding:"required"`
+	ItemGroupCode     string    `json:"item_group_code"`
+	CategoryCode      string    `json:"category_code"`
 	Description       string    `json:"description"`
 	IsTaxExpense      uint8     `json:"is_tax_expense"`
 	IsNew             uint8     `json:"is_new"`
@@ -1996,15 +1994,17 @@ type Cfg_init_journal_account_category struct {
 }
 
 type Cfg_init_journal_account_sub_group struct {
-	Code      string    `json:"code" binding:"required"`
-	Name      string    `json:"name" binding:"required"`
-	GroupCode string    `json:"group_code" binding:"required"`
-	TypeCode  string    `json:"type_code" binding:"required"`
-	CreatedAt time.Time `json:"created_at"`
-	CreatedBy string    `json:"created_by"`
-	UpdatedAt time.Time `json:"updated_at"`
-	UpdatedBy string    `json:"updated_by"`
-	Id        uint64    `json:"id"`
+	Code       string    `json:"code" binding:"required"`
+	Name       string    `json:"name" binding:"required"`
+	GroupCode  string    `json:"group_code" binding:"required"`
+	TypeCode   string    `json:"type_code"`
+	IsHeader   uint8     `json:"is_header"`
+	ParentCode string    `json:"parent_code"`
+	CreatedAt  time.Time `json:"created_at"`
+	CreatedBy  string    `json:"created_by"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	UpdatedBy  string    `json:"updated_by"`
+	Id         uint64    `json:"id"`
 }
 
 type Cfg_init_language struct {
@@ -2031,7 +2031,7 @@ type Cfg_init_loan_item struct {
 type Cfg_init_market struct {
 	Code         string    `json:"code" binding:"required"`
 	Name         string    `json:"name" binding:"required"`
-	CategoryCode string    `json:"category_code" binding:"required"`
+	CategoryCode string    `json:"category_code"`
 	CreatedAt    time.Time `json:"created_at"`
 	CreatedBy    string    `json:"created_by"`
 	UpdatedAt    time.Time `json:"updated_at"`
@@ -2200,7 +2200,7 @@ type Cfg_init_printer struct {
 type Cfg_init_purpose_of struct {
 	Code      string    `json:"code" binding:"required"`
 	Name      string    `json:"name" binding:"required"`
-	IdSort    int       `json:"id_sort" binding:"required"`
+	IdSort    int       `json:"id_sort"`
 	CreatedAt time.Time `json:"created_at"`
 	CreatedBy string    `json:"created_by"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -2229,42 +2229,43 @@ type Cfg_init_reservation_mark struct {
 }
 
 type Cfg_init_room struct {
-	Number          string    `json:"number" binding:"required"`
-	Name            string    `json:"name"`
-	LockNumber      string    `json:"lock_number"`
-	RoomTypeCode    string    `json:"room_type_code" binding:"required"`
-	BedTypeCode     string    `json:"bed_type_code" binding:"required"`
-	ViewCode        string    `json:"view_code"`
-	IsSmoking       uint8     `json:"is_smoking"`
-	Building        string    `json:"building" binding:"required"`
-	Floor           string    `json:"floor" binding:"required"`
-	MaxAdult        int       `json:"max_adult" binding:"required"`
-	Description     string    `json:"description"`
-	PhoneNumber     string    `json:"phone_number"`
-	TvQuantity      int       `json:"tv_quantity" binding:"required"`
-	StartDate       time.Time `json:"start_date" binding:"required"`
-	OwnerCode       string    `json:"owner_code"`
-	IdSort          int       `json:"id_sort"`
-	Image           string    `json:"image"`
-	StatusCode      string    `json:"status_code"`
-	BlockStatusCode string    `json:"block_status_code"`
-	TempStatusCode  string    `json:"temp_status_code"`
-	Remark          string    `json:"remark"`
-	PosX            *int      `json:"pos_x"`
-	PosY            *int      `json:"pos_y"`
-	Width           *int      `json:"width"`
-	Height          *int      `json:"height"`
-	CreatedAt       time.Time `json:"created_at"`
-	CreatedBy       string    `json:"created_by"`
-	UpdatedAt       time.Time `json:"updated_at"`
-	UpdatedBy       string    `json:"updated_by"`
-	Id              uint64    `json:"id"`
+	Number             string    `json:"number" binding:"required"`
+	Name               string    `json:"name"`
+	LockNumber         string    `json:"lock_number"`
+	RoomTypeCode       string    `json:"room_type_code" binding:"required"`
+	BedTypeCode        string    `json:"bed_type_code" binding:"required"`
+	ViewCode           string    `json:"view_code"`
+	IsSmoking          uint8     `json:"is_smoking"`
+	Building           string    `json:"building" binding:"required"`
+	Floor              string    `json:"floor" binding:"required"`
+	MaxAdult           int       `json:"max_adult" binding:"required"`
+	Description        string    `json:"description"`
+	PhoneNumber        string    `json:"phone_number"`
+	TvQuantity         int       `json:"tv_quantity" binding:"required"`
+	StartDate          time.Time `json:"start_date" binding:"required"`
+	OwnerCode          string    `json:"owner_code"`
+	IdSort             int       `json:"id_sort"`
+	Image              string    `json:"image"`
+	StatusCode         string    `json:"status_code"`
+	BlockStatusCode    string    `json:"block_status_code"`
+	TempStatusCode     string    `json:"temp_status_code"`
+	RevenueAccountCode string    `json:"revenue_account_code"`
+	Remark             string    `json:"remark"`
+	PosX               *int      `json:"pos_x"`
+	PosY               *int      `json:"pos_y"`
+	Width              *int      `json:"width"`
+	Height             *int      `json:"height"`
+	CreatedAt          time.Time `json:"created_at"`
+	CreatedBy          string    `json:"created_by"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	UpdatedBy          string    `json:"updated_by"`
+	Id                 uint64    `json:"id"`
 }
 
 type Cfg_init_room_allotment_type struct {
 	Code      string    `json:"code" binding:"required"`
 	Name      string    `json:"name" binding:"required"`
-	IdSort    int       `json:"id_sort" binding:"required"`
+	IdSort    int       `json:"id_sort"`
 	CreatedAt time.Time `json:"created_at"`
 	CreatedBy string    `json:"created_by"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -3215,6 +3216,15 @@ type Fa_cfg_init_location struct {
 	Id               uint64    `json:"id"`
 }
 
+type Cm_log struct {
+	Id         uint64    `json:"id"`
+	BookingId  string    `json:"booking_id" binding:"required"`
+	RevisionId string    `json:"revision_id" binding:"required"`
+	Message    string    `json:"message"`
+	CreatedAt  time.Time `json:"created_at"`
+	CreatedBy  string    `json:"created_by"`
+}
+
 type Fa_cfg_init_manufacture struct {
 	Code      string    `json:"code" binding:"required"`
 	Name      string    `json:"name" binding:"required"`
@@ -3269,7 +3279,7 @@ type Fa_list struct {
 	DepreciationExpenseAccountCode *string    `json:"depreciation_expense_account_code"`
 	PurchasePrice                  float64    `json:"purchase_price" binding:"required"`
 	CurrentValue                   float64    `json:"current_value" binding:"required"`
-	ResidualValue                  float64    `json:"residual_value" binding:"required"`
+	ResidualValue                  *float64   `json:"residual_value" binding:"required"`
 	SerialNumber                   *string    `json:"serial_number"`
 	ManufactureCode                *string    `json:"manufacture_code"`
 	Trademark                      *string    `json:"trademark"`
@@ -3346,17 +3356,17 @@ type Fa_receive struct {
 	ApNumber          string    `json:"ap_number"`
 	CompanyCode       string    `json:"company_code" binding:"required"`
 	InvoiceNumber     string    `json:"invoice_number"`
-	BankAccountCode   string    `json:"bank_account_code"`
-	AmountPayment     float64   `json:"amount_payment"`
+	BankAccountCode   *string   `json:"bank_account_code"`
+	AmountPayment     *float64  `json:"amount_payment"`
 	Date              time.Time `json:"date" binding:"required"`
-	Remark            string    `json:"remark"`
-	IsSeparate        uint8     `json:"is_separate" binding:"required"`
-	IsDiscountIncome  uint8     `json:"is_discount_income" binding:"required"`
-	IsTaxExpense      uint8     `json:"is_tax_expense" binding:"required"`
-	IsShippingExpense uint8     `json:"is_shipping_expense" binding:"required"`
-	IsCredit          uint8     `json:"is_credit" binding:"required"`
+	Remark            *string   `json:"remark"`
+	IsSeparate        *uint8    `json:"is_separate" binding:"required"`
+	IsDiscountIncome  *uint8    `json:"is_discount_income" binding:"required"`
+	IsTaxExpense      *uint8    `json:"is_tax_expense" binding:"required"`
+	IsShippingExpense *uint8    `json:"is_shipping_expense" binding:"required"`
+	IsCredit          *uint8    `json:"is_credit" binding:"required"`
 	DueDate           time.Time `json:"due_date"`
-	IsPaid            uint8     `json:"is_paid" binding:"required"`
+	IsPaid            *uint8    `json:"is_paid" binding:"required"`
 	CreatedAt         time.Time `json:"created_at"`
 	CreatedBy         string    `json:"created_by"`
 	UpdatedAt         time.Time `json:"updated_at"`
@@ -3624,25 +3634,25 @@ type Guest_deposit struct {
 	CreatedBy           string    `json:"created_by"`
 	UpdatedAt           time.Time `json:"updated_at"`
 	UpdatedBy           string    `json:"updated_by"`
-	Id                  uint64    `json:"id"`
+	Id                  uint64    `json:"id" gorm:"primaryKey"`
 }
 
 type Guest_detail struct {
 	Arrival              time.Time `json:"arrival" binding:"required"`
-	ArrivalUnixx         int64     `json:"arrival_unixx" binding:"required"`
-	ArrivalRes           time.Time `json:"arrival_res" binding:"required"`
+	ArrivalUnixx         int64     `json:"arrival_unixx"`
+	ArrivalRes           time.Time `json:"arrival_res" `
 	Departure            time.Time `json:"departure" binding:"required"`
-	DepartureUnixx       int64     `json:"departure_unixx" binding:"required"`
-	DepartureRes         time.Time `json:"departure_res" binding:"required"`
+	DepartureUnixx       int64     `json:"departure_unixx"`
+	DepartureRes         time.Time `json:"departure_res"`
 	Adult                int       `json:"adult" binding:"required"`
 	Child                *int      `json:"child"`
-	RoomTypeCode         string    `json:"room_type_code" binding:"required"`
+	RoomTypeCode         string    `json:"room_type_code"`
 	BedTypeCode          string    `json:"bed_type_code"`
 	RoomNumber           *string   `json:"room_number"`
 	CurrencyCode         string    `json:"currency_code" binding:"required"`
 	ExchangeRate         float64   `json:"exchange_rate"`
 	IsConstantCurrency   uint8     `json:"is_constant_currency"`
-	RoomRateCode         string    `json:"room_rate_code" binding:"required"`
+	RoomRateCode         string    `json:"room_rate_code"`
 	IsOverrideRate       *uint8    `json:"is_override_rate"`
 	WeekdayRate          *float64  `json:"weekday_rate"`
 	WeekendRate          *float64  `json:"weekend_rate"`
@@ -3912,6 +3922,8 @@ type Guest_profile struct {
 	IsActive                uint8     `json:"is_active"`
 	IsBlacklist             uint8     `json:"is_blacklist"`
 	CustomerCode            string    `json:"customer_code"`
+	TpMemberCode            string    `json:"tp_member_code"`
+	TpTypeCode              string    `json:"tp_type_code"`
 	Source                  string    `json:"source"`
 	CreatedAt               time.Time `json:"created_at"`
 	CreatedBy               string    `json:"created_by"`
@@ -4255,7 +4267,7 @@ type Inv_costing_detail struct {
 	CreatedBy          string    `json:"created_by"`
 	UpdatedAt          time.Time `json:"updated_at"`
 	UpdatedBy          string    `json:"updated_by"`
-	Id                 uint64    `json:"id"`
+	Id                 uint64    `json:"id" gorm:"primaryKey"`
 }
 
 type Inv_opname struct {
@@ -4399,21 +4411,21 @@ type Inv_purchase_request_detail struct {
 type Inv_receiving struct {
 	Number            string    `json:"number" binding:"required"`
 	RefNumber         string    `json:"ref_number" binding:"required"`
-	PoNumber          string    `json:"po_number" binding:"required"`
-	ApNumber          string    `json:"ap_number"`
-	CostingNumber     string    `json:"costing_number"`
+	PoNumber          *string   `json:"po_number" binding:"required"`
+	ApNumber          *string   `json:"ap_number"`
+	CostingNumber     *string   `json:"costing_number"`
 	CompanyCode       string    `json:"company_code" binding:"required"`
 	InvoiceNumber     string    `json:"invoice_number"`
-	BankAccountCode   string    `json:"bank_account_code"`
-	AmountPayment     float64   `json:"amount_payment"`
+	BankAccountCode   *string   `json:"bank_account_code"`
+	AmountPayment     *float64  `json:"amount_payment"`
 	Date              time.Time `json:"date" binding:"required"`
 	IsConsignment     uint8     `json:"is_consignment" binding:"required"`
 	Remark            *string   `json:"remark"`
-	IsSeparate        uint8     `json:"is_separate" binding:"required"`
-	IsDiscountIncome  uint8     `json:"is_discount_income" binding:"required"`
-	IsTaxExpense      uint8     `json:"is_tax_expense" binding:"required"`
-	IsShippingExpense uint8     `json:"is_shipping_expense" binding:"required"`
-	IsCredit          uint8     `json:"is_credit" binding:"required"`
+	IsSeparate        *uint8    `json:"is_separate"`
+	IsDiscountIncome  *uint8    `json:"is_discount_income"`
+	IsTaxExpense      *uint8    `json:"is_tax_expense"`
+	IsShippingExpense *uint8    `json:"is_shipping_expense"`
+	IsCredit          *uint8    `json:"is_credit"`
 	DueDate           time.Time `json:"due_date"`
 	IsPaid            uint8     `json:"is_paid" binding:"required"`
 	IsOpname          uint8     `json:"is_opname" binding:"required"`
@@ -5228,7 +5240,7 @@ type Pos_cfg_init_outlet struct {
 	PrinterCodeCheck           string    `json:"printer_code_check"`
 	AccountCode                string    `json:"account_code"`
 	CompanyCode                string    `json:"company_code"`
-	CommissionTypeCode         string    `json:"commission_type_code" binding:"required"`
+	CommissionTypeCode         string    `json:"commission_type_code"`
 	CommissionPercent          float64   `json:"commission_percent"`
 	IdSort                     int       `json:"id_sort"`
 	IsActive                   uint8     `json:"is_active"`
@@ -5468,7 +5480,7 @@ type Pos_check_transaction struct {
 	CreatedBy                 string    `json:"created_by"`
 	UpdatedAt                 time.Time `json:"updated_at"`
 	UpdatedBy                 string    `json:"updated_by"`
-	Id                        uint64    `json:"id"`
+	Id                        uint64    `json:"id" gorm:"primaryKey"`
 }
 
 type Pos_const_check_type struct {
@@ -5786,7 +5798,7 @@ type Report_custom struct {
 	ParentId      uint64 `json:"parent_id" binding:"required"`
 	SystemCode    string `json:"system_code" binding:"required"`
 	UserGroupCode string `json:"user_group_code" binding:"required"`
-	IdSort        uint64 `json:"id_sort" binding:"required"`
+	Id            uint64 `json:"id" gorm:"primaryKey"`
 }
 
 type Report_custom_favorite struct {
@@ -5957,6 +5969,7 @@ type Reservation struct {
 	BookingCode      string    `json:"booking_code"`
 	OtaId            string    `json:"ota_id"`
 	CmResStatus      string    `json:"cm_res_status"`
+	CmRevId          string    `json:"cm_rev_id"`
 	IsCmConfirmed    uint8     `json:"is_cm_confirmed"`
 	ChangeStatusAt   time.Time `json:"change_status_at"`
 	ChangeStatusBy   string    `json:"change_status_by"`
@@ -6396,7 +6409,7 @@ type Sub_folio struct {
 	ExchangeRate        float64   `json:"exchange_rate" binding:"required"`
 	CurrencyCode        string    `json:"currency_code" binding:"required"`
 	AuditDate           time.Time `json:"audit_date" binding:"required"`
-	AuditDateUnixx      int       `json:"audit_date_unixx" binding:"required"`
+	AuditDateUnixx      int64     `json:"audit_date_unixx" binding:"required"`
 	Remark              string    `json:"remark"`
 	DocumentNumber      string    `json:"document_number"`
 	VoucherNumber       string    `json:"voucher_number"`
@@ -6611,9 +6624,10 @@ type ReservationComboListStruct struct {
 }
 
 type GuestDepositPostStruct struct {
-	GuestDeposit Guest_deposit `json:"guest_deposit" binding:"required" `
+	GuestDeposit Guest_deposit `json:"guest_deposit" binding:"required,dive" `
 	IDCorrected  uint64        `json:"id_corrected"`
 	IsCard       bool          `json:"is_card"`
+	SystemCode   string        `json:"system_code"`
 	ChargeAmount float64       `json:"charge_amount"`
 	CardNumber   string        `json:"card_number"`
 	CardHolder   string        `json:"card_holder"`
@@ -6644,6 +6658,15 @@ type GuestInHousePostStruct struct {
 	FolioData            Folio
 	IsIncognito          uint8
 	PostFirstNightCharge uint8
+}
+
+type RegistrationFormStruct struct {
+	GuestProfileData1 Guest_profile
+	GuestProfileData2 Guest_profile
+	GuestProfileData3 Guest_profile
+	GuestProfileData4 Guest_profile
+	GuestDetailData   Guest_detail
+	GuestGeneralData  Guest_general
 }
 
 type MasterDeskFolioPostStruct struct {
@@ -6756,6 +6779,7 @@ var TableName = TTableName{
 	AstUserSubDepartment:                 "ast_user_sub_department",
 	AuditLog:                             "audit_log",
 	BanBooking:                           "ban_booking",
+	BanBookingSchedulePayment:            "ban_booking_schedule_payment",
 	BanCfgInitSeatingPlan:                "ban_cfg_init_seating_plan",
 	BanCfgInitTheme:                      "ban_cfg_init_theme",
 	BanCfgInitVenue:                      "ban_cfg_init_venue",
@@ -6777,6 +6801,7 @@ var TableName = TTableName{
 	BanReservationCharge:                 "ban_reservation_charge",
 	BanReservationRemark:                 "ban_reservation_remark",
 	BanUserGroup:                         "ban_user_group",
+	BanCfgInitLayout:                     "ban_cfg_init_layout",
 	BreakfastListTemp:                    "breakfast_list_temp",
 	BudgetExpense:                        "budget_expense",
 	BudgetFb:                             "budget_fb",
@@ -6867,6 +6892,7 @@ var TableName = TTableName{
 	CompetitorData:                       "competitor_data",
 	Configuration:                        "configuration",
 	ConstAccountGroup:                    "const_account_group",
+	CmLog:                                "cm_log",
 	ConstBudgetType:                      "const_budget_type",
 	ConstChannelManagerVendor:            "const_channel_manager_vendor",
 	ConstChargeFrequency:                 "const_charge_frequency",
@@ -7132,6 +7158,7 @@ type Cm_update_availability struct {
 	StartDate    time.Time `json:"start_date" binding:"required"`
 	EndDate      time.Time `json:"end_date" binding:"required"`
 	RoomTypeCode string    `json:"room_type_code" binding:"required"`
+	BedTypeCode  string    `json:"bed_type_code"`
 	Availability int       `json:"availability"`
 	Status       string    `json:"status" binding:"required"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -7150,6 +7177,22 @@ type Cm_update_allotment struct {
 	EndDate      time.Time `json:"end_date" binding:"required"`
 	PostingDate  time.Time `json:"posting_date" binding:"required"`
 	IsUpdated    uint8     `json:"is_updated" binding:"required"`
+}
+
+type Ban_booking_schedule_payment struct {
+	Id             uint64    `json:"id"`
+	BookingNumber  uint64    `json:"booking_number" binding:"required"`
+	GuestDepositId uint64    `json:"guest_deposit_id" binding:"required"`
+	Name           string    `json:"name" binding:"required"`
+	Date           time.Time `json:"date" binding:"required"`
+	Amount         float64   `json:"amount" binding:"required"`
+	Remark         string    `json:"remark"`
+	IsPaid         uint8     `json:"is_paid" binding:"required"`
+	PaymentRemark  string    `json:"payment_remark" binding:"required"`
+	CreatedAt      time.Time `json:"created_at"`
+	CreatedBy      string    `json:"created_by"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	UpdatedBy      string    `json:"updated_by"`
 }
 
 type Cm_update_inhouse struct {

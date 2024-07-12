@@ -2,12 +2,14 @@ package global_query
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/cakramediadata2022/chs_cloud_general/internal/db_var"
-	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
-	"github.com/cakramediadata2022/chs_cloud_general/pkg/general"
+	"github.com/cakramediadata2022/chs_cloud_general/db_var"
+	"github.com/cakramediadata2022/chs_cloud_general/general"
+	"github.com/cakramediadata2022/chs_cloud_general/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -116,6 +118,20 @@ func InsertAccJournalDetail(DB *gorm.DB, RefNumber string, UnitCode string, SubD
 	return err
 }
 
+func BatchInsertAccJournalDetail(DB *gorm.DB, RefNumber string, AccJournalDetail []db_var.Acc_journal_detail, IsTwoDigitDecimal bool) (Error error) {
+	var Date time.Time
+	for i, detail := range AccJournalDetail {
+		Amount := general.RoundToX3(detail.Amount)
+		if IsTwoDigitDecimal {
+			Amount = general.RoundToX2(Amount)
+			AccJournalDetail[i].Amount = Amount
+			AccJournalDetail[i].Date = Date
+		}
+	}
+	err := DB.Table(db_var.TableName.AccJournalDetail).Create(&AccJournalDetail).Error
+	return err
+}
+
 func UpdateAccJournalDetail(DB *gorm.DB, RefNumber string, Date time.Time, UnitCode string, SubDepartmentCode string, AccountCode string, Amount float64, TypeCode string, Remark string, IdData string, UpdatedBy string, IdHolding uint64) error {
 	var AccJournalDetail = db_var.Acc_journal_detail{
 		RefNumber:         RefNumber,
@@ -147,6 +163,23 @@ func InsertLogUser(DB *gorm.DB, SystemCode string, ActionId int, AuditDate time.
 		"data_link3":    DataLink3,
 		"remark":        Remark,
 		"created_by":    CreatedBy,
+	})
+	return result.Error
+}
+func InsertLogUserX(c *gin.Context, DB *gorm.DB, SystemCode string, ActionId int, DataLink1 interface{}, DataLink2 interface{}, DataLink3 interface{}, Remark interface{}) error {
+	AuditDate := GetAuditDate(c, DB, true)
+	result := DB.Debug().Table(db_var.TableName.LogUser).Omit("actual_date").Create(map[string]interface{}{
+		"system_code":   SystemCode,
+		"action_id":     ActionId,
+		"audit_date":    AuditDate,
+		"ip_address":    utils.GetIPAddress(c),
+		"computer_name": "",
+		"mac_address":   "",
+		"data_link1":    DataLink1,
+		"data_link2":    DataLink2,
+		"data_link3":    DataLink3,
+		"remark":        Remark,
+		"created_by":    c.GetString("ValidUserCode"),
 	})
 	return result.Error
 }
@@ -436,7 +469,7 @@ func InsertCmUpdate(DB *gorm.DB, TypeCode string, Number uint64, RoomTypeCode st
 		PostingDate:  time.Now(),
 	}
 	var result error
-	if StartDate.Unix() <= EndDate.Unix() {
+	if general.DateOf(StartDate).Before(general.DateOf(EndDate)) || general.DateOf(StartDate).Equal(general.DateOf(EndDate)) {
 		result = DB.Table(db_var.TableName.CmUpdate).Create(&CmUpdate).Error
 	}
 	return result
@@ -1166,7 +1199,7 @@ func UpdateInvCosting(DB *gorm.DB, Number string, DocumentNumber string, SubDepa
 	return result.Error
 }
 
-func InsertInvCostingDetail(DB *gorm.DB, Dataset *global_var.TDataset, CostingNumber string, StoreCode string, StoreId uint64, ItemCode string, ItemId uint64, Date time.Time, Quantity float64, UomCode string, TotalPrice float64, ReceiveId uint64, JournalAccountCode string, ItemGroupCode string, ReasonCode string, IsSpoil uint8, IsCogs uint8, CreatedBy string) error {
+func InsertInvCostingDetail(DB *gorm.DB, Dataset *global_var.TDataset, CostingNumber string, StoreCode string, StoreId uint64, ItemCode string, ItemId uint64, Date time.Time, Quantity float64, UomCode string, TotalPrice float64, ReceiveId uint64, JournalAccountCode string, ItemGroupCode string, ReasonCode string, IsSpoil uint8, IsCogs uint8, CreatedBy string) (uint64, error) {
 	Price := TotalPrice / Quantity
 	if Dataset.ProgramConfiguration.ReceiveStockAPTwoDigitDecimal {
 		Price = general.RoundToX2(Price)
@@ -1195,6 +1228,22 @@ func InsertInvCostingDetail(DB *gorm.DB, Dataset *global_var.TDataset, CostingNu
 		CreatedBy:          CreatedBy,
 	}
 	result := DB.Table(db_var.TableName.InvCostingDetail).Create(&InvCostingDetail)
+	return InvCostingDetail.Id, result.Error
+}
+
+func BatchInsertInvCostingDetail(DB *gorm.DB, Dataset *global_var.TDataset, CostingDetail []db_var.Inv_costing_detail) error {
+	for i, detail := range CostingDetail {
+		Price := detail.TotalPrice / detail.Quantity
+		Price = general.RoundToX3(Price)
+		TotalPrice := general.RoundToX3(detail.TotalPrice)
+		if Dataset.ProgramConfiguration.ReceiveStockAPTwoDigitDecimal {
+			Price = general.RoundToX2(Price)
+			TotalPrice = general.RoundToX2(detail.TotalPrice)
+		}
+		CostingDetail[i].Price = Price
+		CostingDetail[i].TotalPrice = TotalPrice
+	}
+	result := DB.Table(db_var.TableName.InvCostingDetail).Create(&CostingDetail)
 	return result.Error
 }
 
@@ -1223,7 +1272,7 @@ func UpdateInvCostingDetail(DB *gorm.DB, CostingNumber string, StoreCode string,
 	return result.Error
 }
 
-func InsertReservation(DB *gorm.DB, PostingDate time.Time, ContactPersonId1 uint64, ContactPersonId2 uint64, ContactPersonId3 uint64, ContactPersonId4 uint64, GuestDetailId uint64, GuestProfileId1 uint64, GuestProfileId2 uint64, GuestProfileId3 uint64, GuestProfileId4 uint64, GuestGeneralId uint64, ReservationBy string, GroupCode string, MemberCode string, IsWaitList uint8, IsIncognito uint8, BookingCode string, OtaId string, CmResStatus string, CreatedBy string) (uint64, error) {
+func InsertReservation(DB *gorm.DB, PostingDate time.Time, ContactPersonId1 uint64, ContactPersonId2 uint64, ContactPersonId3 uint64, ContactPersonId4 uint64, GuestDetailId uint64, GuestProfileId1 uint64, GuestProfileId2 uint64, GuestProfileId3 uint64, GuestProfileId4 uint64, GuestGeneralId uint64, ReservationBy string, GroupCode string, MemberCode string, IsWaitList uint8, IsIncognito, IsFromAllotment uint8, BookingCode string, OtaId string, CmResStatus, CMRevID string, CreatedBy string) (uint64, error) {
 	StatusCode := global_var.ReservationStatus.New
 	if IsWaitList > 0 {
 		StatusCode = global_var.ReservationStatus.WaitList
@@ -1244,9 +1293,11 @@ func InsertReservation(DB *gorm.DB, PostingDate time.Time, ContactPersonId1 uint
 		GroupCode:        GroupCode,
 		MemberCode:       MemberCode,
 		IsIncognito:      &IsIncognito,
+		IsFromAllotment:  IsFromAllotment,
 		OtaId:            OtaId,
 		BookingCode:      BookingCode,
 		CmResStatus:      CmResStatus,
+		CmRevId:          CMRevID,
 		StatusCode:       StatusCode,
 		StatusCode2:      global_var.ReservationStatus2.Tentative,
 		CreatedBy:        CreatedBy,
@@ -1256,36 +1307,56 @@ func InsertReservation(DB *gorm.DB, PostingDate time.Time, ContactPersonId1 uint
 	return Reservation.Number, result.Error
 }
 
-func UpdateReservation(DB *gorm.DB, Number uint64, ReservationBy string, GroupCode string, MemberCode string, IsWaitList uint8, IsIncognito uint8, UpdatedBy string) error {
+func UpdateReservation(DB *gorm.DB, Number uint64, ReservationBy string, GroupCode string, MemberCode string, GuestProfileId1, GuestProfileId2, GuestProfileId3, GuestProfileId4, ContactPersonId1, ContactPersonId2, ContactPersonId3, ContactPersonId4 uint64, IsWaitList uint8, IsIncognito uint8, CMRevID string, UpdatedBy string) error {
 	StatusCode := global_var.ReservationStatus.New
 	if IsWaitList > 0 {
 		StatusCode = global_var.ReservationStatus.WaitList
 	}
 	var Reservation = db_var.Reservation{
-		Number:        Number,
-		ReservationBy: ReservationBy,
-		GroupCode:     GroupCode,
-		MemberCode:    MemberCode,
-		StatusCode:    StatusCode,
-		IsIncognito:   &IsIncognito,
-		UpdatedBy:     UpdatedBy,
+		Number:           Number,
+		GuestProfileId1:  GuestProfileId1,
+		GuestProfileId2:  GuestProfileId2,
+		GuestProfileId3:  GuestProfileId3,
+		GuestProfileId4:  GuestProfileId4,
+		ContactPersonId1: ContactPersonId1,
+		ContactPersonId2: ContactPersonId2,
+		ContactPersonId3: ContactPersonId3,
+		ContactPersonId4: ContactPersonId4,
+		ReservationBy:    ReservationBy,
+		GroupCode:        GroupCode,
+		MemberCode:       MemberCode,
+		StatusCode:       StatusCode,
+		CmRevId:          CMRevID,
+		IsIncognito:      &IsIncognito,
+		UpdatedBy:        UpdatedBy,
 	}
 	result := DB.Table(db_var.TableName.Reservation).Omit("created_at", "created_by", "updated_at").Updates(&Reservation)
 
 	return result.Error
 }
 
-func InsertGuestDetail(DB *gorm.DB, Arrival time.Time, Departure time.Time, Adult int, Child int, RoomTypeCode string, BedTypeCode string, RoomNumber string, CurrencyCode string, ExchangeRate float64, IsConstantCurrency uint8, RoomRateCode string, IsOverrideRate uint8, WeekdayRate float64, WeekendRate float64, DiscountPercent uint8, Discount float64, BusinessSourceCode string, IsOverrideCommission uint8, CommissionTypeCode string, CommissionValue float64, PaymentTypeCode string, MarketCode string, BookingSourceCode string, BillInstruction string, CreatedBy string) (Id uint64, err error) {
+func InsertGuestDetail(DB *gorm.DB, Dataset *global_var.TDataset, Arrival time.Time, Departure time.Time, Adult int, Child int, RoomTypeCode string, BedTypeCode string, RoomNumber string, CurrencyCode string, ExchangeRate float64, IsConstantCurrency uint8, RoomRateCode string, IsOverrideRate uint8, WeekdayRate float64, WeekendRate float64, DiscountPercent uint8, Discount float64, BusinessSourceCode string, IsOverrideCommission uint8, CommissionTypeCode string, CommissionValue float64, PaymentTypeCode string, MarketCode string, BookingSourceCode string, BillInstruction string, CreatedBy string) (Id uint64, err error) {
+	Timezone := Dataset.ProgramConfiguration.Timezone
+	loc, _ := time.LoadLocation(Timezone)
 	if ExchangeRate <= 0 {
 		ExchangeRate = GetExchangeRateCurrency(DB, CurrencyCode)
 	}
 	var DepartureUnix, ArrivalUnixx int64
 	if !Departure.IsZero() {
-		DepartureUnix = general.DateOf(Departure).Unix()
+		DepartureUnix = general.DateOf(Departure.In(loc)).Unix()
+		// fmt.Println(Departure)
+		// fmt.Println(Departure.In(loc))
+		// fmt.Println(general.DateOf(Departure.In(loc)))
+		// fmt.Println(DepartureUnix)
+
 	}
 
 	if !Arrival.IsZero() {
-		ArrivalUnixx = general.DateOf(Arrival).Unix()
+		ArrivalUnixx = general.DateOf(Arrival.In(loc)).Unix()
+		// fmt.Println(Arrival)
+		// fmt.Println(Arrival.In(loc))
+		// fmt.Println(general.DateOf(Arrival.In(loc)))
+		// fmt.Println(ArrivalUnixx)
 	}
 
 	var GuestDetail = db_var.Guest_detail{
@@ -1323,17 +1394,18 @@ func InsertGuestDetail(DB *gorm.DB, Arrival time.Time, Departure time.Time, Adul
 	return GuestDetail.Id, result.Error
 }
 
-func UpdateGuestDetail(DB *gorm.DB, Id uint64, Arrival time.Time, Departure time.Time, Adult int, Child int, RoomTypeCode string, BedTypeCode string, RoomNumber string,
+func UpdateGuestDetail(DB *gorm.DB, Dataset *global_var.TDataset, Id uint64, Arrival time.Time, Departure time.Time, Adult int, Child int, RoomTypeCode string, BedTypeCode string, RoomNumber string,
 	CurrencyCode string, ExchangeRate float64, IsConstantCurrency uint8, RoomRateCode string, IsOverrideRate uint8, WeekdayRate float64, WeekendRate float64, DiscountPercent uint8, Discount float64, BusinessSourceCode string,
 	IsOverrideCommission uint8, CommissionTypeCode string, CommissionValue float64, PaymentTypeCode string, MarketCode string, BookingSourceCode string, BillInstruction string, UpdatedBy string) error {
-
+	Timezone := Dataset.ProgramConfiguration.Timezone
+	loc, _ := time.LoadLocation(Timezone)
 	var DepartureUnix, ArrivalUnixx int64
 	if !Departure.IsZero() {
-		DepartureUnix = general.DateOf(Departure).Unix()
+		DepartureUnix = general.DateOf(Departure.In(loc)).Unix()
 	}
 
 	if !Arrival.IsZero() {
-		ArrivalUnixx = general.DateOf(Arrival).Unix()
+		ArrivalUnixx = general.DateOf(Arrival.In(loc)).Unix()
 	}
 
 	var GuestDetail = db_var.Guest_detail{
@@ -1370,15 +1442,22 @@ func UpdateGuestDetail(DB *gorm.DB, Id uint64, Arrival time.Time, Departure time
 	return result.Error
 }
 
-func InsertGuestInHouse(DB *gorm.DB, AuditDate time.Time, FolioNumber uint64, GroupCode, RoomTypeCode, BedTypeCode,
+func InsertGuestInHouse(DB *gorm.DB, Dataset *global_var.TDataset, AuditDate time.Time, FolioNumber uint64, GroupCode, RoomTypeCode, BedTypeCode,
 	RoomNumber, RoomRateCode, BusinessSourceCode, CommissionTypeCode, PaymentTypeCode, MarketCode, TitleCode,
 	FullName, Street, City, CityCode, CountryCode, StateCode, PostalCode, Phone1, Phone2, Fax, Email, Website, CompanyCode, GuestTypeCode, SalesCode,
 	ComplimentHu, Notes string, Adult, Child int, Rate, RateOriginal, Discount, CommissionValue float64,
 	DiscountPercent, IsAdditional, IsScheduledRate, IsBreakfast uint8, BookingSourceCode, PurposeOfCode, CustomLookupFieldCode01, CustomLookupFieldCode02 string,
 	PaxBreakfast int, BreakfastVoucherNumber, NationalityCode string, CreatedBy string) error {
+
+	Timezone := Dataset.ProgramConfiguration.Timezone
+	loc, _ := time.LoadLocation(Timezone)
+	AuditDateUnixx := general.DateOf(AuditDate.In(loc)).Unix()
+	// fmt.Println("CRUD++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+	// fmt.Println("Rate", Rate)
+	// fmt.Println("RateOriginal", RateOriginal)
 	var GuestInHouse = db_var.Guest_in_house{
 		AuditDate:               AuditDate,
-		AuditDateUnixx:          AuditDate.Unix(),
+		AuditDateUnixx:          AuditDateUnixx,
 		FolioNumber:             FolioNumber,
 		GroupCode:               GroupCode,
 		Adult:                   Adult,
@@ -1426,6 +1505,10 @@ func InsertGuestInHouse(DB *gorm.DB, AuditDate time.Time, FolioNumber uint64, Gr
 		Notes:                   Notes,
 		CreatedBy:               CreatedBy,
 	}
+
+	// fmt.Println("AFTER++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+	// fmt.Println("Rate", GuestInHouse.Rate)
+	// fmt.Println("RateOriginal", GuestInHouse.RateOriginal)
 	result := DB.Table(db_var.TableName.GuestInHouse).Create(&GuestInHouse)
 	return result.Error
 }
@@ -1608,7 +1691,6 @@ func InsertGuestDeposit(c *gin.Context, DB *gorm.DB, ReservationNumber uint64, I
 	if CorrectionBreakdown == 0 {
 		CorrectionBreakdown = GetGuestDepositCorrectionBreakDown(DB)
 	}
-	fmt.Println("doc", DocumentNumber)
 
 	var GuestDeposit = db_var.Guest_deposit{
 		ReservationNumber:   ReservationNumber,
@@ -1635,6 +1717,10 @@ func InsertGuestDeposit(c *gin.Context, DB *gorm.DB, ReservationNumber uint64, I
 		CreatedBy:           CreatedBy,
 	}
 	result := DB.Table(db_var.TableName.GuestDeposit).Create(&GuestDeposit)
+
+	if result.Error != nil {
+		return 0, err
+	}
 
 	// Insert Foreign Cash
 	if (GetAccountSubGroupCode(DB, AccountCode) == global_var.GlobalAccountSubGroup.Payment || GetAccountSubGroupCode(DB, AccountCode) == global_var.GlobalAccountSubGroup.CreditDebitCard || GetAccountSubGroupCode(DB, AccountCode) == global_var.GlobalAccountSubGroup.BankTransfer) && (CurrencyCode != DefaultCurrencyCode) {
@@ -1765,7 +1851,7 @@ func UpdateGuestGroup(DB *gorm.DB, Id uint64, Name string, ContactPerson *string
 	return result.Error
 }
 
-func InsertFolio(DB *gorm.DB, Dataset *global_var.TDataset, TypeCode string, CoNumber string, ReservationNumber uint64, ContactPersonId1 uint64, ContactPersonId2 uint64, ContactPersonId3 uint64, ContactPersonId4 uint64, GuestDetailId uint64, GuestProfileId1 uint64, GuestProfileId2 uint64, GuestProfileId3 uint64, GuestProfileId4 uint64, GuestGeneralId uint64, StatusCode string, GroupCode string, ComplimentHu string, IsFromAllotment uint8, IsIncognito uint8, CreatedBy string) (FolioNumberX uint64, err error) {
+func InsertFolio(DB *gorm.DB, Dataset *global_var.TDataset, TypeCode string, CoNumber string, ReservationNumber uint64, ContactPersonId1 uint64, ContactPersonId2 uint64, ContactPersonId3 uint64, ContactPersonId4 uint64, GuestDetailId uint64, GuestProfileId1 uint64, GuestProfileId2 uint64, GuestProfileId3 uint64, GuestProfileId4 uint64, GuestGeneralId uint64, StatusCode string, GroupCode string, ComplimentHu string, IsFromAllotment uint8, IsIncognito uint8, SystemCode string, CreatedBy string) (FolioNumberX uint64, err error) {
 	var LockOnCheckIn uint8
 	if general.StrToBool(Dataset.Configuration[global_var.ConfigurationCategory.Reservation][global_var.ConfigurationName.LockFolioOnCheckIn].(string)) {
 		LockOnCheckIn = 1
@@ -1792,7 +1878,7 @@ func InsertFolio(DB *gorm.DB, Dataset *global_var.TDataset, TypeCode string, CoN
 		IsLock:          LockOnCheckIn,
 		IsIncognito:     IsIncognito,
 		IsFromAllotment: IsFromAllotment,
-		SystemCode:      "",
+		SystemCode:      SystemCode,
 		CreatedBy:       CreatedBy,
 	}
 	result := DB.Table(db_var.TableName.Folio).Create(&Folio)
@@ -2308,7 +2394,7 @@ func DeleteGuestInHouse(ctx context.Context, DB *gorm.DB, PostingDate time.Time,
 	return result.Error
 }
 
-func InsertPosCheckTransaction(DB *gorm.DB, CheckNumber string, CaptainOrderTransactionId uint64, SubFolioId uint64, InventoryCode string, TenanCode string, SeatNumber int, SpaRoomNumber string, SpaStartDate time.Time, SpaEndDate time.Time, ProductCode string, PricePurchase float64, PriceOriginal float64, Price float64, Discount float64, EstimationCost float64, Tax float64, Service float64, CompanyCode string, CompanyCode2 string, CardCharge float64, FolioTransfer uint64, IsCompliment uint8, IsFree uint8, CreatedBy string) error {
+func InsertPosCheckTransaction(DB *gorm.DB, CheckNumber string, CaptainOrderTransactionId uint64, SubFolioId uint64, InventoryCode string, TenanCode string, SeatNumber int, SpaRoomNumber string, SpaStartDate time.Time, SpaEndDate time.Time, ProductCode string, PricePurchase float64, PriceOriginal float64, Price float64, Discount float64, EstimationCost float64, Tax float64, Service float64, CompanyCode string, CompanyCode2 string, CardCharge float64, FolioTransfer uint64, IsCompliment uint8, IsFree uint8, CreatedBy string) (uint64, error) {
 	var PosCheckTransaction = db_var.Pos_check_transaction{
 		CheckNumber:               CheckNumber,
 		CaptainOrderTransactionId: CaptainOrderTransactionId,
@@ -2333,10 +2419,11 @@ func InsertPosCheckTransaction(DB *gorm.DB, CheckNumber string, CaptainOrderTran
 		FolioTransfer:             FolioTransfer,
 		IsCompliment:              IsCompliment,
 		IsFree:                    IsFree,
-		CreatedBy:                 CreatedBy,
+
+		CreatedBy: CreatedBy,
 	}
 	result := DB.Table(db_var.TableName.PosCheckTransaction).Create(&PosCheckTransaction)
-	return result.Error
+	return PosCheckTransaction.Id, result.Error
 }
 
 func UpdatePosCheckTransaction(DB *gorm.DB, CheckNumber string, CaptainOrderTransactionId uint64, SubFolioId uint64, InventoryCode string, TenanCode string, SeatNumber int, SpaRoomNumber string, SpaStartDate time.Time, SpaEndDate time.Time, ProductCode string, PricePurchase float64, PriceOriginal float64, Price float64, Discount float64, EstimationCost float64, Tax float64, Service float64, CompanyCode string, CompanyCode2 string, CardCharge float64, FolioTransfer uint64, IsCompliment uint8, IsFree uint8, UpdatedBy string) error {
@@ -3382,7 +3469,6 @@ func InsertPosUserGroup(DB *gorm.DB, Id chan uint64, AccessForm string, AccessSp
 
 func UpdatePosUserGroup(DB *gorm.DB, Id uint64, AccessForm string, AccessSpecial string, AccessTransactionTerminal string, AccessTableView string, AccessReservation string, UpdatedBy string) error {
 	var PosUserGroup = db_var.Pos_user_group{
-		Id:                        Id,
 		AccessForm:                AccessForm,
 		AccessSpecial:             AccessSpecial,
 		AccessTransactionTerminal: AccessTransactionTerminal,
@@ -3624,7 +3710,6 @@ func UpdateGuestProfile(DB *gorm.DB, Id uint64, TitleCode string, FullName strin
 		IsActive:                IsActive,
 		IsBlacklist:             IsBlacklist,
 		CustomerCode:            CustomerCode,
-		Source:                  Source,
 		UpdatedBy:               UpdatedBy,
 	}
 	result := DB.Table(db_var.TableName.GuestProfile).Where("id=?", Id).Omit("created_at", "created_by", "updated_at", "id").Updates(&GuestProfile)
@@ -3654,39 +3739,55 @@ func UpdateAccApArPaymentDetail(DB *gorm.DB, ApArNumber string, RefNumber string
 	return result.Error
 }
 
-func DeleteAPAR(c *gin.Context, DB *gorm.DB, Number string, IsAP bool, UserID string) error {
+func DeleteAPAR(ctx context.Context, c *gin.Context, DB *gorm.DB, Number string, IsAP bool, UserID string) error {
 	if err := DB.Transaction(func(tx *gorm.DB) error {
 		type DataOutputStruct struct {
 			Date      time.Time
 			RefNumber string
 		}
 		var DataOutput DataOutputStruct
-		if err := tx.Table(db_var.TableName.AccApAr).Select("date,ref_number").Where("number=?", Number).Take(&DataOutput).Error; err != nil {
+		if err := tx.Table(db_var.TableName.AccApAr).Select("date,ref_number").Where("number=?", Number).Scan(&DataOutput).Error; err != nil {
 			return err
 		}
 		RefNumber := DataOutput.RefNumber
-		err := DB.Table(db_var.TableName.AccJournal).Where("ref_number=? AND date=?", RefNumber, DataOutput.Date).Updates(map[string]interface{}{"updated_by": UserID}).Error
+		if RefNumber == "" {
+			return errors.New("invalid ref number")
+		}
+		err := tx.Table(db_var.TableName.AccJournal).Where("ref_number=? AND date=?", RefNumber, general.FormatDate1(DataOutput.Date)).Updates(map[string]interface{}{
+			"ap_ar_number":    "",
+			"document_number": "",
+			"updated_by":      UserID}).Error
 		if err != nil {
 			return err
 		}
-		err = DB.Table(db_var.TableName.AccJournal).Where("ref_number=? AND date=?", RefNumber, DataOutput.Date).Delete(&RefNumber).Error
-		if err != nil {
-			return err
-		}
-		err = DB.Table(db_var.TableName.AccJournalDetail).Where("ref_number=? AND date=?", RefNumber, DataOutput.Date).Updates(map[string]interface{}{"updated_by": UserID}).Error
-		if err != nil {
-			return err
-		}
-		err = DB.Table(db_var.TableName.AccJournalDetail).Where("ref_number=? AND date=?", RefNumber, DataOutput.Date).Delete(&RefNumber).Error
-		if err != nil {
-			return err
-		}
-
-		err = tx.Exec("CALL delete_acc_ap_ar(?,?)", Number, UserID).Error
-		if err != nil {
+		// Declare cursor
+		var paymentDetails []db_var.Acc_ap_ar_payment_detail
+		if err := tx.Table(db_var.TableName.AccApArPaymentDetail).Where("ap_ar_number = ?", Number).Scan(&paymentDetails).Error; err != nil {
 			return err
 		}
 
+		// Fetch rows from cursor
+		for _, paymentDetail := range paymentDetails {
+			// Call delete function
+			if err := DeleteAccAPARPaymentByRefNumber(ctx, tx, paymentDetail.RefNumber, UserID); err != nil {
+				return err
+			}
+			// deleteAccApArPaymentByRefNumber(tx, paymentDetail.RefNumber, updatedBy)
+		}
+
+		// Update acc_ap_ar
+		if err := tx.Table(db_var.TableName.AccApAr).Where("number = ?", Number).Update("updated_by", UserID).Error; err != nil {
+			return err
+		}
+
+		// Delete from acc_ap_ar
+		if err := tx.Table(db_var.TableName.AccApAr).Where("number = ?", Number).Delete(nil).Error; err != nil {
+			return err
+			// log.Fatalf("Failed to delete from acc_ap_ar: %v", err)
+		}
+		if err := DeleteJournal(ctx, tx, DataOutput.RefNumber, UserID); err != nil {
+			return err
+		}
 		LogAction := global_var.LogUserActionCAS.DeleteAccountReceivable
 		if IsAP {
 			LogAction = global_var.LogUserActionCAS.DeleteAccountPayable
@@ -3699,6 +3800,7 @@ func DeleteAPAR(c *gin.Context, DB *gorm.DB, Number string, IsAP bool, UserID st
 	}
 	return nil
 }
+
 func InsertBudgetStatistic(DBTrx *gorm.DB, Period int, SubDepartmentCode string, Code string, Remark string, Amount float64, TypeCode string, M01 float64, M02 float64, M03 float64, M04 float64, M05 float64, M06 float64, M07 float64, M08 float64, M09 float64, M10 float64, M11 float64, M12 float64, UnitCode string, CreatedBy string, IdHolding uint64) error {
 	var BudgetStatistic = db_var.Budget_statistic{
 		Period:            Period,
@@ -3954,21 +4056,21 @@ func InsertInvReceiving(DBTrx *gorm.DB, Dataset *global_var.TDataset, Number str
 	var InvReceiving = db_var.Inv_receiving{
 		Number:            Number,
 		RefNumber:         RefNumber,
-		PoNumber:          PoNumber,
-		ApNumber:          ApNumber,
-		CostingNumber:     CostingNumber,
+		PoNumber:          &PoNumber,
+		ApNumber:          &ApNumber,
+		CostingNumber:     &CostingNumber,
 		CompanyCode:       CompanyCode,
 		InvoiceNumber:     InvoiceNumber,
-		BankAccountCode:   BankAccountCode,
-		AmountPayment:     AmountPayment,
+		BankAccountCode:   &BankAccountCode,
+		AmountPayment:     &AmountPayment,
 		Date:              Date,
 		IsConsignment:     IsConsignment,
 		Remark:            &Remark,
-		IsSeparate:        IsSeparate,
-		IsDiscountIncome:  IsDiscountIncome,
-		IsTaxExpense:      IsTaxExpense,
-		IsShippingExpense: IsShippingExpense,
-		IsCredit:          IsCredit,
+		IsSeparate:        &IsSeparate,
+		IsDiscountIncome:  &IsDiscountIncome,
+		IsTaxExpense:      &IsTaxExpense,
+		IsShippingExpense: &IsShippingExpense,
+		IsCredit:          &IsCredit,
 		DueDate:           DueDate,
 		IsPaid:            IsPaid,
 		IsOpname:          IsOpname,
@@ -3987,21 +4089,21 @@ func UpdateInvReceiving(DBTrx *gorm.DB, Dataset *global_var.TDataset, Number str
 	}
 	var InvReceiving = db_var.Inv_receiving{
 		Number:            Number,
-		PoNumber:          PoNumber,
-		ApNumber:          ApNumber,
-		CostingNumber:     CostingNumber,
+		PoNumber:          &PoNumber,
+		ApNumber:          &ApNumber,
+		CostingNumber:     &CostingNumber,
 		CompanyCode:       CompanyCode,
 		InvoiceNumber:     InvoiceNumber,
-		BankAccountCode:   BankAccountCode,
-		AmountPayment:     AmountPayment,
+		BankAccountCode:   &BankAccountCode,
+		AmountPayment:     &AmountPayment,
 		Date:              Date,
 		IsConsignment:     IsConsignment,
 		Remark:            &Remark,
-		IsSeparate:        IsSeparate,
-		IsDiscountIncome:  IsDiscountIncome,
-		IsTaxExpense:      IsTaxExpense,
-		IsShippingExpense: IsShippingExpense,
-		IsCredit:          IsCredit,
+		IsSeparate:        &IsSeparate,
+		IsDiscountIncome:  &IsDiscountIncome,
+		IsTaxExpense:      &IsTaxExpense,
+		IsShippingExpense: &IsShippingExpense,
+		IsCredit:          &IsCredit,
 		DueDate:           DueDate,
 		IsOpname:          IsOpname,
 		IsProduction:      IsProduction,
@@ -4013,9 +4115,9 @@ func UpdateInvReceiving(DBTrx *gorm.DB, Dataset *global_var.TDataset, Number str
 func InsertInvReceivingDetail(DBTrx *gorm.DB, Dataset *global_var.TDataset, ReceiveNumber string, StoreCode string, StoreId uint64, ItemCode string, ItemId uint64, Date time.Time, PoId uint64, PoQuantity float64, ReceiveQuantity float64, ReceiveUomCode string, ReceivePrice float64, BasicQuantity float64, BasicUomCode string, BasicPrice float64, Quantity float64, TotalPrice float64, Discount float64, Tax float64, Shipping float64, Remark string, ExpireDate time.Time, IsCogs uint8, JournalAccountCode string, ItemGroupCode string, CreatedBy string) (uint64, error) {
 	Round := func(value float64, IsTwoDecimal bool) float64 {
 		if IsTwoDecimal {
-			return general.RoundToX2(value)
+			return general.RoundFloat(value, 2)
 		}
-		return general.RoundToX3(value)
+		return general.RoundFloat(value, 3)
 	}
 	if Dataset.ProgramConfiguration.ReceiveStockAPTwoDigitDecimal {
 		ReceiveQuantity = Round(ReceiveQuantity, Dataset.ProgramConfiguration.ReceiveStockAPTwoDigitDecimal)
@@ -4291,17 +4393,17 @@ func InsertFaReceive(DBTrx *gorm.DB, Number string, RefNumber string, RefNumberO
 		ApNumber:          ApNumber,
 		CompanyCode:       CompanyCode,
 		InvoiceNumber:     InvoiceNumber,
-		BankAccountCode:   BankAccountCode,
-		AmountPayment:     AmountPayment,
+		BankAccountCode:   &BankAccountCode,
+		AmountPayment:     &AmountPayment,
 		Date:              Date,
-		Remark:            Remark,
-		IsSeparate:        IsSeparate,
-		IsDiscountIncome:  IsDiscountIncome,
-		IsTaxExpense:      IsTaxExpense,
-		IsShippingExpense: IsShippingExpense,
-		IsCredit:          IsCredit,
+		Remark:            &Remark,
+		IsSeparate:        &IsSeparate,
+		IsDiscountIncome:  &IsDiscountIncome,
+		IsTaxExpense:      &IsTaxExpense,
+		IsShippingExpense: &IsShippingExpense,
+		IsCredit:          &IsCredit,
 		DueDate:           DueDate,
-		IsPaid:            IsPaid,
+		IsPaid:            &IsPaid,
 		CreatedBy:         CreatedBy,
 	}
 	result := DBTrx.Table(db_var.TableName.FaReceive).Create(&FaReceive)
@@ -4316,15 +4418,15 @@ func UpdateFaReceive(DBTrx *gorm.DB, Number string, RefNumberOldAsset string, Po
 		ApNumber:          ApNumber,
 		CompanyCode:       CompanyCode,
 		InvoiceNumber:     InvoiceNumber,
-		BankAccountCode:   BankAccountCode,
-		AmountPayment:     AmountPayment,
+		BankAccountCode:   &BankAccountCode,
+		AmountPayment:     &AmountPayment,
 		Date:              Date,
-		Remark:            Remark,
-		IsSeparate:        IsSeparate,
-		IsDiscountIncome:  IsDiscountIncome,
-		IsTaxExpense:      IsTaxExpense,
-		IsShippingExpense: IsShippingExpense,
-		IsCredit:          IsCredit,
+		Remark:            &Remark,
+		IsSeparate:        &IsSeparate,
+		IsDiscountIncome:  &IsDiscountIncome,
+		IsTaxExpense:      &IsTaxExpense,
+		IsShippingExpense: &IsShippingExpense,
+		IsCredit:          &IsCredit,
 		DueDate:           DueDate,
 		UpdatedBy:         UpdatedBy,
 	}
@@ -4416,7 +4518,7 @@ func InsertFaList(DBTrx *gorm.DB, Code string, Barcode string, ReceiveNumber str
 		DepreciationExpenseAccountCode: &DepreciationExpenseAccountCode,
 		PurchasePrice:                  PurchasePrice,
 		CurrentValue:                   CurrentValue,
-		ResidualValue:                  ResidualValue,
+		ResidualValue:                  &ResidualValue,
 		SerialNumber:                   &SerialNumber,
 		ManufactureCode:                &ManufactureCode,
 		Trademark:                      &Trademark,
@@ -4455,7 +4557,7 @@ func UpdateFaList(DBTrx *gorm.DB, Code string, Barcode string, ReceiveNumber str
 		DepreciationExpenseAccountCode: &DepreciationExpenseAccountCode,
 		PurchasePrice:                  PurchasePrice,
 		CurrentValue:                   CurrentValue,
-		ResidualValue:                  ResidualValue,
+		ResidualValue:                  &ResidualValue,
 		SerialNumber:                   &SerialNumber,
 		ManufactureCode:                &ManufactureCode,
 		Trademark:                      &Trademark,
@@ -4479,7 +4581,7 @@ func UpdateFaList(DBTrx *gorm.DB, Code string, Barcode string, ReceiveNumber str
 }
 
 func UpdatePurchaseOrderDetailReceive(DB *gorm.DB, Id uint64, Quantity float64, UserID string) error {
-	if err := DB.Debug().Table(db_var.TableName.InvPurchaseOrderDetail).Where("id=?", Id).Updates(map[string]interface{}{
+	if err := DB.Table(db_var.TableName.InvPurchaseOrderDetail).Where("id=?", Id).Updates(map[string]interface{}{
 		"quantity_received": Quantity,
 		"updated_by":        UserID,
 	}).Error; err != nil {
@@ -4707,10 +4809,11 @@ func UpdateHotelInformation(DBTrx *gorm.DB, Code string, Name string, Street str
 	return result.Error
 }
 
-func InsertCmUpdateAvailability(DBTrx *gorm.DB, StartDate time.Time, EndDate time.Time, RoomTypeCode string, Availability int, Status string) error {
+func InsertCmUpdateAvailability(DBTrx *gorm.DB, StartDate time.Time, EndDate time.Time, RoomTypeCode, BedTypeCode string, Availability int, Status string) error {
 	var CmUpdateAvailability = db_var.Cm_update_availability{
 		StartDate:    StartDate,
 		EndDate:      EndDate,
+		BedTypeCode:  BedTypeCode,
 		RoomTypeCode: RoomTypeCode,
 		Availability: Availability,
 		Status:       Status,
@@ -4719,10 +4822,11 @@ func InsertCmUpdateAvailability(DBTrx *gorm.DB, StartDate time.Time, EndDate tim
 	return result.Error
 }
 
-func UpdateCmUpdateAvailability(DBTrx *gorm.DB, StartDate time.Time, EndDate time.Time, RoomTypeCode string, Availability int, Status string) error {
+func UpdateCmUpdateAvailability(DBTrx *gorm.DB, StartDate time.Time, EndDate time.Time, RoomTypeCode, BedTypeCode string, Availability int, Status string) error {
 	var CmUpdateAvailability = db_var.Cm_update_availability{
 		StartDate:    StartDate,
 		EndDate:      EndDate,
+		BedTypeCode:  BedTypeCode,
 		RoomTypeCode: RoomTypeCode,
 		Availability: Availability,
 		Status:       Status,
@@ -4799,6 +4903,82 @@ func UpdatePosCfgInitMemberOutletDiscountDetail(DBTrx *gorm.DB, Id uint64, Membe
 		UpdatedBy:                UpdatedBy,
 	}
 	result := DBTrx.Table(db_var.TableName.PosCfgInitMemberOutletDiscountDetail).Omit("created_at", "created_by", "updated_at", "id").Where("id", Id).Updates(&PosCfgInitMemberOutletDiscountDetail)
+	return result.Error
+}
+
+func InsertLogKeylock(DBTrx *gorm.DB, ReservationNumber uint64, FolioNumber uint64, RoomNumber1 string, RoomNumber2 string, RoomNumber3 string, RoomNumber4 string, ArrivalDate time.Time, DepartureDate time.Time, GuestName string, IssuedBy string, KeylockVendorCode string, CardNumber string) error {
+	var LogKeylock = db_var.Log_keylock{
+		ReservationNumber: ReservationNumber,
+		FolioNumber:       FolioNumber,
+		RoomNumber1:       RoomNumber1,
+		RoomNumber2:       RoomNumber2,
+		RoomNumber3:       RoomNumber3,
+		RoomNumber4:       RoomNumber4,
+		ArrivalDate:       ArrivalDate,
+		DepartureDate:     DepartureDate,
+		GuestName:         GuestName,
+		IssuedDate:        time.Now(),
+		IssuedBy:          IssuedBy,
+		KeylockVendorCode: KeylockVendorCode,
+		CardNumber:        CardNumber,
+		IsActive:          1,
+	}
+	result := DBTrx.Table(db_var.TableName.LogKeylock).Create(&LogKeylock)
+	return result.Error
+}
+
+func UpdateLogKeylock(DBTrx *gorm.DB, ReservationNumber uint64, FolioNumber uint64, RoomNumber1 string, RoomNumber2 string, RoomNumber3 string, RoomNumber4 string, ArrivalDate time.Time, DepartureDate time.Time, GuestName string, IssuedDate time.Time, IssuedBy string, ErasedDate time.Time, ErasedBy string, KeylockVendorCode string, CardNumber string, IsActive uint8) error {
+	var LogKeylock = db_var.Log_keylock{
+		ReservationNumber: ReservationNumber,
+		FolioNumber:       FolioNumber,
+		RoomNumber1:       RoomNumber1,
+		RoomNumber2:       RoomNumber2,
+		RoomNumber3:       RoomNumber3,
+		RoomNumber4:       RoomNumber4,
+		ArrivalDate:       ArrivalDate,
+		DepartureDate:     DepartureDate,
+		GuestName:         GuestName,
+		IssuedDate:        IssuedDate,
+		IssuedBy:          IssuedBy,
+		ErasedDate:        ErasedDate,
+		ErasedBy:          ErasedBy,
+		KeylockVendorCode: KeylockVendorCode,
+		CardNumber:        CardNumber,
+		IsActive:          IsActive,
+	}
+	result := DBTrx.Table(db_var.TableName.LogKeylock).Omit("id").Updates(&LogKeylock)
+	return result.Error
+}
+
+func InsertBanBookingSchedulePayment(DBTrx *gorm.DB, BookingNumber uint64, GuestDepositId uint64, Name string, Date time.Time, Amount float64, Remark string, IsPaid uint8, PaymentRemark string, CreatedBy string) error {
+	var BanBookingSchedulePayment = db_var.Ban_booking_schedule_payment{
+		BookingNumber:  BookingNumber,
+		GuestDepositId: GuestDepositId,
+		Name:           Name,
+		Date:           Date,
+		Amount:         Amount,
+		IsPaid:         IsPaid,
+		Remark:         Remark,
+		PaymentRemark:  PaymentRemark,
+		CreatedBy:      CreatedBy,
+	}
+	result := DBTrx.Table(db_var.TableName.BanBookingSchedulePayment).Create(&BanBookingSchedulePayment)
+	return result.Error
+}
+
+func UpdateBanBookingSchedulePayment(DBTrx *gorm.DB, Id uint64, BookingNumber uint64, GuestDepositId uint64, Name string, Date time.Time, Amount float64, Remark string, IsPaid uint8, PaymentRemark string, UpdatedBy string) error {
+	var BanBookingSchedulePayment = db_var.Ban_booking_schedule_payment{
+		BookingNumber:  BookingNumber,
+		GuestDepositId: GuestDepositId,
+		Name:           Name,
+		Date:           Date,
+		IsPaid:         IsPaid,
+		Amount:         Amount,
+		Remark:         Remark,
+		PaymentRemark:  PaymentRemark,
+		UpdatedBy:      UpdatedBy,
+	}
+	result := DBTrx.Table(db_var.TableName.BanBookingSchedulePayment).Omit("id", "created_at", "created_by", "updated_at").Where("id", Id).Updates(&BanBookingSchedulePayment)
 	return result.Error
 }
 
@@ -5048,12 +5228,37 @@ func DeleteAccForeignCashByRefNumber(ctx context.Context, DB *gorm.DB, RefNumber
 	return nil
 }
 
-func CheckOutFolio(DB *gorm.DB, FolioNumber uint64, Departure time.Time, UserID string) error {
-	result := DB.Exec("CALL update_folio_status_closed(?,?,?)", FolioNumber, Departure, UserID)
-	return result.Error
+func CheckOutFolio(DB *gorm.DB, Timezone string, FolioNumber uint64, Departure time.Time, UserID string) error {
+	// result := DB.Exec("CALL update_folio_status_closed(?,?,?)", FolioNumber, Departure, UserID)
+	err := DB.Table(db_var.TableName.Folio).Where("number=?", FolioNumber).Updates(map[string]interface{}{
+		"status_code":  "C",
+		"check_out_at": time.Now(),
+		"check_out_by": UserID,
+		"updated_by":   UserID,
+	}).Error
+
+	if err != nil {
+		return err
+	}
+
+	var GuestDetailID uint64
+	if err := DB.Table(db_var.TableName.Folio).Select("guest_detail_id").Where("number=?", FolioNumber).Limit(1).Scan(&GuestDetailID).Error; err != nil {
+		return err
+	}
+	loc, _ := time.LoadLocation(Timezone)
+	err = DB.Table(db_var.TableName.GuestDetail).Where("id=?", GuestDetailID).Updates(map[string]interface{}{
+		"departure":       Departure,
+		"departure_unixx": general.DateOf(Departure.In(loc)).Unix(),
+		"updated_by":      UserID,
+	}).Error
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func CancelCheckOutFolio(DB *gorm.DB, FolioNumber uint64, GuestDetailId uint64, UserID string) error {
+func CancelCheckOutFolio(DB *gorm.DB, Timezone string, FolioNumber uint64, GuestDetailId uint64, UserID string) error {
 	result := DB.Table(db_var.TableName.Folio).Where("number=?", FolioNumber).Updates(map[string]interface{}{
 		"status_code":  "O",
 		"check_out_at": "0000-00-00 00:00:00",
@@ -5065,8 +5270,8 @@ func CancelCheckOutFolio(DB *gorm.DB, FolioNumber uint64, GuestDetailId uint64, 
 		return result
 	}
 	result = DB.Table(db_var.TableName.GuestDetail).Where("id=?", GuestDetailId).Updates(map[string]interface{}{
-		"departure":       DB.Raw(`ADDDATE(DATE(departure), INTERVAL 1 DAY)`),
-		"departure_unixx": DB.Raw("UNIX_TIMESTAMP(ADDDATE(DATE(departure), INTERVAL 1 DAY))"),
+		"departure":       gorm.Expr(`ADDDATE(DATE(departure), INTERVAL 1 DAY)`),
+		"departure_unixx": gorm.Expr("UNIX_TIMESTAMP(ADDDATE(DATE(convert_tz(departure,'UTC','" + Timezone + "')), INTERVAL 1 DAY))"),
 	}).Error
 
 	return result
@@ -5074,6 +5279,113 @@ func CancelCheckOutFolio(DB *gorm.DB, FolioNumber uint64, GuestDetailId uint64, 
 
 func DeleteInventoryReceiveDetail(DB *gorm.DB, ReceiveNumber string, UserID string) error {
 	if err := DB.Exec("CALL delete_inv_receive_detail(?,?)", ReceiveNumber, UserID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeleteBanBookingSchedulePayment(DB *gorm.DB, ID string, UserID string) error {
+	if err := DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Table(db_var.TableName.BanBookingSchedulePayment).Where("id", ID).Update("updated_by", UserID).Error; err != nil {
+			return err
+		}
+		if err := tx.Table(db_var.TableName.BanBookingSchedulePayment).Where("id", ID).Delete(&ID).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeletePrepaidExpense(ctx context.Context, DB *gorm.DB, PrepaidID uint64, UserID string) error {
+	var RefNumber []string
+	if err := DB.Table(db_var.TableName.AccPrepaidExpense).Select("ref_number").Where("id", PrepaidID).Scan(&RefNumber).Error; err != nil {
+		return err
+	}
+
+	if len(RefNumber) > 0 {
+		for _, refNumber := range RefNumber {
+			if err := DeleteJournal(ctx, DB, refNumber, UserID); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := DB.Table(db_var.TableName.AccPrepaidExpense).Where("id", PrepaidID).Update("updated_by", UserID).Error; err != nil {
+		return err
+	}
+	if err := DB.Table(db_var.TableName.AccPrepaidExpense).Where("id", PrepaidID).Delete(nil).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeletePrepaidExpensePost(ctx context.Context, DB *gorm.DB, PrepaidPostedID uint64, UserID string) error {
+	var RefNumber []string
+	if err := DB.Table(db_var.TableName.AccPrepaidExpensePosted).Select("ref_number").Where("id", PrepaidPostedID).Scan(&RefNumber).Error; err != nil {
+		return err
+	}
+
+	if len(RefNumber) > 0 {
+		for _, refNumber := range RefNumber {
+			if err := DeleteJournal(ctx, DB, refNumber, UserID); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := DB.Table(db_var.TableName.AccPrepaidExpensePosted).Where("id", PrepaidPostedID).Update("updated_by", UserID).Error; err != nil {
+		return err
+	}
+	if err := DB.Table(db_var.TableName.AccPrepaidExpensePosted).Where("id", PrepaidPostedID).Delete(nil).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeleteDifferedIncome(ctx context.Context, DB *gorm.DB, DifferedID uint64, UserID string) error {
+	var RefNumber []string
+	if err := DB.Table(db_var.TableName.AccDefferedIncome).Select("ref_number").Where("id", DifferedID).Scan(&RefNumber).Error; err != nil {
+		return err
+	}
+
+	if len(RefNumber) > 0 {
+		for _, refNumber := range RefNumber {
+			if err := DeleteJournal(ctx, DB, refNumber, UserID); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := DB.Table(db_var.TableName.AccDefferedIncome).Where("id", DifferedID).Update("updated_by", UserID).Error; err != nil {
+		return err
+	}
+	if err := DB.Table(db_var.TableName.AccDefferedIncome).Where("id", DifferedID).Delete(nil).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func DeleteDifferedIncomePost(ctx context.Context, DB *gorm.DB, DifferedPostedID uint64, UserID string) error {
+	var RefNumber []string
+	if err := DB.Table(db_var.TableName.AccDefferedIncomePosted).Select("ref_number").Where("id", DifferedPostedID).Scan(&RefNumber).Error; err != nil {
+		return err
+	}
+
+	if len(RefNumber) > 0 {
+		for _, refNumber := range RefNumber {
+			if err := DeleteJournal(ctx, DB, refNumber, UserID); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := DB.Table(db_var.TableName.AccDefferedIncome).Where("id", DifferedPostedID).Update("updated_by", UserID).Error; err != nil {
+		return err
+	}
+	if err := DB.Table(db_var.TableName.AccDefferedIncome).Where("id", DifferedPostedID).Delete(nil).Error; err != nil {
 		return err
 	}
 	return nil
@@ -5217,19 +5529,289 @@ func DeleteAccAPCommissionPaymentByRefNumber(ctx context.Context, DB *gorm.DB, R
 	return nil
 }
 
-func GetJournalBankAccount(DB *gorm.DB, AccountCode string) (CodeName db_var.GeneralCodeNameStruct, err error) {
-	if err := DB.Table(db_var.TableName.AccCfgInitBankAccount).
-		Select("cfg_init_journal_account.code, cfg_init_journal_account.name").
-		Joins("LEFT JOIN cfg_init_journal_account ON acc_cfg_init_bank_account.journal_account_code=cfg_init_journal_account.code").
-		Where("acc_cfg_init_bank_account.code", AccountCode).
-		Scan(&CodeName).Error; err != nil {
-		return db_var.GeneralCodeNameStruct{}, err
+func DeleteCloseYear(DB *gorm.DB, Year string, UserID string) error {
+	Prefix := fmt.Sprintf("%s%s", global_var.JournalPrefix.BeginningYear, Year[len(Year)-2:])
+	if err := DB.Exec("CALL delete_acc_close_year(?,?,?)", Year, Prefix, UserID).Error; err != nil {
+		return err
 	}
-
-	return CodeName, nil
+	return nil
 }
 
 // func DeleteInventoryCloseSummaryOnCloseMonth(AuditDate time.Time) error {
 // 	DeleteDate := IncDayX(DeleteDate, -1)
 // 	DeleteSQLX("inv_close_summary_on_close_month", "'"+FormatDateTimeX(DeleteDate)+"'", False)
 // }
+
+func UpdateFAListCondition(DB *gorm.DB, Code, ConditionCode, RefNumber1, RefNumber2 string, DoNotRevenueJournal bool, UserID string) error {
+	if err := DB.Table(db_var.TableName.FaList).Where("code", Code).Updates(map[string]interface{}{
+		"ref_number1":            RefNumber1,
+		"ref_number2":            RefNumber2,
+		"condition_code":         ConditionCode,
+		"do_not_revenue_journal": DoNotRevenueJournal,
+		"updated_by":             UserID,
+	}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func InsertBanBooking(DBTrx *gorm.DB, IsContinueEvent uint8, ContactPersonId uint64, GuestDetailId uint64, GuestProfileId uint64, CurrencyCode string, ExchangeRate float64, IsConstantCurrency uint8, ReservationBy string, ThemeCode string, SeatingPlanCode string, LocationCode string, VenueCode string, GroupCode string, MarketingCode string, DocumentNumber string, Notes string, EstimateRevenue float64, BeoNotes string, ShowNotes uint8, AuditDate time.Time, ReservationType string, IsPublic uint8, FolioTransfer uint64, CreatedBy string) (uint64, error) {
+	var BanBooking = db_var.Ban_booking{
+		IsContinueEvent:    IsContinueEvent,
+		ContactPersonId:    ContactPersonId,
+		GuestDetailId:      GuestDetailId,
+		GuestProfileId:     GuestProfileId,
+		CurrencyCode:       CurrencyCode,
+		ExchangeRate:       ExchangeRate,
+		IsConstantCurrency: IsConstantCurrency,
+		ReservationBy:      ReservationBy,
+		ThemeCode:          ThemeCode,
+		SeatingPlanCode:    SeatingPlanCode,
+		LocationCode:       LocationCode,
+		VenueCode:          VenueCode,
+		GroupCode:          GroupCode,
+		MarketingCode:      MarketingCode,
+		DocumentNumber:     DocumentNumber,
+		Notes:              Notes,
+		EstimateRevenue:    EstimateRevenue,
+		BeoNote:            BeoNotes,
+		ShowNotes:          ShowNotes,
+		AuditDate:          AuditDate,
+		StatusCode:         global_var.BookingStatus.Booking,
+		ReservationType:    ReservationType,
+		IsLock:             0,
+		IsPublic:           IsPublic,
+		FolioTransfer:      FolioTransfer,
+		CreatedBy:          CreatedBy,
+	}
+	result := DBTrx.Table(db_var.TableName.BanBooking).Create(&BanBooking)
+	return BanBooking.Number, result.Error
+}
+
+func UpdateBanBooking(DBTrx *gorm.DB, Number, ContactPersonID, GuestDetailID, GuestProfileID uint64, CurrencyCode, ReservationBy, ThemeCode, SeatingPlanCode, LocationCode, VenueCode, GroupCode, MarketingCode, DocumentNumber, Notes, BeoNotes string, FolioTransfer uint64, ExchangeRate, EstimateRevenue float64, IsConstantCurrency, IsPublic, IsContinueEvent, ShowNotes uint8, UserID string) error {
+	var BanBooking = db_var.Ban_booking{
+		Number: Number,
+		// CheckNumber:        CheckNumber,
+		IsContinueEvent:    IsContinueEvent,
+		ContactPersonId:    ContactPersonID,
+		GuestDetailId:      GuestDetailID,
+		GuestProfileId:     GuestProfileID,
+		CurrencyCode:       CurrencyCode,
+		ExchangeRate:       ExchangeRate,
+		IsConstantCurrency: IsConstantCurrency,
+		ReservationBy:      ReservationBy,
+		ThemeCode:          ThemeCode,
+		SeatingPlanCode:    SeatingPlanCode,
+		LocationCode:       LocationCode,
+		VenueCode:          VenueCode,
+		GroupCode:          GroupCode,
+		MarketingCode:      MarketingCode,
+		DocumentNumber:     DocumentNumber,
+		Notes:              Notes,
+		EstimateRevenue:    EstimateRevenue,
+		BeoNote:            BeoNotes,
+		ShowNotes:          ShowNotes,
+		// AuditDate:          AuditDate,
+		// CancelAuditDate:    CancelAuditDate,
+		// CancelDate:         CancelDate,
+		// CancelBy:           CancelBy,
+		// CancelReason:       CancelReason,
+		// StatusCode:         StatusCode,
+		// ReservationType:    ReservationType,
+		// IsLock:   IsLock,
+		IsPublic: IsPublic,
+		// ChangeStatusDate:   ChangeStatusDate,
+		// ChangeStatusBy:     ChangeStatusBy,
+		FolioTransfer: FolioTransfer,
+		UpdatedBy:     UserID,
+	}
+	result := DBTrx.Table(db_var.TableName.BanBooking).Where("number", Number).Omit("created_at", "created_by", "updated_at").Updates(&BanBooking)
+	return result.Error
+}
+
+func InsertBanReservation(DBTrx *gorm.DB, BookingNumber uint64, ContactPersonID, GuestDetailID, GuestProfileID uint64, CurrencyCode, ReservationBy, VenueCombineCode string, VenueCombineNumber uint64, VenueCode, ThemeCode, SeatingPlanCode, LocationCode, GroupCode, MarketingCode, DocumentNumber, Notes, ReservationType string, FolioTransfer uint64, ExchangeRate float64, IsConstantCurrency, IsPublic, IsContinueEvent, ShowNotes uint8, AuditDate time.Time, UserID string) (uint64, error) {
+	var BanReservation = db_var.Ban_reservation{
+		Booking:            BookingNumber,
+		IsContinueEvent:    IsContinueEvent,
+		ContactPersonId:    ContactPersonID,
+		GuestDetailId:      GuestDetailID,
+		GuestProfileId:     GuestProfileID,
+		CurrencyCode:       CurrencyCode,
+		ExchangeRate:       ExchangeRate,
+		IsConstantCurrency: IsConstantCurrency,
+		ReservationBy:      ReservationBy,
+		ThemeCode:          ThemeCode,
+		SeatingPlanCode:    SeatingPlanCode,
+		LocationCode:       LocationCode,
+		VenueCombineCode:   VenueCombineCode,
+		VenueCombineNumber: VenueCombineNumber,
+		VenueCode:          VenueCode,
+		GroupCode:          GroupCode,
+		MarketingCode:      MarketingCode,
+		DocumentNumber:     DocumentNumber,
+		Notes:              Notes,
+		ShowNotes:          ShowNotes,
+		AuditDate:          AuditDate,
+		StatusCode:         global_var.ReservationStatus.Reservation,
+		ReservationType:    ReservationType,
+		IsLock:             0,
+		IsPublic:           IsPublic,
+		FolioTransfer:      FolioTransfer,
+		CreatedBy:          UserID,
+	}
+	result := DBTrx.Table(db_var.TableName.BanReservation).Create(&BanReservation)
+	return BanReservation.Number, result.Error
+}
+
+func UpdateBanReservation(DBTrx *gorm.DB, Number uint64, IsContinueEvent uint8, CurrencyCode string, ExchangeRate float64, IsConstantCurrency uint8,
+	ReservationBy string, ThemeCode string, SeatingPlanCode string, LocationCode string, VenueCombineCode string, VenueCombineNumber uint64, VenueCode string, GroupCode string, MarketingCode string, DocumentNumber string, Notes string, ShowNotes uint8,
+	ReservationType string, IsPublic uint8, FolioTransfer uint64, UpdatedBy string) error {
+	var BanReservation = db_var.Ban_reservation{
+		Number:             Number,
+		IsContinueEvent:    IsContinueEvent,
+		CurrencyCode:       CurrencyCode,
+		ExchangeRate:       ExchangeRate,
+		IsConstantCurrency: IsConstantCurrency,
+		ReservationBy:      ReservationBy,
+		ThemeCode:          ThemeCode,
+		SeatingPlanCode:    SeatingPlanCode,
+		LocationCode:       LocationCode,
+		VenueCombineCode:   VenueCombineCode,
+		VenueCombineNumber: VenueCombineNumber,
+		VenueCode:          VenueCode,
+		GroupCode:          GroupCode,
+		MarketingCode:      MarketingCode,
+		DocumentNumber:     DocumentNumber,
+		Notes:              Notes,
+		ShowNotes:          ShowNotes,
+		ReservationType:    ReservationType,
+		IsPublic:           IsPublic,
+		FolioTransfer:      FolioTransfer,
+		UpdatedBy:          UpdatedBy,
+	}
+	result := DBTrx.Table(db_var.TableName.BanReservation).Where("number", Number).Omit("created_at", "created_by", "updated_at").Updates(&BanReservation)
+	return result.Error
+}
+
+func InsertBanReservationCharge(DBTrx *gorm.DB, BookingNumber uint64, ReservationNumber uint64, ServedTime time.Time, ServedEndTime time.Time, OutletCode string, ProductCode string, VenueCode string, SeatingPlanCode string, PackageCode string, PackageRef uint64, CompanyCode string, AccountCode string, Description string, Quantity float64, PricePurchase float64, PriceOriginal float64, Price float64, Discount float64, Tax float64, Service float64, Remark string, TaxAndServiceCode string, TypeCode string, AuditDate time.Time, PostingDate time.Time, Void uint8, InputOf string, SubFolioId uint64, IsPosting uint8, IsBeo uint8, LayoutId uint64, CreatedBy string) error {
+	var BanReservationCharge = db_var.Ban_reservation_charge{
+		BookingNumber:     BookingNumber,
+		ReservationNumber: ReservationNumber,
+		ServedTime:        ServedTime,
+		ServedEndTime:     ServedEndTime,
+		OutletCode:        OutletCode,
+		ProductCode:       ProductCode,
+		VenueCode:         VenueCode,
+		SeatingPlanCode:   SeatingPlanCode,
+		PackageCode:       PackageCode,
+		PackageRef:        PackageRef,
+		CompanyCode:       CompanyCode,
+		AccountCode:       AccountCode,
+		Description:       Description,
+		Quantity:          Quantity,
+		PricePurchase:     PricePurchase,
+		PriceOriginal:     PriceOriginal,
+		Price:             Price,
+		Discount:          Discount,
+		Tax:               Tax,
+		Service:           Service,
+		Remark:            Remark,
+		TaxAndServiceCode: TaxAndServiceCode,
+		TypeCode:          TypeCode,
+		AuditDate:         AuditDate,
+		PostingDate:       PostingDate,
+		Void:              Void,
+		InputOf:           InputOf,
+		SubFolioId:        SubFolioId,
+		IsPosting:         IsPosting,
+		IsBeo:             IsBeo,
+		LayoutID:          LayoutId,
+		CreatedBy:         CreatedBy,
+	}
+	result := DBTrx.Table(db_var.TableName.BanReservationCharge).Create(&BanReservationCharge)
+	return result.Error
+}
+
+func UpdateBanReservationCharge(DBTrx *gorm.DB, BookingNumber uint64, ReservationNumber uint64, ServedTime time.Time, ServedEndTime time.Time, OutletCode string, ProductCode string, VenueCode string, SeatingPlanCode string, PackageCode string, PackageRef uint64, CompanyCode string, AccountCode string, Description string, Quantity float64, PricePurchase float64, PriceOriginal float64, Price float64, Discount float64, Tax float64, Service float64, Remark string, TaxAndServiceCode string, TypeCode string, AuditDate time.Time, PostingDate time.Time, Void uint8, InputOf string, SubFolioId uint64, IsPosting uint8, IsBeo uint8, LayoutId uint64, UpdatedBy string) error {
+	var BanReservationCharge = db_var.Ban_reservation_charge{
+		BookingNumber:     BookingNumber,
+		ReservationNumber: ReservationNumber,
+		ServedTime:        ServedTime,
+		ServedEndTime:     ServedEndTime,
+		OutletCode:        OutletCode,
+		ProductCode:       ProductCode,
+		VenueCode:         VenueCode,
+		SeatingPlanCode:   SeatingPlanCode,
+		PackageCode:       PackageCode,
+		PackageRef:        PackageRef,
+		CompanyCode:       CompanyCode,
+		AccountCode:       AccountCode,
+		Description:       Description,
+		Quantity:          Quantity,
+		PricePurchase:     PricePurchase,
+		PriceOriginal:     PriceOriginal,
+		Price:             Price,
+		Discount:          Discount,
+		Tax:               Tax,
+		Service:           Service,
+		Remark:            Remark,
+		TaxAndServiceCode: TaxAndServiceCode,
+		TypeCode:          TypeCode,
+		AuditDate:         AuditDate,
+		PostingDate:       PostingDate,
+		Void:              Void,
+		InputOf:           InputOf,
+		SubFolioId:        SubFolioId,
+		IsPosting:         IsPosting,
+		IsBeo:             IsBeo,
+		LayoutID:          LayoutId,
+		UpdatedBy:         UpdatedBy,
+	}
+	result := DBTrx.Table(db_var.TableName.BanReservationCharge).Omit("created_at", "created_by", "updated_at", "id").Updates(&BanReservationCharge)
+	return result.Error
+}
+
+func BatchInsertPosProductCosting(DBTrx *gorm.DB, PosProductCosting []db_var.Pos_product_costing) error {
+	result := DBTrx.Table(db_var.TableName.PosProductCosting).Create(&PosProductCosting)
+	return result.Error
+}
+
+func InsertPosProductCosting(DBTrx *gorm.DB, CheckNumber string, CheckTransactionId uint64, CostingNumber string, CostingDetailId uint64, ProductCode string, StoreCode string, ItemCode string, Quantity float64, UomCode string, BasicQuantity float64, BasicUomCode string, CostingQuantity float64, CreatedBy string) error {
+	var PosProductCosting = db_var.Pos_product_costing{
+		CheckNumber:        CheckNumber,
+		CheckTransactionId: CheckTransactionId,
+		CostingNumber:      CostingNumber,
+		CostingDetailId:    CostingDetailId,
+		ProductCode:        ProductCode,
+		StoreCode:          StoreCode,
+		ItemCode:           ItemCode,
+		Quantity:           Quantity,
+		UomCode:            UomCode,
+		BasicQuantity:      BasicQuantity,
+		BasicUomCode:       BasicUomCode,
+		CostingQuantity:    CostingQuantity,
+		CreatedBy:          CreatedBy,
+	}
+	result := DBTrx.Table(db_var.TableName.PosProductCosting).Create(&PosProductCosting)
+	return result.Error
+}
+
+func UpdatePosProductCosting(DBTrx *gorm.DB, CheckNumber string, CheckTransactionId uint64, CostingNumber string, CostingDetailId uint64, ProductCode string, StoreCode string, ItemCode string, Quantity float64, UomCode string, BasicQuantity float64, BasicUomCode string, CostingQuantity float64, UpdatedBy string) error {
+	var PosProductCosting = db_var.Pos_product_costing{
+		CheckNumber:        CheckNumber,
+		CheckTransactionId: CheckTransactionId,
+		CostingNumber:      CostingNumber,
+		CostingDetailId:    CostingDetailId,
+		ProductCode:        ProductCode,
+		StoreCode:          StoreCode,
+		ItemCode:           ItemCode,
+		Quantity:           Quantity,
+		UomCode:            UomCode,
+		BasicQuantity:      BasicQuantity,
+		BasicUomCode:       BasicUomCode,
+		CostingQuantity:    CostingQuantity,
+		UpdatedBy:          UpdatedBy,
+	}
+	result := DBTrx.Table(db_var.TableName.PosProductCosting).Omit("created_at", "created_by", "updated_at", "id").Updates(&PosProductCosting)
+	return result.Error
+}

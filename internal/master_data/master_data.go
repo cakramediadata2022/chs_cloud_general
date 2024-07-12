@@ -11,10 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cakramediadata2022/chs_cloud_general/db_var"
+	"github.com/cakramediadata2022/chs_cloud_general/general"
+	"github.com/cakramediadata2022/chs_cloud_general/global_var"
 	"github.com/cakramediadata2022/chs_cloud_general/internal/config"
-	"github.com/cakramediadata2022/chs_cloud_general/internal/db_var"
-	"github.com/cakramediadata2022/chs_cloud_general/internal/global_var"
-	"github.com/cakramediadata2022/chs_cloud_general/pkg/general"
+	"github.com/cakramediadata2022/chs_cloud_general/internal/init/subscription"
 	"github.com/cakramediadata2022/chs_cloud_general/pkg/utils"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func IsAuthorized(Token string) string {
+func IsAuthorized(Token string, SessionID string) string {
 	if Token != "" {
 		TokenCheck, Err := jwt.Parse(Token, func(TokenCheck *jwt.Token) (interface{}, error) {
 			if _, ok := TokenCheck.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -66,6 +67,9 @@ func SendResponse(StatusCode uint, Message interface{}, Result interface{}, c *g
 		Result:     Result}
 
 	if RequestResponse.StatusCode == global_var.ResponseCode.Successfully || RequestResponse.StatusCode == global_var.ResponseCode.SuccessfullyWithStatus {
+		// if RequestResponse.Message == "" || RequestResponse.Message == nil {
+		// 	RequestResponse.Message = "Success"
+		// }
 		c.JSON(http.StatusOK, &RequestResponse)
 	} else if (RequestResponse.StatusCode == global_var.ResponseCode.NotAuthorized) || (RequestResponse.StatusCode == global_var.ResponseCode.ErrorCreateToken) {
 		c.JSON(http.StatusUnauthorized, &RequestResponse)
@@ -415,7 +419,7 @@ func GetTableFieldId(DB *gorm.DB, TableName string, cond interface{}, args ...in
 // =======================================================================================================================================================================//
 // ========================================                MASTER DATA           =========================================================================================//
 // =======================================================================================================================================================================//
-func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interface{} {
+func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName, Param string) interface{} {
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
@@ -434,12 +438,33 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 		return GetGeneralCodeName(DB, db_var.TableName.ConstJournalAccountGroup, "code")
 	} else if DataName == "JournalAccountSubGroupType" {
 		return GetGeneralCodeName(DB, db_var.TableName.ConstJournalAccountSubGroupType, "code")
+	} else if DataName == "JournalAccountUsed" {
+		return GetGeneralCodeNameQuery(DB,
+			"SELECT DISTINCT"+
+				" cfg_init_journal_account.code,"+
+				" cfg_init_journal_account.name "+
+				"FROM"+
+				" acc_journal_detail"+
+				" LEFT OUTER JOIN cfg_init_journal_account ON (acc_journal_detail.account_code = cfg_init_journal_account.code)"+
+				"ORDER BY cfg_init_journal_account.code", "", "", "", "", "", 0)
 	} else if DataName == "JournalAccount" {
 		return GetGeneralCodeName(DB, db_var.TableName.CfgInitJournalAccount, "code")
 	} else if DataName == "JournalAccountAP" {
 		return GetGeneralCodeNameWithParam(DB, db_var.TableName.CfgInitJournalAccount, "type_code", global_var.GlobalJournalAccountType.AccountPayable, "", "", "", "", "code", 1)
 	} else if DataName == "JournalAccountAR" {
 		return GetGeneralCodeNameWithParam(DB, db_var.TableName.CfgInitJournalAccount, "type_code", global_var.GlobalJournalAccountType.AccountReceivable, "", "", "", "", "code", 1)
+	} else if DataName == "JournalAccountBank" {
+		return GetGeneralCodeNameQuery(DB,
+			"SELECT"+
+				" cfg_init_journal_account.code,"+
+				" cfg_init_journal_account.name,"+
+				" cfg_init_journal_account_sub_group.name AS SubGroupName "+
+				"FROM"+
+				" cfg_init_journal_account"+
+				" LEFT OUTER JOIN cfg_init_journal_account_sub_group ON (cfg_init_journal_account.sub_group_code = cfg_init_journal_account_sub_group.code)"+
+				" WHERE cfg_init_journal_account_sub_group.group_code=?"+
+				" AND cfg_init_journal_account.type_code=? "+
+				"ORDER BY cfg_init_journal_account.code", global_var.GlobalJournalAccountGroup.Assets, global_var.GlobalJournalAccountType.Bank, "", "", "", 2)
 	} else if DataName == "JournalAccountIncome" {
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT"+
@@ -493,6 +518,8 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 		return GetGeneralCodeName(DB, db_var.TableName.AccCfgInitBankAccount, "code")
 	} else if DataName == "BankAccountPayment" {
 		return GetGeneralCodeNameWithParam(DB, db_var.TableName.AccCfgInitBankAccount, "for_payment", 1, nil, nil, nil, nil, "code", 1)
+	} else if DataName == "BankAccountReceive" {
+		return GetGeneralCodeNameWithParam(DB, db_var.TableName.AccCfgInitBankAccount, "for_receive", 1, nil, nil, nil, nil, "code", 1)
 	} else if DataName == "DepartmentType" {
 		return GetGeneralCodeName(DB, db_var.TableName.ConstDepartmentType, "id_sort")
 	} else if DataName == "Department" {
@@ -515,6 +542,35 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 		return GetGeneralCodeNameWithParam(DB, db_var.TableName.CfgInitAccount, "sub_group_code", global_var.GlobalAccountSubGroup.CreditDebitCard, "", "", "", "", "code", 1)
 	} else if DataName == "AccountForCommision" {
 		return GetGeneralCodeNameWithParam(DB, db_var.TableName.CfgInitAccount, "sub_group_code=? AND code<>? AND code<>?", global_var.GlobalAccountSubGroup.AccountPayable, pConfig.Dataset.Configuration[global_var.ConfigurationCategory.GlobalAccount][global_var.ConfigurationName.AccountAPRefundDeposit].(string), pConfig.Dataset.GlobalAccount.CreditCardAdm, "", "", "code", 3)
+	} else if DataName == "AccountRoomCharge" {
+		var DataOutput []map[string]interface{}
+		DB.Table(db_var.TableName.CfgInitAccount).
+			Select(
+				" cfg_init_account.code,"+
+					" cfg_init_account.name,"+
+					" cfg_init_account.sub_group_code,"+
+					" CONCAT(cfg_init_account.code,' | ',cfg_init_account.name) AS CodeName,"+
+					" cfg_init_account.sub_folio_group_code").
+			Joins("LEFT JOIN cfg_init_account_sub_group ON cfg_init_account.sub_group_code=cfg_init_account_sub_group.code ").
+			Where("cfg_init_account_sub_group.group_code=?", global_var.GlobalAccountGroup.Charge).
+			Where("is_room_charge=1").
+			Order("cfg_init_account.code").Scan(&DataOutput)
+		return DataOutput
+		// return GetGeneralCodeNameWithParam(DB, db_var.TableName.CfgInitAccount, "sub_group_code=? AND code<>? AND code<>?", global_var.GlobalAccountSubGroup.AccountPayable, pConfig.Dataset.Configuration[global_var.ConfigurationCategory.GlobalAccount][global_var.ConfigurationName.AccountAPRefundDeposit].(string), pConfig.Dataset.GlobalAccount.CreditCardAdm, "", "", "code", 3)
+	} else if DataName == "AccountCharge" {
+		var DataOutput []map[string]interface{}
+		DB.Table(db_var.TableName.CfgInitAccount).
+			Select(
+				" cfg_init_account.code,"+
+					" cfg_init_account.name,"+
+					" cfg_init_account.sub_group_code,"+
+					" CONCAT(cfg_init_account.code,' | ',cfg_init_account.name) AS CodeName,"+
+					" cfg_init_account.sub_folio_group_code").
+			Joins("LEFT JOIN cfg_init_account_sub_group ON cfg_init_account.sub_group_code=cfg_init_account_sub_group.code ").
+			Where("cfg_init_account_sub_group.group_code=?", global_var.GlobalAccountGroup.Charge).
+			Order("cfg_init_account.code").Scan(&DataOutput)
+		return DataOutput
+		// return GetGeneralCodeNameWithParam(DB, db_var.TableName.CfgInitAccount, "sub_group_code=? AND code<>? AND code<>?", global_var.GlobalAccountSubGroup.AccountPayable, pConfig.Dataset.Configuration[global_var.ConfigurationCategory.GlobalAccount][global_var.ConfigurationName.AccountAPRefundDeposit].(string), pConfig.Dataset.GlobalAccount.CreditCardAdm, "", "", "code", 3)
 	} else if DataName == "CompanyType" {
 		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCompanyType, "code")
 	} else if DataName == "Company" {
@@ -641,6 +697,8 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField11, "code")
 	} else if DataName == "CustomLookupField12" {
 		return GetGeneralCodeName(DB, db_var.TableName.CfgInitCustomLookupField12, "code")
+	} else if DataName == "KeylockVendor" {
+		return GetGeneralCodeName(DB, db_var.TableName.ConstKeylockVendor, "code")
 	} else if DataName == "Timezone" {
 		var DataOutput []db_var.GeneralCodeNameStruct
 		DB.Table(db_var.TableName.CfgInitTimezone).Select("name, cfg_init_timezone.offset/3600 AS code").Scan(&DataOutput)
@@ -692,7 +750,9 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 				" inv_cfg_init_store "+
 				" WHERE is_room='0'", "", "", "", "", "", 0)
 	} else if DataName == "Store" {
-		return GetGeneralCodeName(DB, db_var.TableName.InvCfgInitStore, "code")
+		return GetGeneralCodeNameCondition(DB, db_var.TableName.InvCfgInitStore, "code")
+	} else if DataName == "RoomStore" {
+		return GetGeneralCodeNameCondition(DB, db_var.TableName.InvCfgInitStore, "code", "is_room=1")
 	} else if DataName == "ItemCategory" {
 		return GetGeneralCodeName(DB, db_var.TableName.InvCfgInitItemCategory, "code")
 	} else if DataName == "ItemGroupType" {
@@ -717,7 +777,27 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 		return GetGeneralCodeName(DB, db_var.TableName.FaCfgInitItemCategory, "code")
 	} else if DataName == "FAItem" {
 		return GetGeneralCodeName(DB, db_var.TableName.FaCfgInitItem, "code")
-		//Global All Module
+		//Banquet
+	} else if DataName == "Venue" {
+		return GetGeneralCodeName(DB, db_var.TableName.BanCfgInitVenue, "code")
+	} else if DataName == "VenueCombine" {
+		return GetGeneralCodeName(DB, db_var.TableName.BanCfgInitVenueCombine, "code")
+	} else if DataName == "SeatingPlan" {
+		return GetGeneralCodeName(DB, db_var.TableName.BanCfgInitSeatingPlan, "code")
+	} else if DataName == "Theme" {
+		return GetGeneralCodeName(DB, db_var.TableName.BanCfgInitTheme, "code")
+	} else if DataName == "VenueGroup" {
+		return GetGeneralCodeName(DB, db_var.TableName.BanCfgInitVenueGroup, "code")
+	} else if DataName == "VenueLocation" {
+		return GetGeneralCodeName(DB, db_var.TableName.BanConstVenueLocation, "code")
+	} else if DataName == "Layout" {
+		return GetGeneralCodeNameQuery(DB,
+			"SELECT"+
+				" ban_cfg_init_layout.id as `code`,"+
+				" ban_cfg_init_layout.name "+
+				"FROM"+
+				" ban_cfg_init_layout "+
+				"ORDER BY id", "", "", "", "", "", 0)
 	} else if DataName == "UserGroup" {
 		return GetGeneralCodeName(DB, db_var.TableName.UserGroupAccess, "code")
 	} else if DataName == "User" {
@@ -798,6 +878,32 @@ func FilterGeneralCodeName(c *gin.Context, DB *gorm.DB, DataName string) interfa
 		return GetGeneralCodeNameQuery(DB,
 			"SELECT DISTINCT access_name FROM log_special_access"+
 				"ORDER BY access_name", "", "", "", "", "", 0)
+
+		// BANQUET
+	} else if DataName == "VenueByLocation" {
+		return GetGeneralCodeNameQuery(DB,
+			"SELECT"+
+				" code,"+
+				" name "+
+				"FROM"+
+				" ban_cfg_init_venue "+
+				" WHERE location_code=?", Param, "", "", "", "", 1)
+	} else if DataName == "BanquetReservationType" {
+		return GetGeneralCodeName(DB, db_var.TableName.BanConstReservationType, "code")
+	} else if DataName == "HeaderReservationRemark" {
+		Data := []db_var.GeneralCodeNameStruct{
+			{Code: "1", Name: pConfig.Dataset.HeaderReservationRemark.Header1},
+			{Code: "2", Name: pConfig.Dataset.HeaderReservationRemark.Header2},
+			{Code: "3", Name: pConfig.Dataset.HeaderReservationRemark.Header3},
+			{Code: "4", Name: pConfig.Dataset.HeaderReservationRemark.Header4},
+			{Code: "5", Name: pConfig.Dataset.HeaderReservationRemark.Header5},
+			{Code: "6", Name: pConfig.Dataset.HeaderReservationRemark.Header6},
+			{Code: "7", Name: pConfig.Dataset.HeaderReservationRemark.Header7},
+			{Code: "8", Name: pConfig.Dataset.HeaderReservationRemark.Header8},
+			{Code: "9", Name: pConfig.Dataset.HeaderReservationRemark.Header9},
+			{Code: "10", Name: pConfig.Dataset.HeaderReservationRemark.Header10},
+		}
+		return Data
 	}
 	return nil
 }
@@ -827,7 +933,7 @@ func GetMasterDataCodeNameArrayP(c *gin.Context) {
 		pConfig := val.(*config.CompanyDataConfiguration)
 		DB := pConfig.DB
 		for _, DataName := range DataNameList {
-			GeneralCodeName := FilterGeneralCodeName(c, DB, DataName)
+			GeneralCodeName := FilterGeneralCodeName(c, DB, DataName, "")
 			GeneralCodeNameArray[DataName] = GeneralCodeName
 		}
 	}
@@ -836,6 +942,7 @@ func GetMasterDataCodeNameArrayP(c *gin.Context) {
 
 func GetMasterDataCodeNameP(c *gin.Context) {
 	DataName := c.Param("DataName")
+	Param := c.Query("Param")
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
@@ -844,7 +951,7 @@ func GetMasterDataCodeNameP(c *gin.Context) {
 	}
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
-	GeneralCodeName := FilterGeneralCodeName(c, DB, DataName)
+	GeneralCodeName := FilterGeneralCodeName(c, DB, DataName, Param)
 	SendResponse(global_var.ResponseCode.Successfully, "", GeneralCodeName, c)
 }
 
@@ -865,7 +972,7 @@ func GetMasterDataCodeDescriptionP(c *gin.Context) {
 func GetMasterDataTableName(DataName string) string {
 	if DataName == "JournalAccount" {
 		return db_var.TableName.CfgInitJournalAccount
-	} else if DataName == "JournalAccountCategory" {
+	} else if DataName == "JournalAccountSubGroup" {
 		return db_var.TableName.CfgInitJournalAccountSubGroup
 	} else if DataName == "JournalAccountCategory" {
 		return db_var.TableName.CfgInitJournalAccountCategory
@@ -1015,6 +1122,8 @@ func GetMasterDataTableName(DataName string) string {
 		return db_var.TableName.CfgInitGuestType
 	} else if DataName == "Timezone" {
 		return db_var.TableName.CfgInitTimezone
+	} else if DataName == "KeylockVendor" {
+		return db_var.TableName.ConstKeylockVendor
 		//POS MODULE
 	} else if DataName == "Outlet" {
 		return db_var.TableName.PosCfgInitOutlet
@@ -1060,7 +1169,7 @@ func GetMasterDataTableName(DataName string) string {
 	} else if DataName == "Item" {
 		return db_var.TableName.InvCfgInitItem
 	} else if DataName == "ItemUOM" {
-		return db_var.TableName.InvCfgInitItem
+		return db_var.TableName.InvCfgInitItemUom
 	} else if DataName == "ItemGroup" {
 		return db_var.TableName.InvCfgInitItemGroup
 	} else if DataName == "ReturnStockReason" {
@@ -1075,11 +1184,791 @@ func GetMasterDataTableName(DataName string) string {
 		return db_var.TableName.FaCfgInitItemCategory
 	} else if DataName == "FAItem" {
 		return db_var.TableName.FaCfgInitItem
+		//BANQUET
+	} else if DataName == "VenueGroup" {
+		return db_var.TableName.BanCfgInitVenueGroup
+	} else if DataName == "Venue" {
+		return db_var.TableName.BanCfgInitVenue
+	} else if DataName == "SeatingPlan" {
+		return db_var.TableName.BanCfgInitSeatingPlan
+	} else if DataName == "Theme" {
+		return db_var.TableName.BanCfgInitTheme
+	} else if DataName == "VenueCombine" {
+		return db_var.TableName.BanCfgInitVenueCombine
+	} else if DataName == "VenueCombineDetail" {
+		return db_var.TableName.BanCfgInitVenueCombineDetail
+	} else if DataName == "VenueLocation" {
+		return db_var.TableName.BanConstVenueLocation
+	} else if DataName == "Layout" {
+		return db_var.TableName.BanCfgInitLayout
 		//Global All Module
 	} else if DataName == "UserGroup" {
 		return db_var.TableName.UserGroupAccess
 	}
 	return ""
+}
+
+func MasterDataUsedValidation(DB *gorm.DB, Dataset *global_var.TDataset, Code interface{}, DataName string, IsActive bool) (IsUsed bool) {
+	if DataName == "JournalAccount" {
+		return true
+		// if CheckCodeField(DB, db_var.TableName.CfgInitAccount, "journal_account_code", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.Configuration, "value", "value = ? AND category = ?", Code, global_var.ConfigurationCategory.GlobalJournalAccount) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.AccJournalDetail, "id", "account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.AccCfgInitBankAccount, "id", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.AccApAr, "id", "journal_account_debit=? OR journal_account_credit=?", Code, Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.AccApArPayment, "id", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.AccApCommissionPayment, "id", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.AccApRefundDepositPayment, "journal_account_code", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.AccCreditCardRecon, "journal_account_code", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.BudgetExpense, "journal_account_code", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.CfgInitCompanyType, "id", "journal_account_code_ap = ? OR journal_account_code_ar = ?", Code, Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.InvCfgInitItemCategory, "journal_account_code", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.FaCfgInitItemCategory, "journal_account_code", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.InvCfgInitItemCategoryOtherCogs, "journal_account_code", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.InvCfgInitItemCategoryOtherCogs2, "journal_account_code", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.InvCfgInitItemCategoryOtherExpense, "journal_account_code", "journal_account_code", Code) {
+		// 	return true
+		// }
+		// if CheckCodeField(DB, db_var.TableName.InvReturnStock, "bank_account_code", "bank_account_code", Code) {
+		// 	return true
+		// }
+
+	} else if DataName == "JournalAccountSubGroup" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitJournalAccount, "sub_group_code", "sub_group_code", Code) {
+			return true
+		}
+	} else if DataName == "JournalAccountCategory" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitJournalAccount, "category_code", "category_code", Code) {
+			return true
+		}
+	} else if DataName == "Department" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitSubDepartment, "department_code", "department_code", Code) {
+			return true
+		}
+	} else if DataName == "SubDepartment" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitPackage, "sub_department_code", "sub_department_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoomRateBreakdown, "sub_department_code", "sub_department_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitPackageBreakdown, "sub_department_code", "sub_department_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitAccount, "sub_department_code", "sub_department_code LIKE ?", "%"+Code.(string)+"%") {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitJournalAccount, "sub_department_code", "sub_department_code LIKE ?", "%"+Code.(string)+"%") {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.Configuration, "value", "value = ? AND category = ?", Code, global_var.ConfigurationCategory.GlobalSubDepartment) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.SubFolio, "sub_department_code", "sub_department_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvCfgInitItemCategoryOtherCogs, "sub_department_code", "sub_department_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvCfgInitItemCategoryOtherCogs2, "sub_department_code", "sub_department_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvCfgInitItemCategoryOtherExpense, "sub_department_code", "sub_department_code", Code) {
+			return true
+		}
+	} else if DataName == "TaxAndService" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitAccount, "tax_and_service_code", "tax_and_service_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitPackage, "tax_and_service_code", "tax_and_service_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitPackageBreakdown, "tax_and_service_code", "tax_and_service_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoomRate, "tax_and_service_code", "tax_and_service_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoomRateBreakdown, "tax_and_service_code", "tax_and_service_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestExtraCharge, "tax_and_service_code", "tax_and_service_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestExtraChargeBreakdown, "tax_and_service_code", "tax_and_service_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestBreakdown, "tax_and_service_code", "tax_and_service_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitOutlet, "tax_and_service_code", "tax_and_service_code", Code) {
+			return true
+		}
+	} else if DataName == "AccountSubGroup" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitAccount, "sub_group_code", "sub_group_code", Code) {
+			return true
+		}
+	} else if DataName == "Account" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitPackage, "account_code", "account_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitPackageBreakdown, "account_code", "account_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoomRate, "account_code", "account_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoomRateBreakdown, "account_code", "account_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.Configuration, "value", "value = ? AND category = ?", Code, global_var.ConfigurationCategory.GlobalAccount) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.SubFolio, "account_code", "account_code = ? AND void = 0", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitProductGroup, "account_code", "account_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitPaymentGroup, "account_code", "account_code", Code) {
+			return true
+		}
+	} else if DataName == "BankAccount" {
+		return
+	} else if DataName == "CompanyType" {
+		if CheckCodeField(DB, db_var.TableName.Company, "type_code", "type_code", Code) {
+			return true
+		}
+	} else if DataName == "Company" {
+		if CheckCodeField(DB, db_var.TableName.AccApAr, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.AccJournal, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoomRate, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitPackageBusinessSource, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoomRateBusinessSource, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestInHouse, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.SubFolio, "direct_bill_code", "direct_bill_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.PosCaptainOrderTransaction, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.Invoice, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.FaPurchaseOrder, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.FaReceive, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvPurchaseOrder, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvReceiving, "company_code", "company_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvReturnStock, "company_code", "company_code", Code) {
+			return true
+		}
+	} else if DataName == "Currency" {
+		if CheckCodeField(DB, db_var.TableName.GuestDetail, "currency_code", "currency_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestDeposit, "currency_code", "currency_code = ? OR default_currency_code = ?", Code, Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.SubFolio, "currency_code", "currency_code = ? OR default_currency_code = ?", Code, Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvoiceItem, "currency_code", "currency_code = ? OR default_currency_code = ?", Code, Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvoicePayment, "currency_code", "currency_code = ? OR default_currency_code = ?", Code, Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.AccForeignCash, "currency_code", "currency_code = ? OR default_currency_code = ?", Code, Code) {
+			return true
+		}
+	} else if DataName == "CurrencyNominal" {
+		return
+	} else if DataName == "RoomType" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoom, "room_type_code", "room_type_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoomRate, "room_type_code", "room_type_code LIKE ?", "%"+Code.(string)+"%") {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestDetail, "room_type_code", "room_type_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestInHouse, "room_type_code", "room_type_code", Code) {
+			return true
+		}
+	} else if DataName == "BedType" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoom, "bed_type_code", "bed_type_code", Code) {
+			return true
+		}
+	} else if DataName == "Package" {
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitProduct, "package_code", "package_code", Code) {
+			return true
+		}
+	} else if DataName == "PackageBreakdown" {
+		return
+	} else if DataName == "PackageBusinessSource" {
+		return
+	} else if DataName == "RoomRateCategory" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoomRateSubCategory, "category_code", "category_code", Code) {
+			return true
+		}
+	} else if DataName == "RoomRateSubCategory" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoomRate, "sub_category_code", "sub_category_code", Code) {
+			return true
+		}
+	} else if DataName == "RoomRate" {
+		UsedCode := ""
+		DB.Raw(
+			"SELECT"+
+				" cfg_init_room_rate.code "+
+				"FROM"+
+				" cfg_init_room_rate"+
+				" INNER JOIN guest_detail ON (cfg_init_room_rate.code = guest_detail.room_rate_code)"+
+				" INNER JOIN reservation ON (guest_detail.id = reservation.guest_detail_id)"+
+				" WHERE cfg_init_room_rate.code= ? "+
+				// " AND reservation.status_code=? " +
+				" AND reservation.status_code<>? "+
+				"LIMIT 1", Code, global_var.ReservationStatus.Void).Scan(&UsedCode)
+		if UsedCode != "" {
+			return true
+		}
+
+		DB.Raw(
+			"SELECT"+
+				" cfg_init_room_rate.code "+
+				"FROM"+
+				" cfg_init_room_rate"+
+				" INNER JOIN guest_detail ON (cfg_init_room_rate.code = guest_detail.room_rate_code)"+
+				" INNER JOIN folio ON (guest_detail.id = folio.guest_detail_id)"+
+				" WHERE cfg_init_room_rate.code=? "+
+				// " AND folio.status_code=? " +
+				" AND folio.type_code= ? "+
+				" AND folio.status_code<>? "+
+				"LIMIT 1", Code, global_var.FolioType.GuestFolio, global_var.FolioStatus.CancelCheckIn).Scan(&UsedCode)
+		if UsedCode != "" {
+			return true
+		}
+
+	} else if DataName == "RoomRateBreakdown" {
+		return
+	} else if DataName == "RoomRateBusinessSource" {
+		return
+	} else if DataName == "RoomRateDynamic" {
+		return
+	} else if DataName == "RoomRateCurrency" {
+		return
+	} else if DataName == "RoomView" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoom, "view_code", "view_code", Code) {
+			return true
+		}
+	} else if DataName == "RoomAmenities" {
+		// if CheckCodeField(DB, db_var.TableName.GuestLoanItem, "item_code", "item_code", Code) {
+		// 	return true
+		// }
+		return
+	} else if DataName == "Room" {
+		if IsActive {
+			var RoomNumber string
+			DB.Table(db_var.TableName.Reservation).
+				Select("guest_detail.room_number").
+				Joins("LEFT JOIN guest_detail ON reservation.guest_detail_id=guest_detail.id").
+				Where("reservation.status_code", global_var.ReservationStatus.New).
+				Where("guest_detail.room_number", Code).
+				Scan(&RoomNumber)
+			if RoomNumber != "" {
+				return true
+			}
+
+			DB.Table(db_var.TableName.Folio).
+				Select("guest_detail.room_number").
+				Joins("LEFT JOIN guest_detail ON folio.guest_detail_id=guest_detail.id").
+				Where("folio.status_code", global_var.FolioStatus.Open).
+				Where("guest_detail.room_number", Code).
+				Scan(&RoomNumber)
+
+			if RoomNumber != "" {
+				return true
+			}
+		} else {
+			if CheckCodeField(DB, db_var.TableName.GuestDetail, "room_number", "room_number", Code) {
+				return true
+			}
+			if CheckCodeField(DB, db_var.TableName.GuestInHouse, "room_number", "room_number", Code) {
+				return true
+			}
+			if CheckCodeField(DB, db_var.TableName.RoomUnavailable, "room_number", "room_number", Code) {
+				return true
+			}
+			if CheckCodeField(DB, db_var.TableName.RoomUnavailableHistory, "room_number", "room_number", Code) {
+				return true
+			}
+			if CheckCodeField(DB, db_var.TableName.SubFolio, "room_number", "room_number= ? AND void=0", Code) {
+				return true
+			}
+		}
+	} else if DataName == "RoomBoy" {
+		return
+	} else if DataName == "RoomUnavailableReason" {
+		if CheckCodeField(DB, db_var.TableName.RoomUnavailable, "reason_code", "reason_code", Code) {
+			return true
+		}
+	} else if DataName == "Owner" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitRoom, "owner_code", "owner_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitTenan, "owner_code", "owner_code", Code) {
+			return true
+		}
+	} else if DataName == "Title" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "title_code", "title_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "title_code", "title_code", Code) {
+			return true
+		}
+	} else if DataName == "Continent" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitCountry, "continent_code", "continent_code", Code) {
+			return true
+		}
+	} else if DataName == "Country" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "country_code", "country_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "country_code", "country_code", Code) {
+			return true
+		}
+	} else if DataName == "State" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "state_code", "state_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "state_code", "state_code", Code) {
+			return true
+		}
+	} else if DataName == "Regency" {
+		return
+	} else if DataName == "City" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "city_code", "city_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "city_code", "city_code", Code) {
+			return true
+		}
+	} else if DataName == "Nationality" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "nationality_code", "nationality_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "nationality_code", "nationality_code", Code) {
+			return true
+		}
+	} else if DataName == "Language" {
+		return
+	} else if DataName == "IdCardType" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "id_card_code", "id_card_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "id_card_code", "id_card_code", Code) {
+			return true
+		}
+	} else if DataName == "PaymentType" {
+		if CheckCodeField(DB, db_var.TableName.GuestDetail, "payment_type_code", "payment_type_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestInHouse, "payment_type_code", "payment_type_code", Code) {
+			return true
+		}
+	} else if DataName == "MarketCategory" {
+		if CheckCodeField(DB, db_var.TableName.CfgInitMarket, "category_code", "category_code", Code) {
+			return true
+		}
+	} else if DataName == "Market" {
+		if CheckCodeField(DB, db_var.TableName.GuestDetail, "market_code", "market_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestInHouse, "market_code", "market_code", Code) {
+			return true
+		}
+	} else if DataName == "BookingSource" {
+		if CheckCodeField(DB, db_var.TableName.GuestDetail, "booking_source_code", "booking_source_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestInHouse, "booking_source_code", "booking_source_code", Code) {
+			return true
+		}
+	} else if DataName == "PurposeOf" {
+		if CheckCodeField(DB, db_var.TableName.GuestGeneral, "purpose_of_code", "purpose_of_code", Code) {
+			return true
+		}
+	} else if DataName == "CardBank" {
+		if CheckCodeField(DB, db_var.TableName.SubFolio, "card_bank_code", "card_bank_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestDeposit, "card_bank_code", "card_bank_code", Code) {
+			return true
+		}
+	} else if DataName == "CardType" {
+		if CheckCodeField(DB, db_var.TableName.SubFolio, "card_type_code", "card_type_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestDeposit, "card_type_code", "card_type_code", Code) {
+			return true
+		}
+	} else if DataName == "LoanItem" {
+		if CheckCodeField(DB, db_var.TableName.GuestLoanItem, "item_code", "item_code", Code) {
+			return true
+		}
+	} else if DataName == "CreditCardCharge" {
+		// return db_var.TableName.CfgInitCreditCardCharge
+		return
+	} else if DataName == "PhoneBookType" {
+		if CheckCodeField(DB, db_var.TableName.PhoneBook, "type_code", "type_code", Code) {
+			return true
+		}
+	} else if DataName == "MemberOutletDiscount" {
+		if CheckCodeField(DB, db_var.TableName.Member, "outlet_discount_code", "outlet_discount_code", Code) {
+			return true
+		}
+	} else if DataName == "MemberOutletDiscountDetail" {
+		// return db_var.TableName.PosCfgInitMemberOutletDiscountDetail
+	} else if DataName == "MemberPointType" {
+		if CheckCodeField(DB, db_var.TableName.Member, "room_point_type_code", "room_point_type_code", Code) {
+			return true
+		}
+	} else if DataName == "VoucherReason" {
+		return
+	} else if DataName == "CompetitorCategory" {
+		if CheckCodeField(DB, db_var.TableName.Competitor, "category_code", "category_code", Code) {
+			return true
+		}
+	} else if DataName == "Competitor" {
+		if CheckCodeField(DB, db_var.TableName.CompetitorData, "competitor_code", "competitor_code", Code) {
+			return true
+		}
+	} else if DataName == "Sales" {
+		if CheckCodeField(DB, db_var.TableName.GuestGeneral, "sales_code", "sales_code", Code) {
+			return true
+		}
+	} else if DataName == "SalesSegment" {
+		//TODO
+		return
+	} else if DataName == "SalesSource" {
+		//TODO
+		return
+	} else if DataName == "SalesTaskAction" {
+		//TODO
+		return
+	} else if DataName == "SalesTaskRepeat" {
+		//TODO
+		return
+	} else if DataName == "CustomLookupField01" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code01", "custom_lookup_field_code01", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code01", "custom_lookup_field_code01", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField02" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code02", "custom_lookup_field_code02", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code02", "custom_lookup_field_code02", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField03" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code03", "custom_lookup_field_code03", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code03", "custom_lookup_field_code03", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField04" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code04", "custom_lookup_field_code04", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code04", "custom_lookup_field_code04", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField05" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code05", "custom_lookup_field_code05", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code05", "custom_lookup_field_code05", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField06" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code06", "custom_lookup_field_code06", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code06", "custom_lookup_field_code06", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField07" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code07", "custom_lookup_field_code07", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code07", "custom_lookup_field_code07", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField08" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code08", "custom_lookup_field_code08", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code08", "custom_lookup_field_code08", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField09" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code09", "custom_lookup_field_code09", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code09", "custom_lookup_field_code09", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField10" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code10", "custom_lookup_field_code10", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code10", "custom_lookup_field_code10", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField11" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code11", "custom_lookup_field_code11", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code11", "custom_lookup_field_code11", Code) {
+			return true
+		}
+	} else if DataName == "CustomLookupField12" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "custom_lookup_field_code12", "custom_lookup_field_code12", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "custom_lookup_field_code12", "custom_lookup_field_code12", Code) {
+			return true
+		}
+	} else if DataName == "GuestType" {
+		if CheckCodeField(DB, db_var.TableName.ContactPerson, "guest_type_code", "guest_type_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.GuestProfile, "guest_type_code", "guest_type_code", Code) {
+			return true
+		}
+	} else if DataName == "Timezone" {
+		return true
+	} else if DataName == "KeylockVendor" {
+		return true
+		//POS MODULE
+	} else if DataName == "Outlet" {
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitProduct, "outlet_code", "outlet_code LIKE ?", "%"+Code.(string)+"%") {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitProductCategory, "outlet_code", "outlet_code LIKE ?", "%"+Code.(string)+"%") {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.PosCaptainOrder, "outlet_code", "outlet_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.PosCheck, "outlet_code", "outlet_code", Code) {
+			return true
+		}
+	} else if DataName == "Tenan" {
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitProduct, "tenan_code", "tenan_code LIKE ?", "%"+Code.(string)+"%") {
+			return true
+		}
+	} else if DataName == "ProductCategory" {
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitProduct, "category_code", "category_code", Code) {
+			return true
+		}
+	} else if DataName == "ProductGroup" {
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitProduct, "group_code", "group_code", Code) {
+			return true
+		}
+	} else if DataName == "Product" {
+		if CheckCodeField(DB, db_var.TableName.PosCaptainOrderTransaction, "product_code", "product_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.PosCheckTransaction, "product_code", "product_code", Code) {
+			return true
+		}
+	} else if DataName == "POSMarket" {
+		if CheckCodeField(DB, db_var.TableName.PosCaptainOrder, "market_code", "market_code", Code) {
+			return true
+		}
+	} else if DataName == "POSPaymentGroup" {
+		return
+	} else if DataName == "SpaRoom" {
+		return
+	} else if DataName == "Table" {
+		return
+	} else if DataName == "TableType" {
+		if CheckCodeField(DB, db_var.TableName.PosCfgInitTable, "type_code", "type_code", Code) {
+			return true
+		}
+	} else if DataName == "Waitress" {
+		return
+	} else if DataName == "Printer" {
+		return
+	} else if DataName == "DiscountLimit" {
+		return
+		//CAMS MODULE
+	} else if DataName == "ShippingAddress" {
+		return
+	} else if DataName == "UOM" {
+		if CheckCodeField(DB, db_var.TableName.InvCfgInitItem, "uom_code", "uom_code", Code) {
+			return true
+		}
+	} else if DataName == "Store" {
+		if CheckCodeField(DB, db_var.TableName.InvPurchaseRequestDetail, "store_code", "store_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvPurchaseOrderDetail, "store_code", "store_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvReceivingDetail, "store_code", "store_code", Code) {
+			return true
+		}
+	} else if DataName == "ItemCategory" {
+		if CheckCodeField(DB, db_var.TableName.InvCfgInitItem, "category_code", "category_code", Code) {
+			return true
+		}
+	} else if DataName == "ItemCategoryOtherCOGS" {
+		return
+	} else if DataName == "ItemCategoryOtherCOGS2" {
+		return
+	} else if DataName == "ItemCategoryOtherExpense" {
+		return
+	} else if DataName == "Item" {
+		if CheckCodeField(DB, db_var.TableName.InvPurchaseRequestDetail, "item_code", "item_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvPurchaseOrderDetail, "item_code", "item_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvReceivingDetail, "item_code", "item_code", Code) {
+			return true
+		}
+	} else if DataName == "ItemUOM" {
+		return
+	} else if DataName == "ItemGroup" {
+		if CheckCodeField(DB, db_var.TableName.InvReceivingDetail, "item_group_code", "item_group_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.InvCostingDetail, "item_group_code", "item_group_code", Code) {
+			return true
+		}
+	} else if DataName == "ReturnStockReason" {
+		return
+	} else if DataName == "MarketList" {
+		return
+	} else if DataName == "FAManufacture" {
+		if CheckCodeField(DB, db_var.TableName.FaList, "manufacture_code", "manufacture_code", Code) {
+			return true
+		}
+	} else if DataName == "FALocation" {
+		if CheckCodeField(DB, db_var.TableName.FaList, "location_code", "location_code", Code) {
+			return true
+		}
+	} else if DataName == "FAItemCategory" {
+		if CheckCodeField(DB, db_var.TableName.FaCfgInitItem, "category_code", "category_code", Code) {
+			return true
+		}
+	} else if DataName == "FAItem" {
+		if CheckCodeField(DB, db_var.TableName.FaPurchaseOrderDetail, "item_code", "item_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.FaReceiveDetail, "item_code", "item_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.FaList, "item_code", "item_code", Code) {
+			return true
+		}
+		//BANQUET
+	} else if DataName == "VenueGroup" {
+		if CheckCodeField(DB, db_var.TableName.BanCfgInitVenue, "venue_group_code", "venue_group_code", Code) {
+			return true
+		}
+	} else if DataName == "Venue" {
+		if CheckCodeField(DB, db_var.TableName.BanBooking, "venue_code", "venue_code", Code) {
+			return true
+		}
+		if CheckCodeField(DB, db_var.TableName.BanCfgInitVenueCombineDetail, "venue_code", "venue_code", Code) {
+			return true
+		}
+	} else if DataName == "SeatingPlan" {
+		if CheckCodeField(DB, db_var.TableName.BanBooking, "seating_plan_code", "seating_plan_code", Code) {
+			return true
+		}
+	} else if DataName == "Theme" {
+		if CheckCodeField(DB, db_var.TableName.BanBooking, "theme_code", "theme_code", Code) {
+			return true
+		}
+	} else if DataName == "VenueCombine" {
+		if CheckCodeField(DB, db_var.TableName.BanBooking, "theme_code", "theme_code", Code) {
+			return true
+		}
+	} else if DataName == "VenueCombineDetail" {
+		return
+	} else if DataName == "VenueLocation" {
+		return true
+	} else if DataName == "Layout" {
+		return
+		//Global All Module
+	} else if DataName == "UserGroup" {
+		if CheckCodeField(DB, db_var.TableName.BanBooking, "user_group_access_code", "user_group_access_code", Code) {
+			return true
+		}
+	}
+	return false
 }
 
 func GetMasterDataValidationSearchField1(Index int64) string {
@@ -1109,6 +1998,22 @@ func GetMasterDataValidationSearchField2(Index int64) string {
 		SearchField = "created_by"
 	case 3:
 		SearchField = "updated_by"
+	}
+	SearchField = SearchField + " LIKE ?"
+	return SearchField
+}
+
+func GetMasterDataValidationSearchField3(Index int64, TableName string) string {
+	var SearchField string
+	switch Index {
+	case 0:
+		SearchField = TableName + ".code"
+	case 1:
+		SearchField = TableName + ".name"
+	case 2:
+		SearchField = TableName + ".created_by"
+	case 3:
+		SearchField = TableName + ".updated_by"
 	}
 	SearchField = SearchField + " LIKE ?"
 	return SearchField
@@ -1258,10 +2163,12 @@ func GetMasterDataListValidation(DataName string, Index int64, Text string, Opti
 		Query = "SELECT" +
 			" " + TableName + ".*," +
 			" const_journal_account_group.name AS GroupName," +
-			" const_journal_account_sub_group_type.name AS JournalAccountSubGroupTypeName " +
+			" const_journal_account_sub_group_type.name AS JournalAccountSubGroupTypeName," +
+			" CONCAT(cfg_init_journal_account_sub_group.parent_code, ' - ', cfg_init_journal_account_sub_group1.name) AS Parent " +
 			"FROM" +
 			" " + TableName +
 			" LEFT OUTER JOIN const_journal_account_group ON (" + TableName + ".group_code = const_journal_account_group.code)" +
+			" LEFT OUTER JOIN cfg_init_journal_account_sub_group cfg_init_journal_account_sub_group1 ON (cfg_init_journal_account_sub_group.parent_code = cfg_init_journal_account_sub_group1.code)" +
 			" LEFT OUTER JOIN const_journal_account_sub_group_type ON (" + TableName + ".type_code = const_journal_account_sub_group_type.code)" +
 			QueryCondition + " " +
 			"ORDER BY " + TableName + ".code;"
@@ -1785,6 +2692,7 @@ func GetMasterDataListValidation(DataName string, Index int64, Text string, Opti
 			" " + TableName + ".updated_by," +
 			" " + TableName + ".id," +
 			" CONCAT(cfg_init_room_type.name, ' ', cfg_init_bed_type.name) AS RoomType," +
+			" cfg_init_account.name AS RevenueAccount," +
 			" cfg_init_room_view.name AS ViewName," +
 			" cfg_init_owner.name AS OwnerName " +
 			"FROM" +
@@ -1793,6 +2701,7 @@ func GetMasterDataListValidation(DataName string, Index int64, Text string, Opti
 			" LEFT OUTER JOIN cfg_init_bed_type ON (" + TableName + ".bed_type_code = cfg_init_bed_type.code)" +
 			" LEFT OUTER JOIN cfg_init_room_view ON (" + TableName + ".view_code = cfg_init_room_view.code)" +
 			" LEFT OUTER JOIN cfg_init_owner ON (" + TableName + ".owner_code = cfg_init_owner.code)" +
+			" LEFT OUTER JOIN cfg_init_account ON (" + TableName + ".revenue_account_code = cfg_init_account.code)" +
 			" LEFT OUTER JOIN const_room_status ON (cfg_init_room.status_code = const_room_status.code)" +
 			QueryCondition + " " +
 			"ORDER BY " + TableName + ".id_sort, " + TableName + ".number;"
@@ -2517,7 +3426,9 @@ func GetMasterDataListValidation(DataName string, Index int64, Text string, Opti
 		(DataName == "SalesTaskRepeat") || (DataName == "SalesTaskTag") || (DataName == "POSMarket") || (DataName == "Waitress") || (DataName == "TableType") ||
 		(DataName == "GuestType") ||
 		//CAMS MODULE
-		(DataName == "UOM") || (DataName == "Store") || (DataName == "ItemGroup") || (DataName == "ReturnStockReason") || (DataName == "FAManufacture") {
+		(DataName == "UOM") || (DataName == "Store") || (DataName == "ItemGroup") || (DataName == "ReturnStockReason") || (DataName == "FAManufacture") ||
+		// BANQUET
+		(DataName == "VenueGroup") || (DataName == "Venue") || (DataName == "Theme") || (DataName == "SeatingPlan") {
 		SearchField = GetMasterDataValidationSearchField1(Index)
 	} else if DataName == "ItemGroup" {
 		SearchField = GetMasterDataValidationSearchField91(Index, TableName, "const_inv_item_group_type.name")
@@ -2542,6 +3453,79 @@ func GetMasterDataListValidation(DataName string, Index int64, Text string, Opti
 		SearchField = GetMasterDataValidationSearchField92(Index, TableName, "account_code", "symbol")
 	} else if DataName == "Sales" {
 		SearchField = GetMasterDataValidationSearchField93(Index, TableName, "email", "phone_number", "wa_number")
+	} else if DataName == "Venue" {
+		SearchField = GetMasterDataValidationSearchField1(Index)
+		if Text != "" {
+			QueryCondition = " WHERE " + SearchField
+		}
+		Query =
+
+			"SELECT" +
+				" ban_cfg_init_venue.code," +
+				" ban_cfg_init_venue.name," +
+				" ban_cfg_init_venue.location_code," +
+				" ban_cfg_init_venue.created_by," +
+				" ban_cfg_init_venue.created_at," +
+				" ban_cfg_init_venue.updated_by," +
+				" ban_cfg_init_venue.updated_at," +
+				" ban_cfg_init_venue.id," +
+				" ban_const_venue_location.name AS Location " +
+				"FROM" +
+				"  ban_cfg_init_venue" +
+				" LEFT OUTER JOIN ban_const_venue_location ON ( ban_cfg_init_venue.location_code = ban_const_venue_location.code) " +
+				QueryCondition + " " +
+				"ORDER BY  ban_cfg_init_venue.code "
+
+	} else if DataName == "VenueCombine" {
+		SearchField = GetMasterDataValidationSearchField3(Index, TableName)
+		if Text != "" {
+			QueryCondition = " WHERE " + SearchField
+		}
+		Query =
+			"SELECT" +
+				" ban_cfg_init_venue_combine.code," +
+				" ban_cfg_init_venue_combine.name," +
+				" ban_cfg_init_venue_combine.location_code," +
+				" ban_cfg_init_venue_combine.created_by," +
+				" ban_cfg_init_venue_combine.id," +
+				" ban_const_venue_location.name AS Location " +
+				"FROM" +
+				" ban_cfg_init_venue_combine" +
+				" LEFT OUTER JOIN ban_const_venue_location ON (ban_cfg_init_venue_combine.location_code = ban_const_venue_location.code)" +
+				QueryCondition + " " +
+				"ORDER BY ban_cfg_init_venue_combine.code"
+
+	} else if DataName == "VenueCombineDetail" {
+		Query =
+			"SELECT" +
+				" ban_cfg_init_venue_combine_detail.combine_venue_code," +
+				" ban_cfg_init_venue_combine_detail.venue_code," +
+				" ban_cfg_init_venue_combine_detail.combine_group," +
+				" ban_cfg_init_venue_combine_detail.created_by," +
+				" ban_cfg_init_venue_combine_detail.id," +
+				" ban_cfg_init_venue.name AS Venue " +
+				"FROM" +
+				" ban_cfg_init_venue_combine_detail" +
+				" LEFT OUTER JOIN ban_cfg_init_venue ON (ban_cfg_init_venue_combine_detail.venue_code = ban_cfg_init_venue.code) " +
+				"WHERE ban_cfg_init_venue_combine_detail.combine_venue_code = ? "
+	} else if DataName == "Layout" {
+		switch Index {
+		case 0:
+			SearchField = TableName + ".name LIKE ?"
+		case 1:
+			SearchField = TableName + ".created_by LIKE ?"
+		case 2:
+			SearchField = TableName + ".updated_by LIKE ?"
+		}
+
+		if Text != "" {
+			QueryCondition = " WHERE " + SearchField
+		}
+		Query =
+			"SELECT * " +
+				"FROM" +
+				" ban_cfg_init_layout " +
+				QueryCondition
 	}
 	return TableName, Query, SearchField
 }
@@ -2588,9 +3572,9 @@ func GetMasterDataListP(c *gin.Context) {
 		DB := pConfig.DB
 
 		TableName, Query, SearchField := GetMasterDataListValidation(DataName, Index, Text, Option1, String1, String2)
-		fmt.Println("TableName", TableName)
-		fmt.Println("Query", Query)
-		fmt.Println("SearchField", SearchField)
+		// fmt.Println("TableName", TableName)
+		// fmt.Println("Query", Query)
+		// fmt.Println("SearchField", SearchField)
 		var DataOutput []map[string]interface{}
 		if Query == "" {
 			if SearchField == "" {
@@ -2722,6 +3706,13 @@ func GetDetailDataListP(c *gin.Context) {
 		if result.Error == nil {
 			DataOutputArray["MemberOutletDiscountDetail"] = DataOutput
 		}
+	} else if DataName == "VenueCombine" {
+		var DataOutput []map[string]interface{}
+		_, Query, _ := GetMasterDataListValidation("VenueCombineDetail", 0, "", 0, "", "")
+		result := DB.WithContext(ctx).Raw(Query, Param).Scan(&DataOutput)
+		if result.Error == nil {
+			DataOutputArray["VenueCombineDetail"] = DataOutput
+		}
 	}
 
 	if err == nil {
@@ -2739,10 +3730,7 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 	TableName := GetMasterDataTableName(DataName)
 
 	// Get Program Configuration
-	val, exist := c.Get("pConfig")
-	if !exist {
-		// return
-	}
+	val, _ := c.Get("pConfig")
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
 
@@ -2751,6 +3739,7 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
+				DataInputX.IsNew = 1
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
 					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
@@ -2895,11 +3884,15 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
 			if ModeEditor == 0 {
+				if pConfig.Dataset.ProgramConfiguration.AutoGenerateCompanyCode {
+					DataInputX.Code = GetCompanyCode(DB, pConfig.Dataset, global_var.ConstProgramVariable.CompanyCodePrefix)
+				}
 				if CheckCode(c, DB, TableName, DataInputX.Code) {
 					err = errors.New(global_var.ResponseText.DuplicateEntry)
 				} else {
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
+
 			} else {
 				DataInputMarshal, err = json.Marshal(DataInputX)
 			}
@@ -3564,6 +4557,10 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 		var DataInputX db_var.Pos_cfg_init_outlet
 		err = c.BindJSON(&DataInputX)
 		if err == nil {
+			if DataInputX.CommissionTypeCode == "" {
+				DataInputX.CommissionTypeCode = "0"
+			}
+
 			if ModeEditor == 0 {
 				if CheckCode(c, DB, TableName, DataInputX.Code) || CheckData(c, DB, TableName, "check_prefix", DataInputX.CheckPrefix) {
 					err = errors.New(global_var.ResponseText.DuplicateEntry)
@@ -3746,6 +4743,98 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 				}
 			}
 		}
+		// BANQUET
+	} else if DataName == "VenueGroup" {
+		var DataInputX db_var.Ban_cfg_init_venue_group
+		err = c.BindJSON(&DataInputX)
+		if err == nil {
+			if ModeEditor == 0 {
+				if CheckCode(c, DB, TableName, DataInputX.Code) {
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
+				} else {
+					DataInputMarshal, err = json.Marshal(DataInputX)
+				}
+			} else {
+				DataInputMarshal, err = json.Marshal(DataInputX)
+			}
+		}
+	} else if DataName == "Venue" {
+		var DataInputX db_var.Ban_cfg_init_venue
+		err = c.BindJSON(&DataInputX)
+		if err == nil {
+			if ModeEditor == 0 {
+				if CheckCode(c, DB, TableName, DataInputX.Code) {
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
+				} else {
+					DataInputMarshal, err = json.Marshal(DataInputX)
+				}
+			} else {
+				DataInputMarshal, err = json.Marshal(DataInputX)
+			}
+		}
+	} else if DataName == "VenueCombine" {
+		type DataInputStruct struct {
+			Code         string `json:"code" binding:"required"`
+			Name         string `json:"name" binding:"required"`
+			GroupNumber  uint8  `json:"group_number"`
+			LocationCode string `json:"location_code" binding:"required"`
+			VenueCode    string `json:"venue_code" binding:"required"`
+		}
+		var DataInputX DataInputStruct
+		err = c.BindJSON(&DataInputX)
+		if err == nil {
+			if ModeEditor == 0 {
+				if CheckCode(c, DB, TableName, DataInputX.Code) {
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
+				} else {
+					DataInputMarshal, err = json.Marshal(DataInputX)
+				}
+			} else {
+				DataInputMarshal, err = json.Marshal(DataInputX)
+			}
+		}
+	} else if DataName == "SeatingPlan" {
+		var DataInputX db_var.Ban_cfg_init_seating_plan
+		err = c.BindJSON(&DataInputX)
+		if err == nil {
+			if ModeEditor == 0 {
+				if CheckCode(c, DB, TableName, DataInputX.Code) {
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
+				} else {
+					DataInputMarshal, err = json.Marshal(DataInputX)
+				}
+			} else {
+				DataInputMarshal, err = json.Marshal(DataInputX)
+			}
+		}
+	} else if DataName == "Theme" {
+		var DataInputX db_var.Ban_cfg_init_theme
+		err = c.BindJSON(&DataInputX)
+		if err == nil {
+			if ModeEditor == 0 {
+				if CheckCode(c, DB, TableName, DataInputX.Code) {
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
+				} else {
+					DataInputMarshal, err = json.Marshal(DataInputX)
+				}
+			} else {
+				DataInputMarshal, err = json.Marshal(DataInputX)
+			}
+		}
+	} else if DataName == "VenueCombineDetail" {
+		var DataInputX db_var.Ban_cfg_init_venue_combine_detail
+		err = c.BindJSON(&DataInputX)
+		if err == nil {
+			if ModeEditor == 0 {
+				if CheckCode(c, DB, TableName, DataInputX.CombineVenueCode) {
+					err = errors.New(global_var.ResponseText.DuplicateEntry)
+				} else {
+					DataInputMarshal, err = json.Marshal(DataInputX)
+				}
+			} else {
+				DataInputMarshal, err = json.Marshal(DataInputX)
+			}
+		}
 		//CAMS MODULE
 	} else if DataName == "ShippingAddress" {
 		var DataInputX db_var.Ast_cfg_init_shipping_address
@@ -3868,6 +4957,11 @@ func MasterDataValidation(ModeEditor byte, c *gin.Context, DataName string) (str
 					DataInputMarshal, err = json.Marshal(DataInputX)
 				}
 			} else {
+				// IsUsed := MasterDataUsedValidation(DB, pConfig.Dataset, DataInputX.Code, DataName)
+				// if IsUsed {
+				// 	DataInputX.CategoryCode = ""
+				// 	DataInputX.UomCode = ""
+				// }
 				DataInputMarshal, err = json.Marshal(DataInputX)
 			}
 		}
@@ -4037,6 +5131,7 @@ func InsertMasterDataP(c *gin.Context) {
 				return
 			}
 			pConfig := val.(*config.CompanyDataConfiguration)
+			SubscriptionStatus := subscription.ActiveSubscriptions[pConfig.Subdomain]
 			DB := pConfig.DB
 
 			ValidUserCode := c.GetString("ValidUserCode")
@@ -4047,8 +5142,8 @@ func InsertMasterDataP(c *gin.Context) {
 				var TotalRoom int64
 				DB.WithContext(ctx).Table(db_var.TableName.CfgInitRoom).Count(&TotalRoom)
 
-				if TotalRoom >= pConfig.Rooms {
-					SendResponse(global_var.ResponseCode.OtherResult, "Cannot add more room", nil, c)
+				if TotalRoom >= int64(SubscriptionStatus.Rooms) {
+					SendResponse(global_var.ResponseCode.OtherResult, "You have reached the max rooms allowed. Please check your subscription!", nil, c)
 					return
 				}
 
@@ -4073,6 +5168,49 @@ func InsertMasterDataP(c *gin.Context) {
 				result = DB.WithContext(ctx).Table(TableName).Omit("is_cm_updated", "is_cm_updated_inclusion", "is_sent", "created_at", "updated_at", "id").Create(&DataInput)
 			} else if DataName == "Product" {
 				result = DB.WithContext(ctx).Table(TableName).Omit("is_sold", "created_at", "updated_at", "id").Create(&DataInput)
+			} else if DataName == "VenueCombine" {
+				VenueList := strings.Split(DataInput["venue_code"].(string), "|")
+				VenueCombineCode := DataInput["code"].(string)
+				GroupNumber := DataInput["group_number"].(float64)
+				LocationCode := DataInput["location_code"].(string)
+
+				var venueList []db_var.Ban_cfg_init_venue_combine_detail
+				for index := range VenueList {
+					venueList = append(venueList, db_var.Ban_cfg_init_venue_combine_detail{
+						CombineVenueCode: VenueCombineCode,
+						CombineGroup:     "",
+						VenueCode:        VenueList[index],
+						CreatedBy:        ValidUserCode,
+					})
+				}
+				VenueCombineData := db_var.Ban_cfg_init_venue_combine{
+					Code:         VenueCombineCode,
+					GroupNumber:  uint8(GroupNumber),
+					Name:         DataInput["name"].(string),
+					LocationCode: LocationCode,
+					CreatedBy:    ValidUserCode,
+				}
+				if err := DB.Transaction(func(tx *gorm.DB) error {
+					// Master
+					if err := tx.WithContext(ctx).Table(db_var.TableName.BanCfgInitVenueCombine).Omit("created_at", "updated_at", "id").Create(&VenueCombineData).Error; err != nil {
+						// utils.LogResponseError(c, ctx, global_var.AppLogger, errors.Wrap(err, "ProcessMemberProductDiscountP.query"))
+						// SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
+						return err
+					}
+					//Detail
+					if err := tx.WithContext(ctx).Table(db_var.TableName.BanCfgInitVenueCombineDetail).Omit("created_at", "updated_at", "id").Create(&venueList).Error; err != nil {
+						// utils.LogResponseError(c, ctx, global_var.AppLogger, errors.Wrap(err, "ProcessMemberProductDiscountP.query"))
+						// SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
+						return err
+					}
+					return nil
+				}); err != nil {
+					SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
+					return
+				}
+
+				SendResponse(global_var.ResponseCode.Successfully, "", nil, c)
+				return
 			} else if DataName == "MemberOutletDiscountDetail" {
 				if DataInput["discount_percent"].(float64) > 100 || DataInput["discount_percent"].(float64) < 0 {
 					SendResponse(global_var.ResponseCode.InvalidDataFormat, "Invalid discount value", nil, c)
@@ -4125,6 +5263,9 @@ func InsertMasterDataP(c *gin.Context) {
 func GetMasterDataP(c *gin.Context) {
 	DataName := c.Param("DataName")
 	Param := c.Param("Param")
+	ctx, span := global_var.Tracer.Start(utils.GetRequestCtx(c), "GetMasterDataP", trace.WithAttributes(attribute.String("DataName", DataName), attribute.String("Param", Param)))
+	defer span.End()
+
 	TableName := GetMasterDataTableName(DataName)
 	var result *gorm.DB
 	var DataOutput map[string]interface{}
@@ -4138,21 +5279,38 @@ func GetMasterDataP(c *gin.Context) {
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
 
+	// var KeyField string = "code"
 	if (DataName == "Room") || (DataName == "SpaRoom") || (DataName == "Table") {
-		result = DB.Table(TableName).Where("number=?", Param).Scan(&DataOutput)
+		// KeyField = "number"
+		result = DB.WithContext(ctx).Table(TableName).Where("number=?", Param).Scan(&DataOutput)
 	} else if (DataName == "PackageBreakdown") || (DataName == "PackageBusinessSource") ||
 		(DataName == "RoomRateBreakdown") || (DataName == "RoomRateBusinessSource") || (DataName == "RoomRateDynamic") || (DataName == "RoomRateCurrency") ||
 		(DataName == "CurrencyNominal") || (DataName == "DiscountLimit") || (DataName == "MarketList") ||
 		(DataName == "ItemCategoryOtherCOGS") || (DataName == "ItemCategoryOtherCOGS2") || (DataName == "ItemCategoryOtherExpense") ||
 		(DataName == "ItemUOM") || (DataName == "MemberOutletDiscountDetail") {
-		result = DB.Table(TableName).Where("id=?", Param).Scan(&DataOutput)
+		// KeyField = "id"
+		result = DB.WithContext(ctx).Table(TableName).Where("id=?", Param).Scan(&DataOutput)
 	} else if (DataName == "POSPaymentGroup") || (DataName == "CreditCardCharge") {
-		result = DB.Table(TableName).Where("account_code=?", Param).Scan(&DataOutput)
+		// KeyField = "account_code"
+		result = DB.WithContext(ctx).Table(TableName).Where("account_code=?", Param).Scan(&DataOutput)
+	} else if DataName == "VenueCombine" {
+		// KeyField = "code"
+		DB.WithContext(ctx).Table(TableName).Where("code=?", Param).Scan(&DataOutput)
+		var VenueCode []string
+		result = DB.WithContext(ctx).Table(db_var.TableName.BanCfgInitVenueCombineDetail).Select("venue_code").Where("combine_venue_code=?", Param).Scan(&VenueCode)
+		VenueCodeX := strings.Join(VenueCode, "|")
+		if DataOutput != nil {
+			DataOutput["venue_code"] = VenueCodeX
+		}
 	} else {
-		result = DB.Table(TableName).Where("code=?", Param).Scan(&DataOutput)
+		result = DB.WithContext(ctx).Table(TableName).Where("code=?", Param).Scan(&DataOutput)
 	}
+	IsUsed := MasterDataUsedValidation(DB, pConfig.Dataset, Param, DataName, true)
 	if result.Error == nil {
-		SendResponse(global_var.ResponseCode.Successfully, "", DataOutput, c)
+		SendResponse(global_var.ResponseCode.Successfully, "", gin.H{
+			"data":    DataOutput,
+			"is_used": IsUsed,
+		}, c)
 	} else {
 		SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
 	}
@@ -4160,6 +5318,9 @@ func GetMasterDataP(c *gin.Context) {
 
 func UpdateMasterDataP(c *gin.Context) {
 	DataName := c.Param("DataName")
+	ctx, span := global_var.Tracer.Start(utils.GetRequestCtx(c), "UpdateMasterDataP", trace.WithAttributes(attribute.String("DataName", DataName)))
+	defer span.End()
+
 	if DataName != "" {
 		// Get Program Configuration
 		val, exist := c.Get("pConfig")
@@ -4218,6 +5379,50 @@ func UpdateMasterDataP(c *gin.Context) {
 				result = DB.Table(TableName).Where(KeyField+"=?", DataInput[KeyField]).Omit("is_sold", "created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
 			} else if (DataName == "ItemCategoryOtherCOGS") || (DataName == "ItemCategoryOtherCOGS2") || (DataName == "ItemCategoryOtherExpense") || (DataName == "ItemUOM") {
 				result = DB.Table(TableName).Where(KeyField+"=?", general.InterfaceToUint64(DataInput[KeyField])).Omit("created_at", "created_by", "updated_at", KeyField).Updates(&DataInput)
+			} else if DataName == "VenueCombine" {
+				VenueList := strings.Split(DataInput["venue_code"].(string), "|")
+				VenueCombineCode := DataInput["code"].(string)
+				GroupNumber := DataInput["group_number"].(float64)
+				LocationCode := DataInput["location_code"].(string)
+
+				var venueList []db_var.Ban_cfg_init_venue_combine_detail
+				for index := range VenueList {
+					venueList = append(venueList, db_var.Ban_cfg_init_venue_combine_detail{
+						CombineVenueCode: VenueCombineCode,
+						CombineGroup:     "",
+						VenueCode:        VenueList[index],
+						CreatedBy:        ValidUserCode,
+					})
+				}
+				VenueCombineData := db_var.Ban_cfg_init_venue_combine{
+					Code:         VenueCombineCode,
+					GroupNumber:  uint8(GroupNumber),
+					Name:         DataInput["name"].(string),
+					LocationCode: LocationCode,
+					UpdatedBy:    ValidUserCode,
+				}
+				if err := DB.Transaction(func(tx *gorm.DB) error {
+					// Master
+					if err := tx.WithContext(ctx).Table(db_var.TableName.BanCfgInitVenueCombine).Where("code", VenueCombineCode).Omit("code", "created_at", "created_by", "updated_at", "id").Updates(&VenueCombineData).Error; err != nil {
+						// utils.LogResponseError(c, ctx, global_var.AppLogger, errors.Wrap(err, "ProcessMemberProductDiscountP.query"))
+						// SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
+						return err
+					}
+					//Detail
+					tx.WithContext(ctx).Table(db_var.TableName.BanCfgInitVenueCombineDetail).Where("combine_venue_code", VenueCombineCode).Delete(&VenueCombineCode)
+					if err := tx.WithContext(ctx).Table(db_var.TableName.BanCfgInitVenueCombineDetail).Omit("created_at", "updated_at", "id").Create(&venueList).Error; err != nil {
+						// utils.LogResponseError(c, ctx, global_var.AppLogger, errors.Wrap(err, "ProcessMemberProductDiscountP.query"))
+						// SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
+						return err
+					}
+					return nil
+				}); err != nil {
+					SendResponse(global_var.ResponseCode.DatabaseError, "", nil, c)
+					return
+				}
+
+				SendResponse(global_var.ResponseCode.Successfully, "", nil, c)
+				return
 			} else {
 				result = DB.Table(TableName).Where(KeyField+"=?", DataInput[KeyField]).Omit(KeyField, "created_at", "created_by", "updated_at", "id").Updates(&DataInput)
 			}
@@ -4245,6 +5450,11 @@ func DeleteMasterDataP(c *gin.Context) {
 	pConfig := val.(*config.CompanyDataConfiguration)
 	DB := pConfig.DB
 
+	IsUsed := MasterDataUsedValidation(DB, pConfig.Dataset, Param, DataName, false)
+	if IsUsed {
+		SendResponse(global_var.ResponseCode.OtherResult, "Cannot delete data already used.", nil, c)
+		return
+	}
 	UpdatedBy := c.GetString("ValidUserCode")
 	var KeyField string = "code"
 	if (DataName == "Room") || (DataName == "SpaRoom") || (DataName == "Table") {
@@ -4634,7 +5844,7 @@ func GetAccountBySubDepartmentTransactionEditorP(c *gin.Context) {
 }
 
 func GetAccountSubGroupByAccountCode1P(c *gin.Context) {
-	var AccountCode string
+	AccountCode := c.Param("AccountCode")
 	// Get Program Configuration
 	val, exist := c.Get("pConfig")
 	if !exist {
@@ -4726,4 +5936,27 @@ func GetBusinessSourceCommissionRateP(c *gin.Context) {
 	}
 
 	SendResponse(global_var.ResponseCode.Successfully, "", DataOutput, c)
+}
+
+func GetCompanyCode(DB *gorm.DB, Dataset *global_var.TDataset, Prefix string) string {
+	var result string
+	CompanyCodeDigit := Dataset.ProgramConfiguration.CompanyCodeDigit
+
+	// Query the database for the maximum company code with the given prefix
+	var maxCode string
+	if err := DB.Raw("SELECT CAST(RIGHT(code, LENGTH(code)-?) AS UNSIGNED) AS MaxCompanyCode FROM company WHERE LEFT(code, ?)=? ORDER BY MaxCompanyCode DESC LIMIT 1", len(Prefix), len(Prefix), Prefix).Scan(&maxCode).Error; err != nil {
+		log.Println("Error querying database:", err)
+		return Prefix + strings.Repeat("0", CompanyCodeDigit-len(Prefix)-1) + "1"
+	}
+
+	// Calculate the new company code
+	if maxCode == "" {
+		result = Prefix + strings.Repeat("0", CompanyCodeDigit-len(Prefix)-1) + "1"
+	} else {
+		maxCompanyCode, _ := strconv.Atoi(maxCode)
+		newCode := maxCompanyCode + 1
+		result = Prefix + fmt.Sprintf("%0*d", CompanyCodeDigit-len(Prefix), newCode)
+	}
+
+	return result
 }

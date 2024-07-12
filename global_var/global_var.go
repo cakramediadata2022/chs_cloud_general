@@ -25,6 +25,9 @@ type TProgramVariable struct {
 type TTimeSegment struct {
 	Breakfast, Lunch, Dinner, CoffeBreak string
 }
+type TInputOf struct {
+	Reservation, InHouse, CheckOut string
+}
 
 type TFNBStructureRate struct {
 	Portion, Revenue, Average string
@@ -42,13 +45,18 @@ type TReportTemplateName struct {
 	DailyRevenueReport8,
 	DailyRevenueReport9,
 	DailyRevenueReport10,
-	DailyRevenueReport11 string
+	DailyRevenueReport11,
+	DailyRevenueReport12 string
 }
 
 type TCustomDateOptions struct {
 	Condition21,
 	Condition22,
 	ConditionAuditDate2 string
+}
+
+type TVenueLocation struct {
+	Inside, Outside string
 }
 
 type TReportCodeName struct {
@@ -162,6 +170,7 @@ type TReportCodeName struct {
 	PackageBreakdown,
 	RoomRateStructure,
 	RoomRevenue,
+	LateCheckOut,
 	Sales,
 	SalesSummary,
 	FrequentlySales,
@@ -357,18 +366,21 @@ type TReportCodeName struct {
 }
 
 type TProgramConfiguration struct {
-	MemberPointExpire, VoucherLength, VoucherExpire, VoucherPointRedeem, LimitGrid, GridRowHeight, DueDateColor, LogoWidth, ReportHeaderAlignment, PMSServicePort, NotificationDuration, NotificationDelay, NotificationWidth, NotificationHeight, NotificationStyle, NotificationPosition int
+	CMGlobalPercentAvailability, CMGlobalMinRoomLeft, MemberPointExpire, VoucherLength, VoucherExpire, VoucherPointRedeem, LimitGrid, GridRowHeight, DueDateColor, LogoWidth, ReportHeaderAlignment, PMSServicePort, NotificationDuration, NotificationDelay, NotificationWidth, NotificationHeight, NotificationStyle, NotificationPosition int
 	IsReplication, UseChildRate, IsRoomByName, PostFirstNightCharge, PostDiscount, IsRoomNumberRequired, IsBusinessSourceRequired, IsMarketRequired, IsTitleRequired, IsStateRequired, IsCityRequired, IsNationalityRequired, IsPhone1Required, IsEmailRequired, IsCompanyRequired, IsPurposeOfRequired, IsTAVoucherRequired, IsHKNoteRequired, FilterRateByMarket, FilterRateByCompany, AlwaysShowPublishRate, LockFolioOnCheckIn, IsAccrualBase, FormMDIChild, ShowGridGroupByBox, GridCanEditCell,
 	ShowTaxService, AllowZeroAmount, PrintRegFormAfterCheckIn, ShowRate, ShowTransferOnCashierReport, ShowComplimentOnCashierReport, IncomeBudgetCalculateEachDay, InsertServerIDOnNumber, VRVCRoomStatus, ShowRemarkOnRoomAvailability, IsCalculateAllRoomRevenueSubGroup,
-	MemberAutoUpdateMemberProfile, PABXAutoChargeToFolio, CCMSSMReservationAsAllotment, CCMSSMSynchronizeReservation, CCMSSMSynchronizeAvailability, CCMSSMSynchronizeRate, MikrotikAutoCreateUser, MikrotikSameUserPassword, MikrotikAskForPassword, NotificationActive, CanCLOverLimit, CompanyContactPersonRequired, CompanyStreetRequired, CompanyCityRequired, CompanyCountryRequired, CompanyStateRequired, CompanyPostalCodeRequired, CompanyPhone1Required, AutoGenerateCompanyCode, VentazaUseLift,
+	MemberAutoUpdateMemberProfile, PABXAutoChargeToFolio, CCMSSMReservationAsAllotment, CCMSSMSynchronizeReservation, CCMSSMSynchronizeAvailability, CCMSSMSynchronizeAvailabilityByBedType, CCMSSMSynchronizeRate, MikrotikAutoCreateUser, MikrotikSameUserPassword, MikrotikAskForPassword, NotificationActive, CanCLOverLimit, CompanyContactPersonRequired, CompanyStreetRequired, CompanyCityRequired, CompanyCountryRequired, CompanyStateRequired, CompanyPostalCodeRequired, CompanyPhone1Required, AutoGenerateCompanyCode, VentazaUseLift,
 	EmailReminderReservation, EmailOnCheckIn, EmailOnCheckOut, EmailOnGuestBirthDay, EmailSalesActivitySendReminder, FridayAsWeekend, SaturdayAsWeekend, SundayAsWeekend,
 	ShowPurchasePricePRSR,
-	LockTransactionDateInventory,
 	SynchronizePOAndReceive,
 	IsPurchasingApproval,
 	IsCompanyPRApplyPriceMoreThanOne,
-	WAReminderReservation, WAOnCheckIn, WAOnCheckOut, WAOnGuestBirthDay, WASalesActivitySendReminder, AutomaticCreateInvoiceCLAtCheckOut, ReceiveStockAPTwoDigitDecimal, AutoImportJournal bool
+	WAReminderReservation, WAOnCheckIn, WAOnCheckOut, WAOnGuestBirthDay, WASalesActivitySendReminder, AutoCostingCostRecipeonCloseTransaction, AutomaticCreateInvoiceCLAtCheckOut, ReceiveStockAPTwoDigitDecimal, AutoImportJournal bool
 	UnitCode, BillFileName,
+
+	RTJournalVoucher, RTJournalVoucherPaymentForm, RTJournalVoucherReceiveForm, RTGeneralLedger, RTTrialBalance, RTBalanceSheet, RTBalanceSheetbyCategory, RTBalanceSheetbyCategorySummary, RTBankBook, RTBankBookGroupByReference, RTIncomeStatement,
+	RTProfitLoss, RTProfitLossDetail, RTProfitLossDetailByCategory, RTProfitLossBySubDepartment, RTProfitLossDetailBySubDepartment, RTProfitLossDetailBySubDepartmentByCategory, RTProfitLossByDepartment, RTProfitLossDetailByDepartment, RTProfitLossDetailByDepartmentByCategory, RTProfitLossMultiPeriod, QRURLDomainFolio, QRURLDomainInvoice, ApplicationLabel string
+
 	DefaultFolio, RegistrationFormReservation, RegistrationFormInHouse, ConfirmationLetter, ConfirmationLetterSelected, GuaranteedLetter, ProformaInvoice, ProformaInvoiceDetail, FolioFooter, KeylockVendor, PMSServiceAddress, SureLockHotelID, KimaOperatorCode, VingCardKeyType, VingCardUserGroup,
 	InvoiceRemark, InvoiceNote, InvoiceAPNote, InvoiceTemplate, TaxServiceRemark, GuaranteeLetterRemark, BankName1, BankAccount1, HolderName1, BankName2, BankAccount2, HolderName2,
 	ActiveStoreCode, CompanyTypeTravelAgent, VoucherDescription, VoucherTemplate, VoucherSaleDiscountTemplate, VingCardSource, VingCardDestination, BeTechServerName, BeTechUserName, BeTechPassword, OnityServerName, OnityEncoderNumber,
@@ -376,17 +388,33 @@ type TProgramConfiguration struct {
 	SD01, SD02, SD03, SD04, SD05, SD06, SD07, SD08, SD09, SD10, SD11, SD12, SDN01, SDN02, SDN03, SDN04, SDN05, SDN06, SDN07, SDN08, SDN09, SDN10, SDN11, SDN12,
 	PYAccount01, PYAccount02, PYAccount03, PYAccount04, PYAccount05, PYAccount06, PYAccount07, PYAccount08, PYAccount09, PYAccount10, PYAccount11, PYAccount12,
 	PYNAccount01, PYNAccount02, PYNAccount03, PYNAccount04, PYNAccount05, PYNAccount06, PYNAccount07, PYNAccount08, PYNAccount09, PYNAccount10, PYNAccount11, PYNAccount12,
-	PABXLANSMDRPassword, IPTVendor, IPTVPassword, IPTVAddress, CCMSVendor, CCMSSMUser, CCMSSMPassword, CCMSSMRequestorID, CCMSSMHotelCode, CCMSSMWSDL, MikrotikVersion, MikrotikVendor, MikrotikAddress, MikrotikUser, MikrotikHotspotServer, MikrotikUserProfile, MikrotikServiceAddress, MikrotikPassword, SubDepartmentAllCCAdmin, DownsAuthCode, RTIncomeStatement, PABXLocal, PABXSLJJ, PABXSLI, EmailServer, WAAPIVendor, WAAPIURL, WAAPIKEY string
+	PABXLANSMDRPassword, IPTVendor, IPTVPassword, IPTVAddress, CCMSVendor, CCMSSMUser, CCMSSMPassword, CCMSSMRequestorID, CCMSSMHotelCode, CCMSSMWSDL, MikrotikVersion, MikrotikVendor, MikrotikAddress, MikrotikUser, MikrotikHotspotServer, MikrotikUserProfile, MikrotikServiceAddress, MikrotikPassword, SubDepartmentAllCCAdmin, DownsAuthCode, PABXLocal, PABXSLJJ, PABXSLI, EmailServer, WAAPIVendor, WAAPIURL, WAAPIKEY string
 	CostingMethod,
 	DefaultShippingAddress string
 	PABXChargePerSecond, PABXChargePerSecondOther, VoucherDefaultPrice                                                                                 float64
-	DefaultBill, BeTechPort, BeTechReaderType, BeTechDatabaseType, OnityDBType, OnitySoftwareType, OnityPort, MikrotikPasswordOption, CompanyCodeDigit byte
+	DefaultBill, BeTechPort, BeTechReaderType, BeTechDatabaseType, OnityDBType, OnitySoftwareType, OnityPort, MikrotikPasswordOption, CompanyCodeDigit int
 	KeylockLimit, CheckOutLimit, Timezone                                                                                                              string
 
 	//CAMS
 	PRDHColor, PRCCColor, PRFNColor, PRRJColor, LowStockColor int
+
+	LockTransactionDateInventory time.Time
 	ActiveStore, CompanyTypeSupplier, CompanyTypeExpedition, RFPurchaseRequest, RFPurchaseOrder, RFReceiveStock, RFStoreRequisition, RFStockTransfer, RFCosting, RFFAPurchaseOrder, RFFAReceive,
-	RTJournalVoucher, RTJournalVoucherPaymentForm, RTJournalVoucherReceiveForm, DefaultStore, RTInventoryReconciliation, RTDailyInventoryReconciliation, RTMonthlyInventoryReconciliation string
+	DefaultStore, RTInventoryReconciliation, RTDailyInventoryReconciliation, RTMonthlyInventoryReconciliation string
+	// BANQUET
+	BanquetOutletCode, BanquetViewReservationColor, BanquetViewInHouseColor string
+	//TADA MEMBER
+
+	TADAUsername,
+	TADAPassword,
+	TADAMerchantID,
+	TADATerminalID,
+	TADAWalletIDTopUp,
+	TADAWalletIDPoint,
+	TADAProgramID,
+	TADACompanyCode,
+	TADAAccountCode string
+	TADAEnable                bool
 	AutoRefreshOnFormActivate byte
 }
 
@@ -417,12 +445,26 @@ type TDepreciationType struct {
 	None, StraightLine, DecliningBalance, DoubleDecliningBalance, SumOfYearDigit string
 }
 
+type TCmStatus struct {
+	Pending, Success, Failed string
+}
+
 type TGlobalJournalAccountGroupName struct {
 	Assets, Liability, Equity, Income, Cost, Expense1, Expense2, OtherIncome, OtherExpense string
 }
 
 type TStoreRequisitionStatus struct {
 	NotApproved, Approved, Rejected string
+}
+
+type THeaderReservationRemark struct {
+	Header1, Header2, Header3, Header4, Header5, Header6, Header7, Header8, Header9, Header10,
+	HeaderTemplate1, HeaderTemplate2, HeaderTemplate3, HeaderTemplate4, HeaderTemplate5,
+	HeaderTemplate6, HeaderTemplate7, HeaderTemplate8, HeaderTemplate9, HeaderTemplate10 string
+}
+
+type TBookingStatus struct {
+	Booking, InProgress, Finish, Cancel, NoShow, Void string
 }
 
 type TFAItemCondition struct {
@@ -497,7 +539,12 @@ type TConfigurationCategory struct {
 	WAAPI,
 	Email,
 	Inventory,
+	TADAMemberService,
 	DayendClosed string
+	//Ban
+	HeaderReservationRemark,
+	BanquetView,
+	BanquetConfiguration string
 }
 
 type TConfigurationCategoryCAMS struct {
@@ -579,6 +626,8 @@ type TConfigurationName struct {
 	RoomProduction,
 	GuestForecast,
 	RTIncomeStatement,
+	CancellationReservation,
+	DailyHotelCompetitor,
 	//Other
 	ShowTransferOnCashierReport,
 	ShowComplimentOnCashierReport,
@@ -837,7 +886,7 @@ type TConfigurationName struct {
 	IPTVSubFolio,
 	IPTVAddress,
 	//Service CCMS
-	CCMSVendor, CCMSSMUser, CCMSSMPassword, CCMSSMRequestorID, CCMSSMHotelCode, CCMSSMWSDL, CCMSSMReservationAsAllotment, CCMSSMSynchronizeReservation, CCMSSMSynchronizeAvailability, CCMSSMSynchronizeRate, CCMSSTAAHGlobalPercentAvailability, CCMSSTAAHGlobalMinRoomLeft,
+	CCMSVendor, CCMSSMUser, CCMSSMPassword, CCMSSMRequestorID, CCMSSMHotelCode, CCMSSMWSDL, CCMSSMReservationAsAllotment, CCMSSMSynchronizeReservation, CCMSSMSynchronizeAvailability, CCMSSMSynchronizeAvailabilityByBedType, CCMSSMSynchronizeRate, CCMSGlobalPercentAvailability, CCMSGlobalMinRoomLeft,
 	//Mikrotik
 	MikrotikVersion, MikrotikVendor, MikrotikAddress, MikrotikUser, MikrotikPassword, MikrotikHotspotServer, MikrotikUserProfile, MikrotikServiceAddress, MikrotikAutoCreateUser, MikrotikSameUserPassword, MikrotikAskForPassword, MikrotikPasswordOption,
 	//Notification
@@ -899,12 +948,71 @@ type TConfigurationName struct {
 	FAPurchaseOrder,
 	FAReceive,
 	//Report Template
+	RTInventoryReconciliation,
+	RTDailyInventoryReconciliation,
+	RTMonthlyInventoryReconciliation,
+
+	//Report Template
 	RTJournalVoucher,
 	RTJournalVoucherPaymentForm,
 	RTJournalVoucherReceiveForm,
-	RTInventoryReconciliation,
-	RTDailyInventoryReconciliation,
-	RTMonthlyInventoryReconciliation string
+	RTGeneralLedger,
+	RTTrialBalance,
+	RTBalanceSheet,
+	RTBalanceSheetbyCategory,
+	RTBalanceSheetbyCategorySummary,
+	RTBankBook,
+	RTBankBookGroupByReference,
+	RTProfitLoss,
+	RTProfitLossDetail,
+	RTProfitLossDetailByCategory,
+	RTProfitLossBySubDepartment,
+	RTProfitLossDetailBySubDepartment,
+	RTProfitLossDetailBySubDepartmentByCategory,
+	RTProfitLossByDepartment,
+	RTProfitLossDetailByDepartment,
+	RTProfitLossDetailByDepartmentByCategory,
+	RTProfitLossMultiPeriod string
+
+	//Header Rservation Remark
+	Header1,
+	Header2,
+	Header3,
+	Header4,
+	Header5,
+	Header6,
+	Header7,
+	Header8,
+	Header9,
+	Header10,
+	HeaderTemplate1,
+	HeaderTemplate2,
+	HeaderTemplate3,
+	HeaderTemplate4,
+	HeaderTemplate5,
+	HeaderTemplate6,
+	HeaderTemplate7,
+	HeaderTemplate8,
+	HeaderTemplate9,
+	HeaderTemplate10,
+	//Banquet view
+	ReservationColor,
+	InHouseColor,
+	//Schedule Payment
+	SchedulePaymentColor,
+	//Banquet Configuration
+	BCOutletCode,
+	//TADA Member
+	TADAUsername,
+	TADAPassword,
+	TADAMerchantID,
+	TADATerminalID,
+	TADAWalletIDTopUp,
+	TADAWalletIDPoint,
+	TADAProgramID,
+	TADACompanyCode,
+	TADAAccountCode string
+	TADAEnable string
 }
 type TConfigurationNamePOS struct {
 	//General
@@ -1157,6 +1265,9 @@ type TFormMessage struct {
 	TransactionTerminal []string
 	RoomRate            []string
 	APARPayment         []string
+	Costing             []string
+	BookingReservation  []string
+	AdvancedCorrection  []string
 }
 
 type TProgramMessage struct {
@@ -1177,6 +1288,9 @@ type TUserInfo struct {
 
 type TUserAccessType struct {
 	Form, Report, Special, Keylock, Reservation, Deposit, InHouse, WalkIn, Folio, FolioHistory, FloorPlan, Company, Invoice, MemberVoucherGift, PreviewReport, PaymentByAPAR string
+}
+type TUserAccessTypePOS struct {
+	Form, Report, Special, Keylock, TransactionTerminal, TabeView, Company, PreviewReport, ExportFileReport, Reservation, MemberVoucherGift string
 }
 type TReportAccessType struct {
 	Form, Preview, FrontDesk, Pos, Banquet, Accounting, Asset string
@@ -1324,6 +1438,7 @@ type TLogUserAction struct {
 	URSIBillInstruction,
 	URSICurrency,
 	URSIExchangeRate,
+	URSIBedType,
 	//Update Reservation Personal Information
 	URPIMember,
 	URPITitle,
@@ -1425,6 +1540,7 @@ type TLogUserAction struct {
 	UFSIBillInstruction,
 	UFSICurrency,
 	UFSIExchangeRate,
+	UFSIBedType,
 	//Update Folio Personal Information
 	UFPIMember,
 	UFPITitle,
@@ -1609,6 +1725,7 @@ type TLogUserAction struct {
 	URSIBillInstructionX,
 	URSICurrencyX,
 	URSIExchangeRateX,
+	URSIBedTypeX,
 	//Update Reservation Personal Information
 	URPIMemberX,
 	URPITitleX,
@@ -1710,6 +1827,7 @@ type TLogUserAction struct {
 	UFSIBillInstructionX,
 	UFSICurrencyX,
 	UFSIExchangeRateX,
+	UFSIBedTypeX,
 	//Update Folio Personal Information
 	UFPIMemberX,
 	UFPITitleX,
@@ -2359,9 +2477,11 @@ type TRoomStatusColor struct {
 }
 
 type TReservationStatus struct {
-	New, WaitList, InHouse, Canceled, NoShow, Void, CheckOut string
+	Reservation, New, WaitList, InHouse, Canceled, NoShow, Void, CheckOut string
 }
-
+type TBanquetReservationStatus struct {
+	Reservation, CheckIn, Canceled, NoShow, Void, CheckOut string
+}
 type TReservationBlockType struct {
 	Reservation, BlockOnly, ChekIn string
 }
@@ -2372,6 +2492,10 @@ type TReservationStatus2 struct {
 
 type TReservationType struct {
 	Guaranteed, NonGuaranteed string
+}
+
+type TBanquetReservationType struct {
+	Definite, Confirm, Tentative, Waiting, Loss string
 }
 
 type TFolioStatus struct {
@@ -2419,7 +2543,7 @@ type TKeylockVendor struct {
 }
 
 type TChannelManager struct {
-	BookNLink, Stah, SiteMinder string
+	BookNLink, Stah, SiteMinder, CakraHub string
 }
 
 type TMikrotikVendor struct {
@@ -2432,7 +2556,7 @@ type TPMSCommand struct {
 
 // Accounting
 type TJournalPrefix struct {
-	Manual, Transaction, Disbursement, Receive, Inventory, Adjustment, FixedAsset, BeginningYear, AccountPayable, AccountReceivable string
+	Manual, Transaction, Disbursement, Receive, Inventory, Adjustment, FixedAsset, BeginningYear, InventoryCPOS, AccountPayable, AccountReceivable string
 }
 
 type TJournalType struct {
@@ -2480,7 +2604,7 @@ type TReportSignature struct {
 }
 
 type TReportTemplate struct {
-	DepositReceipt, DepositreceiptRefund, FolioReceipt, FolioReceiptRefund, MiscellaneousCharge, CashierReport, CashRemittance, BreakfastList, PickUpService, DropService, HKCheckList, HKRoomStatus, HKRoomStatusSummary, HKRoomDiscrepancy, HKRoomAttendantControlSheet, DailyRevenueReport, DailyRevenueReportSummary, GuestInHouseListing, RoomStatistic, DailyFlashReport, RoomProduction, GuestForecast, RevenueBySubDepartment string
+	DepositReceipt, DepositreceiptRefund, FolioReceipt, FolioReceiptRefund, MiscellaneousCharge, CashierReport, CashRemittance, BreakfastList, PickUpService, DropService, HKCheckList, HKRoomStatus, HKRoomStatusSummary, HKRoomDiscrepancy, HKRoomAttendantControlSheet, DailyRevenueReport, DailyRevenueReportSummary, GuestInHouseListing, RoomStatistic, DailyFlashReport, RoomProduction, GuestForecast, RevenueBySubDepartment, DailyHotelCompetitor string
 }
 
 type TPersonal struct {
@@ -2552,6 +2676,60 @@ type TCustomField struct {
 type TCustomLookupField struct {
 	CLFName01, CLFName02, CLFName03, CLFName04, CLFName05, CLFName06, CLFName07, CLFName08, CLFName09, CLFName10, CLFName11, CLFName12,
 	CLFDefaultValue01, CLFDefaultValue02, CLFDefaultValue03, CLFDefaultValue04, CLFDefaultValue05, CLFDefaultValue06, CLFDefaultValue07, CLFDefaultValue08, CLFDefaultValue09, CLFDefaultValue10, CLFDefaultValue11, CLFDefaultValue12 string
+}
+
+// type TUserTerminalAccessOrderPOS struct {
+// 	ChangeQuantity, Discount, OverridePrice, ModifyPrice, RemoveItem, Payment, FinishSale, CancelCaptainOrder, AddSpecialItem, ShowOtherOutlet byte
+// }
+
+type TPOSAccessTransactionTerminal struct {
+	ChangeQuantity  int `json:"changeQuantity"`
+	Discount        int `json:"discount"`
+	OverridePrice   int `json:"overridePrice"`
+	Payment         int `json:"payment"`
+	ModifyPrice     int `json:"modifyPrice"`
+	RemoveItem      int `json:"removeItem"`
+	FinishSale      int `json:"finishSale"`
+	CancelCO        int `json:"cancelCO"`
+	AddSpecialItem  int `json:"addSpecialItem"`
+	ShowOtherOutlet int `json:"showOtherOutlet"`
+}
+type TPOSAccessForm struct {
+	Customer              int `json:"customer"`
+	Reservation           int `json:"reservation"`
+	Calendar              int `json:"calendar"`
+	TransactionTerminal   int `json:"transactionTerminal"`
+	TableView             int `json:"tableView"`
+	SpaRoomView           int `json:"spaRoomView"`
+	IPTVMenuOrder         int `json:"iptvMenuOrder"`
+	ClosedTransaction     int `json:"closedTransaction"`
+	FoodAndBeverageBudget int `json:"foodAndBeverageBudget"`
+	DayendClose           int `json:"dayendClose"`
+	BreakfastControl      int `json:"breakfastControl"`
+}
+type TPointOfSalesAccessOrder struct {
+	TPOSAccessForm            TPOSAccessForm
+	AccessTransactionTerminal TPOSAccessTransactionTerminal
+	AccessSpecial             struct {
+		Discount              int `json:"discount"`
+		OverridePrice         int `json:"overridePrice"`
+		ModifyPrice           int `json:"modifyPrice"`
+		VoidCheck             int `json:"voidCheck"`
+		RemoveItem            int `json:"removeItem"`
+		CancelCO              int `json:"cancelCO"`
+		VoidReservation       int `json:"voidReservation"`
+		TransferToDeskFolio   int `json:"transferToDeskFolio"`
+		TransferToMasterFolio int `json:"transferToMasterFolio"`
+		ReduceQuantity        int `json:"reduceQuantity"`
+		AddSpecialItem        int `json:"addSpecialItem"`
+	} `json:"accessSpecial"`
+	AccessTableView struct {
+		Transfer      int `json:"transfer"`
+		TileTable     int `json:"tileTable"`
+		SavePosition  int `json:"savePosition"`
+		AdminMode     int `json:"adminMode"`
+		TakeAwayOrder int `json:"takeAwayOrder"`
+	} `json:"accessTableView"`
 }
 
 type TCMUpdateType struct {
@@ -2627,11 +2805,11 @@ type TRequestResponse struct {
 }
 
 type TWSMessageType struct {
-	Broadcast  int
-	Client     int
-	Channel    int
-	Room       int
-	Connection int
+	Broadcast           int
+	Client              int
+	Channel             int
+	Room                int
+	Connection, Keylock int
 }
 
 type TWSDataType struct {
@@ -2639,6 +2817,7 @@ type TWSDataType struct {
 	DayendCloseStatus              int
 	ModifiedRoomAvailabilityStatus int
 	AuditDateChanged               int
+	Keylock                        int
 }
 
 type TDataset struct {
@@ -2652,6 +2831,8 @@ type TDataset struct {
 	// ProgramMessage: TProgramMessage;
 	// DateCheckMessage: array [0..1] of PChar;
 	// UserInfo: TUserInfo;
+	ReportTemplate                TReportTemplate
+	HeaderReservationRemark       THeaderReservationRemark
 	GlobalAccount                 TGlobalAccount
 	GlobalDepartment              TGlobalDepartment
 	GlobalSubDepartment           TGlobalSubDepartment
@@ -2661,7 +2842,7 @@ type TDataset struct {
 	GlobalJournalAccountGroupName TGlobalJournalAccountGroupName
 }
 
-const PasswordKeyString = "^%^#@JHGHFsd56hs123^93g$0"
+const PasswordKeyString = "^%^#@JHGHFsd56hsd63^93g$0"
 
 var Tracer = otel.Tracer("PMS Service")
 var PublicPath string
@@ -2671,13 +2852,18 @@ var MxSocket = &sync.RWMutex{}
 var localTime, _ = time.LoadLocation("Asia/Makassar")
 var AppLogger *otelzap.Logger
 
-var SigningKey = []byte("H6$#%123hjsdf(765398$$")
-var EncryptKey = []byte("bas5%$#8123jhsjHFHjs7426%54238$#")
-var EncryptKeyGlobal = []byte("JHGD123DJH&^*^&SDJJHSDGHGR%@#^@%&@&")
+var SigningKey = []byte("H6$#%#&jhjsdf(765398$$")
+var EncryptKey = []byte("bas5%$#8227jhsjHFHjs7426%54238$#")
+var EncryptKeyGlobal = []byte("JHGDHJSDJH&^*^&SDJJHSDGHGR%@#^@%&@&")
 
-var AESSecretKey = []byte("^%^#@JHGHFsd5123d63^93g$0gtr#vf3")
+var AESSecretKey = []byte("^%^#@JHGHFsd56hsd63^93g$0gtr#vf3")
 
-var AESiv = []byte("JHGHFsd5123d63^9")
+// var AESSecretKey = []byte("bdfacb85f316310d97d296faa5a18588bd479fd7836aceb8534c2529bd89da56")
+
+var AESiv = []byte("JHGHFsd56hsd63^9")
+
+// Report Directory
+var ReportDirectory = "report/reports"
 
 var DatabaseInfo databaseinfo
 
@@ -2800,7 +2986,12 @@ var ConfigurationCategory = TConfigurationCategory{
 	WAAPI:                        "WA_API",
 	Email:                        "EMAIL",
 	Inventory:                    "INVENTORY",
-	DayendClosed:                 "DAYEND_CLOSED"}
+	DayendClosed:                 "DAYEND_CLOSED",
+	BanquetConfiguration:         "BANQUET_CONF",
+	BanquetView:                  "BANQUET_VIEW",
+	HeaderReservationRemark:      "HEADER_RES_REMARK",
+	TADAMemberService:            "TADA_MEMBER_SERVICE",
+}
 var ConfigurationCategoryCAMS = TConfigurationCategoryCAMS{
 	General:                      "GENERAL",
 	Form:                         "FORM",
@@ -2886,6 +3077,8 @@ var ConfigurationName = TConfigurationName{
 	RoomProduction:              "ROOM_PRODUCTION",
 	GuestForecast:               "GUEST_FORECAST",
 	RTIncomeStatement:           "INCOME_STATEMENT",
+	CancellationReservation:     "CANCELLATION_LETTER",
+	DailyHotelCompetitor:        "DAILY_HOTEL_COMPETITOR",
 	//Other
 	ShowTransferOnCashierReport:     "SHOW_TRANSFER_ON_CASHIER_REPORT",
 	ShowComplimentOnCashierReport:   "SHOW_COMPLIMENT_ON_CASHIER_REPORT",
@@ -3227,18 +3420,19 @@ var ConfigurationName = TConfigurationName{
 	IPTVSubFolio: "IPTV_SUB_FOLIO",
 	IPTVAddress:  "IPTV_ADDRESS",
 	//CCMS
-	CCMSVendor:                         "CHANNEL_MANAGER_VENDOR",
-	CCMSSMUser:                         "SITE_MINDER_USER",
-	CCMSSMPassword:                     "SITE_MINDER_PASSWORD",
-	CCMSSMRequestorID:                  "SITE_MINDER_REQUESTOR_ID",
-	CCMSSMHotelCode:                    "SITE_MINDER_HOTEL_CODE",
-	CCMSSMWSDL:                         "SITE_MINDER_WSDL",
-	CCMSSMReservationAsAllotment:       "SITE_MINDER_RESERVATION_AS_ALLOTMENT",
-	CCMSSMSynchronizeReservation:       "SITE_MINDER_SYNCHRONIZE_RESERVATION",
-	CCMSSMSynchronizeAvailability:      "SITE_MINDER_SYNCHRONIZE_AVAILABILITY",
-	CCMSSMSynchronizeRate:              "SITE_MINDER_SYNCHRONIZE_RATE",
-	CCMSSTAAHGlobalPercentAvailability: "CHANNEL_MANAGER_GLOBAL_PERCENT_AVAILABILITY",
-	CCMSSTAAHGlobalMinRoomLeft:         "CHANNEL_MANAGER_GLOBAL_MIN_ROOM_LEFT",
+	CCMSVendor:                             "CHANNEL_MANAGER_VENDOR",
+	CCMSSMUser:                             "SITE_MINDER_USER",
+	CCMSSMPassword:                         "SITE_MINDER_PASSWORD",
+	CCMSSMRequestorID:                      "SITE_MINDER_REQUESTOR_ID",
+	CCMSSMHotelCode:                        "SITE_MINDER_HOTEL_CODE",
+	CCMSSMWSDL:                             "SITE_MINDER_WSDL",
+	CCMSSMReservationAsAllotment:           "SITE_MINDER_RESERVATION_AS_ALLOTMENT",
+	CCMSSMSynchronizeReservation:           "SITE_MINDER_SYNCHRONIZE_RESERVATION",
+	CCMSSMSynchronizeAvailability:          "SITE_MINDER_SYNCHRONIZE_AVAILABILITY",
+	CCMSSMSynchronizeAvailabilityByBedType: "SITE_MINDER_SYNCHRONIZE_AVAILABILITY_BY_BED_TYPE",
+	CCMSSMSynchronizeRate:                  "SITE_MINDER_SYNCHRONIZE_RATE",
+	CCMSGlobalPercentAvailability:          "CHANNEL_MANAGER_GLOBAL_PERCENT_AVAILABILITY",
+	CCMSGlobalMinRoomLeft:                  "CHANNEL_MANAGER_GLOBAL_MIN_ROOM_LEFT",
 	//Mikrotik
 	MikrotikVersion:          "MIKROTIK_VERSION",
 	MikrotikVendor:           "MIKROTIK_VENDOR",
@@ -3334,7 +3528,67 @@ var ConfigurationName = TConfigurationName{
 	Costing:          "COSTING",
 	FAPurchaseOrder:  "FA_PURCHASE_ORDER",
 	FAReceive:        "FA_RECEIVE",
-	//Report Template
+
+	RTJournalVoucher:                            "JOURNAL_VOUCHER",
+	RTJournalVoucherPaymentForm:                 "JOURNAL_VOUCHER_PAYMENT_FORM",
+	RTJournalVoucherReceiveForm:                 "JOURNAL_VOUCHER_RECEIVE_FORM",
+	RTGeneralLedger:                             "GENERAL_LEDGER",
+	RTTrialBalance:                              "TRIAL_BALANCE",
+	RTBalanceSheet:                              "BALANCE_SHEET",
+	RTBalanceSheetbyCategory:                    "BALANCE_SHEET_BY_CATEGORY",
+	RTBalanceSheetbyCategorySummary:             "BALANCE_SHEET_BY_CATEGORY_SUMMARY",
+	RTBankBook:                                  "BANK_BOOK",
+	RTBankBookGroupByReference:                  "BANK_BOOK_GROUP_BY_REFERENCE",
+	RTProfitLoss:                                "PROFIT_LOSS",
+	RTProfitLossDetail:                          "PROFIT_LOSS_DETAIL",
+	RTProfitLossDetailByCategory:                "PROFIT_LOSS_DETAIL_BY_CATEGORY",
+	RTProfitLossBySubDepartment:                 "PROFIT_LOSS_BY_SUB_DEPT",
+	RTProfitLossDetailBySubDepartment:           "PROFIT_LOSS_DETAIL_BY_SUB_DEPT",
+	RTProfitLossDetailBySubDepartmentByCategory: "PROFIT_LOSS_DETAIL_BY_SUB_DEPT_CAT",
+	RTProfitLossByDepartment:                    "PROFIT_LOSS_BY_DEPT",
+	RTProfitLossDetailByDepartment:              "PROFIT_LOSS_DETAIL_BY_DEPT",
+	RTProfitLossDetailByDepartmentByCategory:    "PROFIT_LOSS_DETAIL_BY_DEPT_CAT",
+	RTProfitLossMultiPeriod:                     "PROFIT_LOSS_MULTI_PERIOD",
+
+	//Header Reservation remark
+	Header1:          "HEADER1",
+	Header2:          "HEADER2",
+	Header3:          "HEADER3",
+	Header4:          "HEADER4",
+	Header5:          "HEADER5",
+	Header6:          "HEADER6",
+	Header7:          "HEADER7",
+	Header8:          "HEADER8",
+	Header9:          "HEADER9",
+	Header10:         "HEADER10",
+	HeaderTemplate1:  "TEMPLATE1",
+	HeaderTemplate2:  "TEMPLATE2",
+	HeaderTemplate3:  "TEMPLATE3",
+	HeaderTemplate4:  "TEMPLATE4",
+	HeaderTemplate5:  "TEMPLATE5",
+	HeaderTemplate6:  "TEMPLATE6",
+	HeaderTemplate7:  "TEMPLATE7",
+	HeaderTemplate8:  "TEMPLATE8",
+	HeaderTemplate9:  "TEMPLATE9",
+	HeaderTemplate10: "TEMPLATE10",
+	//Banquet View
+	ReservationColor: "RESERVATION_COLOR",
+	InHouseColor:     "IN_HOUSE_COLOR",
+	//Schedule Payment
+	SchedulePaymentColor: "SCHEDULE_PAYMENT",
+	//Banquet Configuration
+	BCOutletCode: "OUTLET_CODE",
+	//TADA Member
+	TADAUsername:      "TADA_USERNAME",
+	TADAPassword:      "TADA_PASSWORD",
+	TADAMerchantID:    "TADA_MERCHANT_ID",
+	TADATerminalID:    "TADA_TERMINAL_ID",
+	TADAWalletIDTopUp: "TADA_WALLET_ID_TOPUP",
+	TADAWalletIDPoint: "TADA_WALLET_ID_POINT",
+	TADAEnable:        "TADA_ENABLE",
+	TADAProgramID:     "TADA_PROGRAM_ID",
+	TADACompanyCode:   "TADA_COMPANY_CODE",
+	TADAAccountCode:   "TADA_ACCOUNT_CODE",
 }
 
 var ConfigurationCategoryPOS = TConfigurationCategoryPOS{
@@ -3621,6 +3875,32 @@ var UserAccessType = TUserAccessType{
 	MemberVoucherGift: "M",
 	PreviewReport:     "T",
 	PaymentByAPAR:     "A"}
+var UserAccessTypePOS = TUserAccessTypePOS{
+	Form:                "F",
+	Report:              "R",
+	Special:             "S",
+	Keylock:             "K",
+	TransactionTerminal: "E",
+	TabeView:            "V",
+	Company:             "C",
+	PreviewReport:       "T",
+	ExportFileReport:    "Y",
+	Reservation:         "A",
+	MemberVoucherGift:   "M"}
+var PointOfSalesAccessOrder = TPointOfSalesAccessOrder{
+	AccessTransactionTerminal: TPOSAccessTransactionTerminal{
+		ChangeQuantity:  0,
+		Discount:        1,
+		OverridePrice:   2,
+		ModifyPrice:     3,
+		RemoveItem:      4,
+		Payment:         5,
+		FinishSale:      6,
+		CancelCO:        7,
+		AddSpecialItem:  8,
+		ShowOtherOutlet: 9},
+}
+
 var ReportAccessType = TReportAccessType{
 	Form:       "F",
 	Preview:    "V",
@@ -3671,6 +3951,7 @@ var LogUserAction = TLogUserAction{
 	URSIBillInstruction: 10217,
 	URSICurrency:        10218,
 	URSIExchangeRate:    10219,
+	URSIBedType:         10411,
 	//Update Reservation Personal Information
 	URPIMember:        10300,
 	URPITitle:         10301,
@@ -3771,6 +4052,7 @@ var LogUserAction = TLogUserAction{
 	UFSIBillInstruction: 30217,
 	UFSICurrency:        30218,
 	UFSIExchangeRate:    30219,
+	UFSIBedType:         30622,
 	//Update Folio Personal Information
 	UFPIMember:        30300,
 	UFPITitle:         30301,
@@ -3953,6 +4235,7 @@ var LogUserAction = TLogUserAction{
 	URSIBillInstructionX: true,
 	URSICurrencyX:        true,
 	URSIExchangeRateX:    true,
+	URSIBedTypeX:         true,
 	//Update Reservation Personal Information
 	URPIMemberX:        true,
 	URPITitleX:         true,
@@ -4053,6 +4336,7 @@ var LogUserAction = TLogUserAction{
 	UFSIBillInstructionX: true,
 	UFSICurrencyX:        true,
 	UFSIExchangeRateX:    true,
+	UFSIBedTypeX:         true,
 	//Update Folio Personal Information
 	UFPIMemberX:        true,
 	UFPITitleX:         true,
@@ -5047,14 +5331,21 @@ var RoomBlockStatus = TRoomBlockStatus{
 	GeneralCleaning: "G",
 	ShowingRoom:     "S"}
 var ReservationStatus = TReservationStatus{
-	New:      "N",
-	WaitList: "W",
-	InHouse:  "I",
-	Canceled: "C",
-	NoShow:   "S",
-	Void:     "V",
-	CheckOut: "O"}
-
+	Reservation: "R",
+	New:         "N",
+	WaitList:    "W",
+	InHouse:     "I",
+	Canceled:    "C",
+	NoShow:      "S",
+	Void:        "V",
+	CheckOut:    "O"}
+var BanquetReservationStatus = TBanquetReservationStatus{
+	Reservation: "R",
+	CheckIn:     "I",
+	Canceled:    "C",
+	NoShow:      "N",
+	Void:        "V",
+	CheckOut:    "O"}
 var ReservationBlockType = TReservationBlockType{
 	Reservation: "R",
 	BlockOnly:   "B",
@@ -5066,6 +5357,12 @@ var ReservationStatus2 = TReservationStatus2{
 var ReservationType = TReservationType{
 	Guaranteed:    "GRTD",
 	NonGuaranteed: "NGRD"}
+var BanquetReservationType = TBanquetReservationType{
+	Definite:  "DF",
+	Confirm:   "CF",
+	Tentative: "UF",
+	Waiting:   "WT",
+	Loss:      "LS"}
 var FolioStatus = TFolioStatus{
 	Open:          "O",
 	Closed:        "C",
@@ -5196,6 +5493,7 @@ var MikrotikVendor = TMikrotikVendor{
 var ChannelManager = TChannelManager{
 	BookNLink:  "BKNL",
 	Stah:       "STAH",
+	CakraHub:   "CKHU",
 	SiteMinder: "STMD"}
 var PMSCommand = TPMSCommand{
 	Issued:     "I",
@@ -5213,6 +5511,7 @@ var JournalPrefix = TJournalPrefix{
 	FixedAsset:        "JF",
 	BeginningYear:     "JB",
 	AccountPayable:    "AP",
+	InventoryCPOS:     "JIC",
 	AccountReceivable: "AR"}
 var JournalType = TJournalType{
 	CashIn:                   "1",
@@ -5498,6 +5797,12 @@ var ReceivedStatus = TReceivedStatus{
 	Received:        2,
 }
 
+var CmStatus = TCmStatus{
+	Pending: "P",
+	Success: "S",
+	Failed:  "F",
+}
+
 var GlobalPaymentType = TGlobalPaymentType{
 	TransferDeposit: "TRDP",
 }
@@ -5544,7 +5849,7 @@ var FormMessage = TFormMessage{
 		4: "Cannot cancel check out, this folio was created invoice",
 	},
 	PostingRoomCharge: []string{
-		0:   "Reposting successful",
+		0:   "Posting successful",
 		1:   "Breakdown is too large",
 		2:   "Zero amount not allowed",
 		3:   "No room charge for today",
@@ -5552,7 +5857,7 @@ var FormMessage = TFormMessage{
 		255: "Posting room charge failed",
 	},
 	PostingExtraCharge: []string{
-		0:   "Reposting successful",
+		0:   "Posting successful",
 		1:   "Breakdown is too large",
 		2:   "Zero amount not allowed",
 		3:   "No extra charge for today",
@@ -5602,6 +5907,51 @@ var FormMessage = TFormMessage{
 		6: "If Payment By AP/AR, Total Amount Must be Equal with Total AP/AR Amount Use",
 		7: "Payment Date not valid, There is Payment AP/AR Date Greater than Payment Date",
 	},
+	Costing: []string{
+		0: "Cannot delete opname data, please open the opname menu",
+		1: "This costing is from receive directly out, please modify it from receive stock form",
+		2: "Cannot delete production data, please open the production menu",
+		3: "Cannot delete return stock data, please open the return stock menu",
+		4: "Cannot delete room costing data",
+		5: "Cannot delete costing recipe data",
+		6: "Inventory already closed on that date",
+		7: "Cannot delete store requisition data",
+		8: "Can not delete data, Costing date must greater than lock transaction date",
+	},
+	BookingReservation: []string{
+		0:  "Reservation number changed, please save again.",
+		1:  "Please save reservation data first.",
+		2:  "Start date must be equal or greater than End Date.",
+		3:  "Cannot update or delete Default Package. Please contact administrator to modify Default Package.",
+		4:  "Start date must be equal or higher than Audit date.",
+		5:  "End date must be higher than Audit date.",
+		6:  "End time must be higher than server time.",
+		7:  "This transaction is already voided. Cannot void or correct voided transaction",
+		8:  "Cannot void past transaction, transaction date must be in audit date. Please do correction for this data",
+		9:  "This is a correction data, cannot correct a correction data.",
+		10: "Start Date Reservation Must >= Arrrival Date Booking and Start Date Reservation <= Departure Date Booking",
+		11: "Cannot correct this transaction, because transaction date equal with audit date. Please do Void for this data",
+		12: "Transaction already paid or invoice created or foreign cash already changed. Please delete payment and invoice first or delete foreign cash changed to void or correct it.",
+		13: "Are you sure want to cretae new profile?",
+		//  14:"Reservation that transfer/receive is not active anymore.",
+		//  15:"Folio that transfer/receive is already closed.",
+		//  16:"Date you entered is exist, please insert another date.",
+		//  17:"Date out of stay date, please input valid range date. Date must be equal or higher than Audit Date",
+		//  18:"Cannot update remark or document number of correction data.",
+		//  19:"This room not available or no allotment for the date you entered.",
+		//  20:"This deposit reservation already balance",
+		//  21:"Deposit reservation must have zero balance",
+		22: "Update remark successfully",
+		23: "Start Time must be greater than End Time.",
+		24: "Venue not available.",
+	},
+	AdvancedCorrection: []string{
+		0: "Total amount is too large",
+		1: "Total amount cannot be less than zero",
+		2: "Total new amount must equal with total amount before",
+		3: "Amount cannot be less than zero",
+		4: "Please changed amount for correction.",
+	},
 }
 
 var UserInfo = TUserInfo{}
@@ -5612,6 +5962,7 @@ var WSMessageType = TWSMessageType{
 	Client:     3,
 	Connection: 4,
 	Room:       5,
+	Keylock:    6,
 }
 
 var WSDataType = TWSDataType{
@@ -5711,6 +6062,7 @@ var ReportCodeName = TReportCodeName{
 	TaxBreakdownDetailed:                  11589,
 	TodayRoomRevenueBreakdown:             11590,
 	CancelCheckOut:                        11591,
+	LateCheckOut:                          11592,
 	Member:                                11701,
 	Voucher:                               11702,
 	VoucherSoldRedemeedAndComplimented:    11703,
@@ -5927,18 +6279,19 @@ var ReportCodeName = TReportCodeName{
 }
 
 var ReportTemplateName = TReportTemplateName{
-	DailyRevenueReport1:        "DailyRevenueReport01.fr3",
-	DailyRevenueReport2:        "DailyRevenueReport02.fr3",
-	DailyRevenueReport3:        "DailyRevenueReport03.fr3",
-	DailyRevenueReport4:        "DailyRevenueReport04.fr3",
-	DailyRevenueReport5:        "DailyRevenueReport05.fr3",
-	DailyRevenueReport5Point2D: "DailyRevenueReport05Point2D.fr3",
-	DailyRevenueReport6:        "DailyRevenueReport06.fr3",
-	DailyRevenueReport7:        "DailyRevenueReport07.fr3",
-	DailyRevenueReport8:        "DailyRevenueReport08.fr3",
-	DailyRevenueReport9:        "DailyRevenueReport09.fr3",
-	DailyRevenueReport10:       "DailyRevenueReport10.fr3",
-	DailyRevenueReport11:       "DailyRevenueReport11.fr3",
+	DailyRevenueReport1:        "DailyRevenueReport01.mrt",
+	DailyRevenueReport2:        "DailyRevenueReport02.mrt",
+	DailyRevenueReport3:        "DailyRevenueReport03.mrt",
+	DailyRevenueReport4:        "DailyRevenueReport04.mrt",
+	DailyRevenueReport5:        "DailyRevenueReport05.mrt",
+	DailyRevenueReport5Point2D: "DailyRevenueReport05Point2D.mrt",
+	DailyRevenueReport6:        "DailyRevenueReport06.mrt",
+	DailyRevenueReport7:        "DailyRevenueReport07.mrt",
+	DailyRevenueReport8:        "DailyRevenueReport08.mrt",
+	DailyRevenueReport9:        "DailyRevenueReport09.mrt",
+	DailyRevenueReport10:       "DailyRevenueReport10.mrt",
+	DailyRevenueReport11:       "DailyRevenueReport11.mrt",
+	DailyRevenueReport12:       "DailyRevenueReport12.mrt",
 }
 
 var CustomDateOptions = TCustomDateOptions{
@@ -5959,6 +6312,17 @@ var TimeSegment = TTimeSegment{
 	Dinner:     "D",
 	CoffeBreak: "C",
 }
+
+var VenueLocation = TVenueLocation{
+	Inside:  "I",
+	Outside: "O"}
+var BookingStatus = TBookingStatus{
+	Booking:    "B",
+	InProgress: "I",
+	Finish:     "F",
+	Cancel:     "C",
+	NoShow:     "N",
+	Void:       "V"}
 
 var CacheKey = TCacheKey{
 	LastAPNumber:               "LAST_AP_NUMBER",
@@ -6000,6 +6364,12 @@ var ReportAccessOrder = TReportAccessOrder{
 	},
 }
 
+var InputOf = TInputOf{
+	Reservation: "R",
+	InHouse:     "I",
+	CheckOut:    "O",
+}
+
 // TODO need to set on init
 // TODO Load data configuration
 var ProgramVariable TProgramVariable
@@ -6023,6 +6393,7 @@ var GlobalJournalAccount = TGlobalJournalAccount{}
 var GlobalJournalAccountSubGroup = TGlobalJournalAccountSubGroup{}
 var WeekendDay = TWeekendDay{}
 var GlobalJournalAccountGroupName = TGlobalJournalAccountGroupName{}
+var HeaderReservationRemark = THeaderReservationRemark{}
 
 func Main() {
 
