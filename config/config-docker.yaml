@@ -13,8 +13,8 @@ server:
   CSRF: true
   Debug: false
   Staging: false
-  BaseURL: https://cakrasoft.net
-  Domain: cakrasoft.net
+  BaseURL:
+  Domain:
   PublicPath: "/public"
   SecretPath: "/secret/key"
   BackupPath: "/backup"
@@ -55,8 +55,8 @@ mysql:
   MysqlHost: api_database
   MysqlPort: 3306
   MysqlUser: root
-  MysqlPassword: 8cd54be5114ee861dd9b8e0101374fa5a4264e6548d9158e47132045
-  MysqlDatabase: 26a4d25910e1ad4cab639f242fdbe0a763beca6d48824ba896b1acbc48817640
+  MysqlPassword:
+  MysqlDatabase:
   MaxOpenConns: 100
   MaxIdleConns: 10
 

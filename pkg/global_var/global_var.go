@@ -2842,7 +2842,7 @@ type TDataset struct {
 	GlobalJournalAccountGroupName TGlobalJournalAccountGroupName
 }
 
-const PasswordKeyString = "^%^#@JHGHFsd56hsd63^93g$0"
+const PasswordKeyString = ""
 
 var Tracer = otel.Tracer("PMS Service")
 var PublicPath string
@@ -2852,15 +2852,15 @@ var MxSocket = &sync.RWMutex{}
 var localTime, _ = time.LoadLocation("Asia/Makassar")
 var AppLogger *otelzap.Logger
 
-var SigningKey = []byte("H6$#%#&jhjsdf(765398$$")
-var EncryptKey = []byte("bas5%$#8227jhsjHFHjs7426%54238$#")
-var EncryptKeyGlobal = []byte("JHGDHJSDJH&^*^&SDJJHSDGHGR%@#^@%&@&")
+var SigningKey = []byte("")
+var EncryptKey = []byte("")
+var EncryptKeyGlobal = []byte("")
 
-var AESSecretKey = []byte("^%^#@JHGHFsd56hsd63^93g$0gtr#vf3")
+var AESSecretKey = []byte("")
 
 // var AESSecretKey = []byte("bdfacb85f316310d97d296faa5a18588bd479fd7836aceb8534c2529bd89da56")
 
-var AESiv = []byte("JHGHFsd56hsd63^9")
+var AESiv = []byte("")
 
 // Report Directory
 var ReportDirectory = "report/reports"
