@@ -2,9 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"chs/internal/global_var"
-	"chs/internal/utils/cache"
-	"chs/pkg/httpErrors"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -12,6 +9,10 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/cakramediadata2022/chs_cloud_general/internal/utils/cache"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/global_var"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/httpErrors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"

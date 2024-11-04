@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cakramediadata2022/chs_cloud_general/general"
 	"github.com/cakramediadata2022/chs_cloud_general/internal/config"
 	"github.com/cakramediadata2022/chs_cloud_general/internal/init/subscription"
 	"github.com/cakramediadata2022/chs_cloud_general/pkg/db_var"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/general"
 	"github.com/cakramediadata2022/chs_cloud_general/pkg/global_var"
 	"github.com/cakramediadata2022/chs_cloud_general/pkg/utils"
 	jwt "github.com/dgrijalva/jwt-go"

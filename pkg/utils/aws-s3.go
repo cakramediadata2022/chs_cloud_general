@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"chs/internal/global_var"
 	"fmt"
 	"strings"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/cakramediadata2022/chs_cloud_general/pkg/global_var"
 )
 
 func AwsLoad() (endpoint string, client *s3.S3, err error) {
