@@ -29,8 +29,8 @@ func (q *PaginationQuery) SetLimit(limitQuery string) error {
 	if err != nil {
 		return err
 	}
-	if n > 500 {
-		n = 500
+	if n > 2500 {
+		n = 2500
 	}
 	q.Limit = n
 
