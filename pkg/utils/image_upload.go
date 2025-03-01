@@ -189,7 +189,6 @@ func UploadImage(file *multipart.FileHeader, UnitCode string, FolderName string,
 		out.Close()
 		return "", err
 	}
-	out.Close()
 
 	// Encode gambar sesuai format yang dipilih
 	if outputFormat == "jpg" || outputFormat == "jpeg" {
@@ -201,6 +200,7 @@ func UploadImage(file *multipart.FileHeader, UnitCode string, FolderName string,
 		return "", err
 	}
 
+	out.Close()
 	// Inisialisasi koneksi ke AWS MinIO
 	endpoint, s3Client, err := AwsLoad(AWSMinioAccessKey, AWSMinioSecretKey, AWSMinioEndpoint, AWSEndpoint)
 	if err != nil {
