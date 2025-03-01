@@ -186,9 +186,10 @@ func UploadImage(file *multipart.FileHeader, UnitCode string, FolderName string,
 	// Simpan gambar ke file sementara
 	out, err := os.Create(filename)
 	if err != nil {
+		out.Close()
 		return "", err
 	}
-	defer out.Close()
+	out.Close()
 
 	// Encode gambar sesuai format yang dipilih
 	if outputFormat == "jpg" || outputFormat == "jpeg" {
@@ -211,7 +212,6 @@ func UploadImage(file *multipart.FileHeader, UnitCode string, FolderName string,
 	if err != nil {
 		return "", err
 	}
-	defer uploadFile.Close()
 
 	// Path penyimpanan di S3
 	fileUrlPath := "pms-web/web-public" + imagePath
@@ -229,9 +229,10 @@ func UploadImage(file *multipart.FileHeader, UnitCode string, FolderName string,
 	// Upload file ke S3
 	_, err = s3Client.PutObject(&object)
 	if err != nil {
+		uploadFile.Close()
 		return "", err
 	}
-
+	uploadFile.Close()
 	// Hapus file lokal setelah berhasil di-upload
 	if err := os.Remove(filename); err != nil {
 		return "", fmt.Errorf("failed to delete local file: %s", err)
