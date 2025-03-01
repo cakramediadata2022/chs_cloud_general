@@ -8,21 +8,19 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/cakramediadata2022/chs_cloud_general/pkg/global_var"
 )
 
-func AwsLoad() (endpoint string, client *s3.S3, err error) {
-
+func AwsLoad(AWSMinioAccessKey, AWSMinioSecretKey, AWSMinioEndpoint, AWSEndpoint string) (endpoint string, client *s3.S3, err error) {
 	// Step 2: Define the parameters for the session you want to create.
-	key := global_var.Config.AWS.MinioAccessKey // Access key pair.
-	secret := global_var.Config.AWS.MinioSecretKey
-	endpoint = global_var.Config.AWS.MinioEndpoint
+	key := AWSMinioAccessKey // Access key pair.
+	secret := AWSMinioSecretKey
+	endpoint = AWSMinioEndpoint
 
 	s3Config := &aws.Config{
-		Credentials:      credentials.NewStaticCredentials(key, secret, ""),       // Specifies your credentials.
-		Endpoint:         aws.String("https://" + global_var.Config.AWS.Endpoint), // Your DigitalOcean Spaces endpoint.
-		S3ForcePathStyle: aws.Bool(false),                                         // Use subdomain/virtual calling format.
-		Region:           aws.String("sgp1"),                                      // Must match the region in your endpoint.
+		Credentials:      credentials.NewStaticCredentials(key, secret, ""), // Specifies your credentials.
+		Endpoint:         aws.String("https://" + AWSEndpoint),              // Your DigitalOcean Spaces endpoint.
+		S3ForcePathStyle: aws.Bool(false),                                   // Use subdomain/virtual calling format.
+		Region:           aws.String("sgp1"),                                // Must match the region in your endpoint.
 	}
 
 	// Create a new session with the specified config
@@ -36,11 +34,11 @@ func AwsLoad() (endpoint string, client *s3.S3, err error) {
 	return endpoint, s3Client, nil
 }
 
-func LoadReportTemplateList(Module string) ([]struct {
+func LoadReportTemplateList(Module string, AWSMinioAccessKey, AWSMinioSecretKey, AWSMinioEndpoint, AWSEndpoint string) ([]struct {
 	Name string
 	Path interface{}
 }, error) {
-	endpoint, s3Client, err := AwsLoad()
+	endpoint, s3Client, err := AwsLoad(AWSMinioAccessKey, AWSMinioSecretKey, AWSMinioEndpoint, AWSEndpoint)
 	if err != nil {
 		fmt.Println("Error Initialize:", err.Error())
 		return nil, err

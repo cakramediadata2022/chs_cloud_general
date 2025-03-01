@@ -46,7 +46,7 @@ func CreateDirectoryIfNotExist(dir string) error {
 	return nil
 }
 
-func UploadImageUtility(file *multipart.FileHeader, UnitCode string) (filePath string, err error) {
+func UploadImageUtility(file *multipart.FileHeader, UnitCode string, AWSMinioAccessKey, AWSMinioSecretKey, AWSMinioEndpoint, AWSEndpoint string) (filePath string, err error) {
 	src, err := file.Open()
 	if err != nil {
 		return "", err
@@ -97,7 +97,7 @@ func UploadImageUtility(file *multipart.FileHeader, UnitCode string) (filePath s
 	}
 
 	out.Close()
-	endpoint, s3Client, err := AwsLoad()
+	endpoint, s3Client, err := AwsLoad(AWSMinioAccessKey, AWSMinioSecretKey, AWSMinioEndpoint, AWSEndpoint)
 	if err != nil {
 		fmt.Println("Error Initialize:", err.Error())
 		return "", err
@@ -136,7 +136,7 @@ func UploadImageUtility(file *multipart.FileHeader, UnitCode string) (filePath s
 	return endpoint + "/" + fileUrlPath, nil
 }
 
-func UploadImage(file *multipart.FileHeader, UnitCode string, FolderName string) (filePath string, err error) {
+func UploadImage(file *multipart.FileHeader, UnitCode string, FolderName string, AWSMinioAccessKey, AWSMinioSecretKey, AWSMinioEndpoint, AWSEndpoint string) (filePath string, err error) {
 	src, err := file.Open()
 	if err != nil {
 		return "", err
@@ -187,7 +187,7 @@ func UploadImage(file *multipart.FileHeader, UnitCode string, FolderName string)
 	}
 
 	out.Close()
-	endpoint, s3Client, err := AwsLoad()
+	endpoint, s3Client, err := AwsLoad(AWSMinioAccessKey, AWSMinioSecretKey, AWSMinioEndpoint, AWSEndpoint)
 	if err != nil {
 		fmt.Println("Error Initialize:", err.Error())
 		return "", err
