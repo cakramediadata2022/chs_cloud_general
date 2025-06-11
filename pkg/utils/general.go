@@ -22,8 +22,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func GetMD5Hash(text string) string {
-	text = text + global_var.PasswordKeyString
+func GetMD5Hash(text, PasswordKeyString string) string {
+	text = text + PasswordKeyString
 	hash := md5.Sum([]byte(text))
 	return hex.EncodeToString(hash[:])
 }
@@ -89,9 +89,9 @@ func generateIV(iv []byte, salt string) []byte {
 	return IV
 }
 
-func OpensslDecrypt(encryptedText string, salt string) (string, error) {
-	key := global_var.AESSecretKey
-	iv := generateIV(global_var.AESiv, salt)
+func OpensslDecrypt(encryptedText string, salt string, AESSecretKey, AESiv []byte) (string, error) {
+	key := AESSecretKey
+	iv := generateIV(AESiv, salt)
 	ciphertext, err := base64.StdEncoding.DecodeString(encryptedText)
 	if err != nil {
 		return "", err
@@ -109,10 +109,10 @@ func OpensslDecrypt(encryptedText string, salt string) (string, error) {
 	return fmt.Sprintf("%s\n", plaintext), nil
 }
 
-func OpensslEncrypt(text string, salt string) (string, error) {
+func OpensslEncrypt(text string, salt string, AESSecretKey, AESiv []byte) (string, error) {
 	plaintext := []byte(text)
-	key := global_var.AESSecretKey
-	iv := generateIV(global_var.AESiv, salt)
+	key := AESSecretKey
+	iv := generateIV(AESiv, salt)
 
 	plaintext = PKCS7Padding(plaintext)
 	ciphertext := make([]byte, len(plaintext))
@@ -375,6 +375,8 @@ func InterfaceToFloat64(v interface{}) float64 {
 
 func InterfaceToBool(t interface{}) bool {
 	switch t := t.(type) {
+	case string:
+		return StrToBool(t)
 	case int:
 		return t != 0
 	case int8:
@@ -390,6 +392,13 @@ func InterfaceToBool(t interface{}) bool {
 	default:
 		return false
 	}
+}
+
+func InterfaceToString(t interface{}) string {
+	if t == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v", t)
 }
 
 func Uint8ToBool(i uint8) bool {
@@ -460,10 +469,6 @@ func FormatNumber(number float64) string {
 	return formattedWithSeparator + "." + decimalPart
 }
 
-func IsWeekend(ATime time.Time, Dataset *global_var.TDataset) bool {
-	return (Dataset.ProgramConfiguration.FridayAsWeekend && (int(ATime.Weekday()) == 5)) || (Dataset.ProgramConfiguration.SaturdayAsWeekend && (int(ATime.Weekday()) == 6)) || (Dataset.ProgramConfiguration.SundayAsWeekend && (int(ATime.Weekday()) == 7))
-}
-
 func PtrString(i string) *string {
 	return &i
 }
@@ -509,7 +514,8 @@ func StrToInt(str string) int {
 }
 
 func StrToFloat64(str string) float64 {
-	number, error := strconv.ParseFloat(str, 64)
+	separate := strings.ReplaceAll(str, ",", "")
+	number, error := strconv.ParseFloat(separate, 64)
 	if error != nil {
 		number = 0
 	}
@@ -534,6 +540,13 @@ func StrToInt64(str string) int64 {
 
 func StrToBool(str string) bool {
 	return strings.ToUpper(str) == "TRUE" || str == "1"
+}
+
+func StrBoolToUint8(str string) uint8 {
+	if strings.ToUpper(str) == "TRUE" || str == "1" {
+		return 1
+	}
+	return 0
 }
 
 func StrToUint8(str string) uint8 {
@@ -717,7 +730,7 @@ func GenerateValidateErrorMsg(c *gin.Context, err error) interface{} {
 }
 
 func IntToStr(i int64) string {
-	return strconv.FormatInt(i, 36)
+	return strconv.FormatInt(i, 10)
 }
 
 func PtrToStr(s *string) string {
@@ -755,4 +768,24 @@ func IsDate(dateString string, layout string) bool {
 	}
 	_, err := time.Parse(layout, dateString)
 	return err == nil
+}
+
+func GeneratePortalBookingCode(UnitCode string, length int) (string, error) {
+	now := time.Now()
+	year := IntToStr(int64(now.Year()))
+	month := fmt.Sprintf("%02d", now.Month())
+	prefix := fmt.Sprintf("%s%s%s", UnitCode[:2], year[2:], month)
+	if len(UnitCode) > 2 {
+		prefix = fmt.Sprintf("%s%s%s", UnitCode[:3], year[2:], month)
+	}
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // Avoid ambiguous characters
+	code := make([]byte, length)
+	for i := range code {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		code[i] = charset[num.Int64()]
+	}
+	return fmt.Sprintf("%s-%s", prefix, string(code)), nil
 }

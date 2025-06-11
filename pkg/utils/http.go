@@ -68,10 +68,11 @@ func GetUnitCode(c *gin.Context) string {
 
 // Error response with logging error for gin context
 func ErrResponseWithLog(ctx *gin.Context, logger *otelzap.Logger, err error) {
-	logger.Ctx(ctx).Error("ErrResponseWithLog", zap.Error(err),
+	logger.Ctx(ctx).Error("ErrResponseWithLog",
 		zap.String("UnitCode", GetUnitCode(ctx)),
 		zap.String("RequestID", GetRequestID(ctx)),
-		zap.String("IPAddress", GetIPAddress(ctx)))
+		zap.String("IPAddress", GetIPAddress(ctx)),
+		zap.Error(err))
 
 	ctx.JSON(httpErrors.ErrorResponse(err))
 }
@@ -102,10 +103,11 @@ func ErrResponseWithLog(ctx *gin.Context, logger *otelzap.Logger, err error) {
 //
 // Error response with logging error for gin context
 func LogResponseError(c *gin.Context, ctx context.Context, logger *otelzap.Logger, err error) {
-	logger.Ctx(ctx).Error("ErrResponseWithLog", zap.Error(err),
+	logger.Ctx(ctx).Error("ErrResponseWithLog",
 		zap.String("UnitCode", GetUnitCode(c)),
 		zap.String("RequestID", GetRequestID(c)),
-		zap.String("IPAddress", GetIPAddress(c)))
+		zap.String("IPAddress", GetIPAddress(c)),
+		zap.Error(err))
 }
 
 func SendResponse(StatusCode uint, Message interface{}, Result interface{}, c *gin.Context) {
@@ -148,14 +150,14 @@ func SendWebsocketResponse(StatusCode uint, Message interface{}, Result interfac
 	}
 }
 
-func Post(URI string, Payload interface{}) (interface{}, int, error) {
+func Post(URI string, Authorization string, Payload interface{}) (interface{}, int, error) {
 	payload, err := json.Marshal(Payload)
 	if err != nil {
 		fmt.Println("Error marshaling JSON:", err)
 		return nil, http.StatusInternalServerError, err
 
 	}
-
+	fmt.Println("payload", string(payload))
 	req, err := http.NewRequest("POST", URI, bytes.NewBuffer(payload))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
@@ -163,8 +165,11 @@ func Post(URI string, Payload interface{}) (interface{}, int, error) {
 
 	}
 
-	Authorize := GetServiceAuthorized()
-	req.Header.Set("Authorization", "Basic "+Authorize)
+	if Authorization == "" {
+		Authorization = GetServiceAuthorized("", "")
+	}
+	fmt.Println("AAA", Authorization)
+	req.Header.Set("Authorization", "Basic "+Authorization)
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 
@@ -173,7 +178,6 @@ func Post(URI string, Payload interface{}) (interface{}, int, error) {
 	if err != nil {
 		fmt.Println("Error making request:", err)
 		return nil, http.StatusInternalServerError, err
-
 	}
 	defer resp.Body.Close()
 
@@ -207,7 +211,7 @@ func Get(URI string, Payload interface{}) (interface{}, int, error) {
 		return nil, http.StatusInternalServerError, err
 	}
 
-	Authorize := GetServiceAuthorized()
+	Authorize := GetServiceAuthorized("", "")
 	req.Header.Set("Authorization", "Basic "+Authorize)
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
@@ -252,10 +256,15 @@ func GetToken(username string, password string) string {
 	return Token
 }
 
-func GetServiceAuthorized() string {
-	API_Key := "CAKRASOFT_CLOUD"
-	API_Secret := "ushdKUGHueKHBsdiyue324OUJNs"
-	Authorization := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", API_Key, API_Secret)))
+func GetServiceAuthorized(API_Key interface{}, API_Secret string) string {
+	if API_Key == "" {
+		API_Key = "CAKRASOFT_CLOUD"
+	}
+
+	if API_Secret == "" {
+		API_Secret = "ushdKUGHueKHBsdiyue324OUJNs"
+	}
+	Authorization := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", InterfaceToString(API_Key), API_Secret)))
 
 	return Authorization
 }
