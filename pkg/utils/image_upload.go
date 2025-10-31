@@ -240,3 +240,110 @@ func UploadImage(file *multipart.FileHeader, UnitCode string, FolderName string,
 
 	return endpoint + "/" + fileUrlPath, nil
 }
+
+// UploadImageBookingEngine is a function to upload and resize images specifically for the booking engine.
+func UploadImageBookingEngine(file *multipart.FileHeader, UnitCode string, FolderName string, AWSMinioAccessKey, AWSMinioSecretKey, AWSMinioEndpoint, AWSEndpoint, outputFormat string, MaxWidth uint) (filePath string, err error) {
+	// Buka file yang diunggah
+	src, err := file.Open()
+	if err != nil {
+		return "", err
+	}
+	defer src.Close()
+
+	// Baca file ke dalam buffer
+	buf := bytes.NewBuffer(nil)
+	if _, err = io.Copy(buf, src); err != nil {
+		return "", err
+	}
+
+	// Deteksi format file berdasarkan ekstensi
+	ext := strings.ToLower(filepath.Ext(file.Filename))
+	var img image.Image
+
+	switch ext {
+	case ".png":
+		img, err = png.Decode(buf)
+	case ".jpg", ".jpeg":
+		img, err = jpeg.Decode(buf)
+	default:
+		return "", fmt.Errorf("unsupported file format: %s", ext)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	// Resize gambar ke lebar 512px (tinggi menyesuaikan)
+	m := resize.Resize(MaxWidth, 0, img, resize.Lanczos3)
+
+	// Tentukan path & ekstensi file berdasarkan format output
+	path, imagePath, err := GetFilePath(UnitCode, "images/"+FolderName, FolderName)
+	if err != nil {
+		return "", err
+	}
+
+	var filename string
+	if outputFormat == "jpg" || outputFormat == "jpeg" {
+		filename = path + ".jpg"
+		imagePath += ".jpg"
+	} else {
+		filename = path + ".png"
+		imagePath += ".png"
+	}
+
+	// Simpan gambar ke file sementara
+	out, err := os.Create(filename)
+	if err != nil {
+		out.Close()
+		return "", err
+	}
+
+	// Encode gambar sesuai format yang dipilih
+	if outputFormat == "jpg" || outputFormat == "jpeg" {
+		err = jpeg.Encode(out, m, &jpeg.Options{Quality: 80})
+	} else {
+		err = png.Encode(out, m)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	out.Close()
+	// Inisialisasi koneksi ke AWS MinIO
+	endpoint, s3Client, err := AwsLoad(AWSMinioAccessKey, AWSMinioSecretKey, AWSMinioEndpoint, AWSEndpoint)
+	if err != nil {
+		return "", err
+	}
+
+	// Buka kembali file untuk di-upload ke S3
+	uploadFile, err := os.Open(filename)
+	if err != nil {
+		return "", err
+	}
+
+	// Path penyimpanan di S3 untuk booking engine
+	fileUrlPath := "cbe-web/web-public" + imagePath
+	object := s3.PutObjectInput{
+		Bucket: aws.String("pms-storage"),
+		Key:    aws.String(fileUrlPath),
+		Body:   uploadFile,
+		ACL:    aws.String("public-read"),
+		Metadata: map[string]*string{
+			"x-amz-meta-type":      aws.String(FolderName),
+			"x-amz-meta-unit-code": aws.String(UnitCode),
+		},
+	}
+
+	// Upload file ke S3
+	_, err = s3Client.PutObject(&object)
+	if err != nil {
+		uploadFile.Close()
+		return "", err
+	}
+	uploadFile.Close()
+	// Hapus file lokal setelah berhasil di-upload
+	if err := os.Remove(filename); err != nil {
+		return "", fmt.Errorf("failed to delete local file: %s", err)
+	}
+
+	return endpoint + "/" + fileUrlPath, nil
+}
