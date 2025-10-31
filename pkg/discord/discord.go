@@ -1,10 +1,16 @@
 package discord
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/cakramediadata2022/chs_cloud_general/config"
 	"github.com/disgoorg/disgo"
@@ -95,5 +101,40 @@ func onMessageCreate(event *events.MessageCreate) {
 	}
 	if message != "" {
 		_, _ = event.Client().Rest().CreateMessage(event.ChannelID, discord.NewMessageCreateBuilder().SetContent(message).Build())
+	}
+}
+
+type discordWebhookPayload struct {
+	Content string `json:"content"`
+}
+
+func SendToDiscord(webhookURL string, message string) {
+	if message == "" {
+		fmt.Println("SendToDiscord: message is empty, not sending")
+		return
+	}
+
+	payload := discordWebhookPayload{Content: message}
+	body, _ := json.Marshal(payload)
+
+	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(body))
+	if err != nil {
+		fmt.Printf("SendToDiscord: failed to create request: %v\n", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("SendToDiscord: request failed: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		fmt.Printf("SendToDiscord: received non-2xx status: %d\n", resp.StatusCode)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		fmt.Printf("Response: %s\n", string(bodyBytes))
 	}
 }
